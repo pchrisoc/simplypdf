@@ -8,7 +8,7 @@ Use [Bluebeam’s feature matrix](https://support.bluebeam.com/revu/subscription
 
 ## Architecture decision
 
-Start with a spike for **Qt 6 Widgets and C++**, using **PDFium** for rendering, text extraction, and coordinate transforms, and **qpdf** for structural editing and PDF object access. Prototype **Tesseract** for offline OCR. Confirm licensing, build reproducibility, installer size, and memory usage before committing. Keep the engine interfaces narrow enough to replace a dependency if the spike fails.
+Write all first-party application, library, and tooling code in **Rust**. Spike Rust desktop UI frameworks and Rust-compatible PDF adapters. Evaluate PDFium for rendering and text extraction, qpdf for structural editing, and Tesseract for offline OCR through Rust bindings or process adapters. Confirm licensing, build reproducibility, installer size, and memory usage before selecting dependencies. Keep the engine interfaces narrow enough to replace a dependency if the spike fails.
 
 - Use PDF page space as the canonical coordinate system. Centralize transformations for zoom, rotation, crop boxes, and device pixel ratio. Render large sheets as cached tiles with cancelable background work.
 - Store standard annotations and appearance streams in the PDF. Keep richer application state in documented, versioned data with stable IDs. Define save modes for ordinary edits, incremental updates, and full rewrites. Detect signed or protected files before offering a write.
@@ -82,13 +82,13 @@ Build a thin local MCP adapter around the same document and measurement services
 
 ## Coding-agent handoff
 
-Treat this file as the implementation brief. Start at milestone 0, then build milestone 1 in vertical slices. The broader replacement milestones define the roadmap. Implement the takeoff workflow first and keep later interfaces small until a working slice needs them.
+Use this file as the implementation brief and the README checklist to track staged progress. Start at milestone 0, then build milestone 1 in vertical slices. The broader replacement milestones define the roadmap. Implement the takeoff workflow first and keep later interfaces small until a working slice needs them.
 
 ### Workspace and build contract
 
-- Start in the directory containing this plan. Check for existing source, repository status, and local instructions before editing. The initial workspace contains the plan and local reference artifacts. Keep `references/bluebeam/`, the original Revu installer, generated builds, and local projects out of source control and release bundles.
-- Use CMake and CTest with C++20 for the initial Qt Widgets spike. Suggested layout is `src/core/` for units, geometry, calibration, and takeoff commands, `src/pdf/` for PDF adapters and worker protocol, `src/app/` for the Qt UI, `src/mcp/` for the local MCP executable, and `tests/fixtures/` for small generated or redistributable PDFs.
-- Make the core testable without Qt, a PDF engine, a window system, or network access. Add a named CMake preset for core-only builds and a desktop preset once dependency acquisition works. Pin dependencies, record their acquisition and licenses, and document exact bootstrap commands for each OS in the root README.
+- Start in the directory containing this plan. Check for existing source, repository status, and local instructions before editing. Do not commit or push Bluebeam code or any proprietary source code or files to GitHub. Keep local vendor references, installers, generated builds, and local projects out of source control and release bundles.
+- Use Cargo and Rust 2024. Keep units, geometry, calibration, and takeoff commands in the headless core crate. Add PDF adapters, worker, desktop UI, and MCP packages when their slices begin. Put small generated or redistributable PDFs in `tests/fixtures/`.
+- Make the core testable without a GUI toolkit, PDF engine, window system, or network access. Pin dependencies, record their acquisition and licenses, and document exact bootstrap commands for each OS in the root README.
 - Use Windows x64, macOS arm64, and Ubuntu LTS x64 as the proposed first build matrix. Record the tested OS versions and assess macOS Intel and other Linux distributions separately. Run core and integration tests on each supported target. Keep packaging checks distinct from tests that require an interactive desktop.
 - For the first slice, add a deterministic PDF fixture generator and headless core tests before the viewer. For the next slice, open a fixture, display it, and place points that round-trip through the view transform. Then wire calibration, measure, persistence, CSV, and MCP in that order. Each slice should leave a runnable build with reproducible verification instructions.
 
