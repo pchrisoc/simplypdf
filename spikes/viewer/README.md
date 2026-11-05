@@ -31,6 +31,10 @@ The standalone Rust probe checks PDFium against the same four-page fixture. Obta
 cargo run --locked --manifest-path spikes/viewer/Cargo.toml --example probe_pdfium -- /absolute/path/to/libpdfium.dylib
 ```
 
-The probe expects a full path to the appropriate `.dylib`, `.dll`, or `.so`. It checks PDFium's rendered pixels and its raw-PDF-to-device mapping against the core transform and verifies that the chosen pixel maps back to the original PDF point. It uses the fixture manifest as the metadata source.
+The probe expects a full path to the appropriate `.dylib`, `.dll`, or `.so`. It checks PDFium's rendered pixels and its raw-PDF-to-device mapping against the core transform and verifies that the chosen pixel maps back to the original PDF point. It reads metadata from the same PDF bytes that PDFium renders. The fixture manifest supplies independent expected dimensions and positions.
 
-On macOS arm64, PDFium reported sizes of 200×150 and 150×200 for this fixture. The canonical sizes are 400×300 and 300×400 after applying UserUnit 2. Rendering into a viewport sized from the canonical geometry aligned all four pages. A production adapter needs reliable raw page boxes, rotation, and UserUnit from document metadata before it can provide the same guarantees on arbitrary PDFs. The tested public PDFium size functions alone are insufficient for canonical geometry. The desktop viewer still uses Quartz.
+On macOS arm64, PDFium reported sizes of 200×150 and 150×200 for this fixture. The canonical sizes are 400×300 and 300×400 after applying UserUnit 2. Rendering into a viewport sized from the canonical geometry aligned all four pages. The tested public PDFium size functions alone are insufficient for canonical geometry.
+
+The probe uses [lopdf 0.42.0](https://github.com/J-F-Liu/lopdf/tree/v0.42.0) (MIT) with default features disabled. The metadata reader lives in `examples/probe_pdfium/metadata.rs`. It resolves inherited MediaBox, CropBox, and Rotate entries and reads UserUnit directly from each page. The rest of the probe receives only core `PageGeometry` values. To swap parsers, preserve that return type, page order, inheritance and defaults, and rerun the metadata tests and raster probe.
+
+This comparison covers the synthetic fixture on macOS arm64. Broader parser agreement, encrypted and malformed document handling across both engines, and Windows and Linux verification remain open. The desktop viewer still uses Quartz.

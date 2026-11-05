@@ -52,3 +52,11 @@ Next slice is a cross-platform renderer comparison against the same fixture, the
 - Recorded the command and metadata requirement in the viewer guide. The probe supplies fixture metadata directly. Production metadata extraction, Windows and Linux runs, and integration into the desktop UI remain open.
 
 Next slice is to select and test a raw metadata reader for PDFium or identify an engine that supplies the required metadata. File picking, zoom, and pan are separate viewer changes that can use the existing Quartz adapter.
+
+## 2026-11-04 · Stage 0, PDFium metadata reader
+
+- Pinned lopdf 0.42.0 as a dev dependency and isolated it behind a function that returns core page geometry in document order. The probe reads the same bytes with lopdf and PDFium and checks both against the fixture manifest.
+- Added three tests for inherited boxes and rotation, indirect values, local overrides, noninherited UserUnit, defaults, malformed boxes, and cyclic parent links. All four viewer and probe tests and all eleven core tests passed on macOS arm64. The native PDFium probe passed on all four fixture rotations using the extracted metadata.
+- The viewer still uses Quartz. PDFium on Windows and Linux, broader parser agreement, and minimum toolchain verification are pending.
+
+Next viewer slice is file opening, zoom, and pan. Keep the click marker anchored in canonical page coordinates. The separate PDFium track still needs cross-platform and broader fixture verification before it can replace Quartz.

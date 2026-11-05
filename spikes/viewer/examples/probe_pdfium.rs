@@ -1,5 +1,8 @@
 //! Standalone PDFium compatibility probe for the repository's synthetic fixture.
 
+#[path = "probe_pdfium/metadata.rs"]
+mod metadata;
+
 use std::error::Error;
 use std::ffi::{c_char, c_int, c_void};
 use std::path::{Path, PathBuf};
@@ -74,6 +77,7 @@ impl<'a> Pdfium<'a> {
     }
 
     fn check_fixture(&self, bytes: &[u8]) -> Result<(), Box<dyn Error>> {
+        let pages = metadata::read_pages(bytes)?;
         // The fixture buffer remains live until the document is closed.
         unsafe {
             (self.init)();
@@ -81,7 +85,7 @@ impl<'a> Pdfium<'a> {
             let result = if doc.is_null() {
                 Err("PDFium could not open the fixture".into())
             } else {
-                let result = self.check_pages(doc);
+                let result = self.check_pages(doc, &pages);
                 (self.close)(doc);
                 result
             };
@@ -90,18 +94,18 @@ impl<'a> Pdfium<'a> {
         }
     }
 
-    fn check_pages(&self, doc: Handle) -> Result<(), Box<dyn Error>> {
+    fn check_pages(&self, doc: Handle, pages: &[PageGeometry]) -> Result<(), Box<dyn Error>> {
         // doc belongs to the active library. Each page is closed before doc.
         unsafe {
-            if (self.count)(doc) != 4 {
+            if (self.count)(doc) != 4 || pages.len() != 4 {
                 return Err("the fixture should have four pages".into());
             }
-            for (index, rotation) in [0, 90, 180, 270].into_iter().enumerate() {
+            for (index, &geometry) in pages.iter().enumerate() {
                 let page = (self.load_page)(doc, index as c_int);
                 if page.is_null() {
                     return Err(format!("could not load fixture page {}", index + 1).into());
                 }
-                let result = self.check_page(page, rotation);
+                let result = self.check_page(page, index, geometry);
                 (self.close_page)(page);
                 result?;
             }
@@ -109,18 +113,24 @@ impl<'a> Pdfium<'a> {
         Ok(())
     }
 
-    fn check_page(&self, page: Handle, rotation: i32) -> Result<(), Box<dyn Error>> {
-        let geometry = PageGeometry::new(
-            [[-10.0, 20.0], [310.0, 260.0]],
-            Some([[30.0, 50.0], [230.0, 200.0]]),
-            2.0,
-            rotation,
-        )?;
+    fn check_page(
+        &self,
+        page: Handle,
+        index: usize,
+        geometry: PageGeometry,
+    ) -> Result<(), Box<dyn Error>> {
+        let rotation = index * 90;
         let viewport = geometry.viewport([0.0, 0.0], 2.0)?;
-        let [width, height] = viewport.size().map(|side| side as c_int);
-        let reported_without_user_unit = [width as f32 / 4.0, height as f32 / 4.0];
+        let size = if index % 2 == 0 { [800, 600] } else { [600, 800] };
+        let [width, height] = size;
+        let expected = [[140.0, 480.0], [120.0, 140.0], [660.0, 120.0], [480.0, 660.0]][index];
         let raw = [65.0, 80.0];
-        let expected = viewport.page_to_canvas(geometry.pdf_to_page(raw)?)?;
+        if viewport.size() != size.map(f64::from)
+            || viewport.page_to_canvas(geometry.pdf_to_page(raw)?)? != expected
+        {
+            return Err(format!("{rotation}°: parsed metadata disagrees with the fixture manifest").into());
+        }
+        let reported_without_user_unit = [width as f32 / 4.0, height as f32 / 4.0];
         let mut x = 0;
         let mut y = 0;
         // The page is live. Format 3 is BGRx and uses four bytes per pixel.
