@@ -55,6 +55,8 @@ pub struct MeasureView {
     pub drawing_points: f64,
     pub real_distance: f64,
     pub vertical_multiplier: f64,
+    half_size_presets: bool,
+    preset_family: usize,
     pub unit: String,
     /// The unit picked for the page side of the scale; `None` follows `unit`.
     pub page_unit: Option<PageUnit>,
@@ -89,6 +91,8 @@ impl Default for MeasureView {
             drawing_points: 1.0,
             real_distance: 1.0,
             vertical_multiplier: 1.0,
+            half_size_presets: false,
+            preset_family: 0,
             unit: "in".into(),
             page_unit: None,
             ratio_text: String::new(),
@@ -109,7 +113,8 @@ impl Default for MeasureView {
 pub(crate) fn page_unit_of(picked: Option<PageUnit>, unit: &str, display: crate::units::Unit) -> PageUnit {
     picked.or_else(|| PageUnit::from_label(unit)).or_else(|| PageUnit::from_label(display.label())).unwrap_or(PageUnit::Pt)
 }
-/// Drawing scales an architect's rule offers, as the N of 1:N.
+/// Representative ratios for scale field regression tests.
+#[cfg(test)]
 pub(crate) const RATIOS: [f64; 10] = [1.0, 5.0, 10.0, 20.0, 25.0, 50.0, 100.0, 200.0, 500.0, 1000.0];
 /// "1:200", "1/200", "1 : 200" or a bare "200" (a comma works as the decimal mark), as the N of 1:N.
 /// `None` for anything else, for zero, negative or absurd values.
@@ -469,6 +474,7 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
     ui.separator();
     // "1:N" fills the fields below and applies at once, as does picking a common scale.
     let mut chosen = None;
+    let mut preset = None;
     let fields = scale_fields(state);
     ui.horizontal(|ui| {
         ui.label(tl!("Drawing scale")).on_hover_text(tl!("Applying a scale switches units to m / mm."));
@@ -481,13 +487,38 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
                 None => state.error = Some(tl!("Enter a scale such as 1:50.").into()),
             }
         }
-        craft_ui::ComboBox::from_id_salt("measure-common-scales").selected_text(tl!("Common scales")).width(20.0).show_ui(ui, |ui| {
-            for n in RATIOS {
-                if ui.selectable_label(state.ratio_text == format_ratio(n), format_ratio(n)).clicked() {
-                    chosen = Some(n);
-                }
-            }
-        });
+        let groups = [
+            (tl!("Metric"), measure::presets::METRIC),
+            (tl!("Architectural"), measure::presets::ARCHITECTURAL),
+            (tl!("Engineering"), measure::presets::ENGINEERING),
+        ];
+        craft_ui::ComboBox::from_id_salt("measure-common-scales")
+            .selected_text(tl!("Common scales"))
+            .width(20.0)
+            .close_behavior(egui::PopupCloseBehavior::CloseOnClickOutside)
+            .show_ui_with_header(
+                ui,
+                |ui| {
+                    ui.horizontal(|ui| {
+                        ui.selectable_value(&mut state.half_size_presets, false, tl!("Full size"));
+                        ui.selectable_value(&mut state.half_size_presets, true, tl!("Half size"));
+                    });
+                    ui.horizontal(|ui| {
+                        for (index, (label, _)) in groups.iter().enumerate() {
+                            ui.selectable_value(&mut state.preset_family, index, *label);
+                        }
+                    });
+                    groups.get(state.preset_family).map_or(measure::presets::METRIC, |(_, group)| *group)
+                },
+                |ui, group| {
+                    for item in group {
+                        if ui.selectable_label(false, item.label).clicked() {
+                            preset = Some(*item);
+                            ui.close();
+                        }
+                    }
+                },
+            );
     });
     ui.horizontal(|ui| {
         ui.add(egui::DragValue::new(&mut state.drawing_points).range(0.000001..=1e9));
@@ -565,8 +596,17 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
     {
         state.error = None;
     }
+    if let Some(preset) = preset {
+        let (paper, page_unit) = preset.paper(state.half_size_presets);
+        state.drawing_points = paper;
+        state.page_unit = Some(page_unit);
+        state.real_distance = preset.real;
+        state.unit = preset.unit.into();
+        sync_ratio_text(state, units);
+        state.error = None;
+    }
     // Apply scale, or a 1:N typed or picked: the fields are applied to the document at once.
-    if (apply || chosen.is_some())
+    if (apply || chosen.is_some() || preset.is_some())
         && doc.allows_annotation()
         && let Some(info) = info
     {

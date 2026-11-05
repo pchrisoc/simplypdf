@@ -8261,6 +8261,8 @@ fn measurement_scale_ratio_takes_the_page_side_in_a_unit() {
     assert!((read(&mut a, doc) - 500.0 * mm).abs() < 1e-9);
     let before = ok(&mut a, "doc_list", json!({}));
     for args in [
+        json!({"doc":doc,"page":1,"sheet_size":"half"}),
+        json!({"doc":doc,"page":1,"preset":"1/4\" = 1'","distance":5}),
         json!({"doc":doc,"page":1,"page_distance":1,"page_unit":"ft","distance":1,"unit":"ft"}),
         json!({"doc":doc,"page":1,"page_distance":1,"distance":1,"unit":"m"}),
         json!({"doc":doc,"page":1,"page_distance":1,"unit":"mm"}),
@@ -8270,6 +8272,16 @@ fn measurement_scale_ratio_takes_the_page_side_in_a_unit() {
     ] {
         assert!(a.call("measure_scale", &args).is_err(), "{args}");
         assert_eq!(ok(&mut a, "doc_list", json!({})), before);
+    }
+    for (preset, size, points, expected) in [
+        ("1/4\" = 1'", "full", 18.0, 1.0),
+        ("1/4\" = 1'", "half", 18.0, 2.0),
+        ("1\" = 20'", "half", 36.0, 20.0),
+        ("1:50", "half", mm * 10.0, 1.0),
+    ] {
+        ok(&mut a, "measure_scale", json!({"doc":doc,"page":1,"preset":preset,"sheet_size":size}));
+        let reading = ok(&mut a, "measure_info", json!({"doc":doc,"page":1,"points":[[10.0,10.0],[10.0+points,10.0]]}));
+        assert!((reading["reading"]["value"].as_f64().unwrap() - expected).abs() < 1e-9, "{preset} {size}: {reading}");
     }
     let _ = std::fs::remove_dir_all(dir);
 }

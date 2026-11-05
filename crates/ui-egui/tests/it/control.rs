@@ -1678,6 +1678,22 @@ fn a_plan_scale_picked_or_typed_applies_at_once() {
     ok(&mut h, &c, "ui.command", json!({"id":"edit.undo"}));
     h.run_steps(2);
     assert_ne!(read(&h), before);
+    // A quarter inch represents one foot at full size and two feet on a half-size sheet.
+    for (size, expected) in [("Full size", 1.0), ("Half size", 2.0)] {
+        h.get_by(|n| n.role() == egui::accesskit::Role::ComboBox && n.value().is_some_and(|v| v == "Common scales")).click();
+        h.run_steps(2);
+        h.get_by_label(size).click_accesskit();
+        h.run_steps(2);
+        h.get_by_label("Architectural").click_accesskit();
+        h.run_steps(2);
+        h.get_by_label("1/4\" = 1'").click_accesskit();
+        h.run_steps(3);
+        let scale = h.state().session.get(doc).unwrap().measurement_scale(0, line[0]).unwrap();
+        let quarter_inch = [[20.0, 20.0], [38.0, 20.0]];
+        let reading = measure::reading(Kind::Distance, &quarter_inch, &scale).unwrap();
+        assert_eq!(reading.unit, "ft");
+        assert!((reading.value - expected).abs() < 1e-9, "{size}: {reading:?}");
+    }
 }
 
 #[test]

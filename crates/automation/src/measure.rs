@@ -80,7 +80,16 @@ impl Automation {
         let precision = u8::try_from(a.opt_int("precision")?.unwrap_or(2)).map_err(|_| failed("precision must be between 0 and 6"))?;
         let unit = a.opt_str("unit")?.unwrap_or("in");
         let vertical = a.opt_num("vertical_multiplier")?;
-        if vertical.is_some() && a.get("page_distance").is_none() {
+        let preset = a.opt_str("preset")?;
+        let half_size = match a.opt_str("sheet_size")? {
+            None | Some("full") => false,
+            Some("half") => true,
+            Some(_) => return Err(failed("sheet_size must be full or half")),
+        };
+        if a.get("sheet_size").is_some() && preset.is_none() {
+            return Err(failed("sheet_size requires a construction scale preset"));
+        }
+        if vertical.is_some() && a.get("page_distance").is_none() && preset.is_none() {
             return Err(failed("vertical_multiplier requires a horizontal scale ratio (page_distance and distance)"));
         }
         if ["points", "units_per_point", "page_distance"].iter().filter(|k| a.get(k).is_some()).count() > 1 {
@@ -89,7 +98,18 @@ impl Automation {
         if a.get("page_unit").is_some() && a.get("page_distance").is_none() {
             return Err(failed("page_unit is the unit of page_distance; pass page_distance too"));
         }
-        let scale = if a.get("points").is_some() {
+        let scale = if let Some(label) = preset {
+            if ["points", "units_per_point", "page_distance", "distance", "unit"].iter().any(|key| a.get(key).is_some()) {
+                return Err(failed("use a preset or manual calibration fields"));
+            }
+            let preset = measure::presets::all().find(|preset| preset.label == label).ok_or_else(|| failed("unknown construction scale preset"))?;
+            let (paper, page_unit) = preset.paper(half_size);
+            let from = self.doc(a)?.measurement_to_user(page, [0.0, 0.0]).map_err(failed)?;
+            let to = self.doc(a)?.measurement_to_user(page, [1.0, 0.0]).map_err(failed)?;
+            Scale::ratio(from, to, paper, page_unit, preset.real, preset.unit, precision)
+                .and_then(|scale| scale.with_vertical_multiplier(from, to, vertical.unwrap_or(1.0)))
+                .map_err(failed)?
+        } else if a.get("points").is_some() {
             let (_, points) = self.measurement_points(a)?;
             let [from, to] = points.as_slice() else {
                 return Err(failed("scale calibration needs exactly two points"));

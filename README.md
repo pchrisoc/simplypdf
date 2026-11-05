@@ -14,6 +14,15 @@ ArtCraft team and PDFCraft contributors. [Planned project website](https://pdf.s
 - Save measurements as PDF annotations and export their quantities as numeric XLSX cells.
 - Use MCP to open drawings, create and list measurements, and export a takeoff workbook.
 
+In **Measure → Common scales**, choose **Full size** or **Half size** before picking an architectural,
+engineering, or metric scale. The presets include `1/4" = 1'`, `1" = 20'`, and `1:50`.
+Use **Half size** when the PDF itself was reduced to 50% of its original linear dimensions.
+If the scale printed on the sheet already describes the reduced PDF, use **Full size** with
+that scale. For other reductions, calibrate against a known dimension.
+
+MCP accepts the preset label and sheet size through `measure_scale`, for example
+`{"doc":1,"page":1,"preset":"1/4\" = 1'","sheet_size":"half"}`.
+
 For a drawing stretched in one direction, enter its horizontal scale and a **Vertical scale
 multiplier** in the Measure panel. For example, a multiplier of `1.02` makes a vertical
 segment read 2% longer while leaving horizontal distances unchanged. **Calibrate from two
@@ -73,7 +82,9 @@ features. Keep the proprietary installer and any captured artifacts outside the 
 
 - [x] Apply separate horizontal and vertical calibration factors to distances and areas.
   Verify rotated pages and save/reopen through MCP.
-- [ ] Add construction scale presets and editable page and viewport scales, with a visible
+- [x] Add architectural, engineering, and metric construction presets with full-size and
+  half-size calibration in the desktop app and MCP.
+- [ ] Add editable page and viewport scales, with a visible
   indicator for uncalibrated drawings and the scale applied to each markup.
 - [ ] Make vector snaps respect drawing layer visibility. Test endpoints, midpoints,
   intersections, and path snaps on synthetic layered and rotated plans.

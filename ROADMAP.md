@@ -223,6 +223,8 @@ Ranked; detail and the full milestone table in [docs/roadmap.md](docs/roadmap.md
 
 ## Progress log
 
+- **2026-11-04 (M12, construction presets):** Desktop and MCP share architectural, engineering, and metric presets. Half-size sheets use half of the nominal paper distance for the same real-world distance.
+
 - **2026-11-04 (M12, construction scale):** A vertical correction can be applied to a horizontal drawing scale in the Measure panel and through automation. The persisted factors follow the displayed axes when set on a rotated page.
 
 - **2026-11-04 (M12, takeoff workbook):** The CLI and MCP expose a Rust XLSX snapshot with a named range for spreadsheet linking. Automatic refresh of the source from PDF edits is pending.
