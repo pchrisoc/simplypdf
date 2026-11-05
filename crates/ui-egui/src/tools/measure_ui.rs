@@ -43,6 +43,8 @@ impl Tool {
 }
 pub struct MeasureView {
     pub points: Vec<Point>,
+    locked_angle: Option<f64>,
+    pub hvac: Option<measure::hvac::Takeoff>,
     pub page: Option<usize>,
     pub tool: Option<Tool>,
     pub reading: Option<Reading>,
@@ -80,6 +82,8 @@ impl Default for MeasureView {
     fn default() -> Self {
         Self {
             points: Vec::new(),
+            locked_angle: None,
+            hvac: None,
             page: None,
             tool: None,
             reading: None,
@@ -170,9 +174,25 @@ pub(crate) fn set_ratio(state: &mut MeasureView, n: f64) -> bool {
 impl MeasureView {
     pub fn cancel(&mut self) {
         self.points.clear();
+        self.locked_angle = None;
         self.page = None;
         self.reading = None;
         self.scale = None;
+    }
+
+    fn lock_vertex(&mut self, last: Point, point: Point) -> Point {
+        let dx = point[0] - last[0];
+        let dy = point[1] - last[1];
+        if dx.hypot(dy) < 1e-6 {
+            return last;
+        }
+        let angle = *self.locked_angle.get_or_insert_with(|| {
+            let step = std::f64::consts::FRAC_PI_4;
+            (dy.atan2(dx) / step).round() * step
+        });
+        let (sin, cos) = angle.sin_cos();
+        let length = (dx * cos + dy * sin).max(0.0);
+        [last[0] + length * cos, last[1] + length * sin]
     }
 }
 /// Snaps `point` to the page's drawn geometry (endpoints, midpoints, intersections, paths),
@@ -256,6 +276,10 @@ pub(crate) fn page_input(
         xf.norm_to_screen(v[0] / xf.pw, v[1] / xf.ph)
     };
     let pos = cx.ptr.within(xf.rect);
+    let shift = ui.input(|i| i.modifiers.shift);
+    if !shift {
+        state.locked_angle = None;
+    }
     let mut hover = None;
     let mut snap = None;
     if let Some(pos) = pos {
@@ -271,10 +295,14 @@ pub(crate) fn page_input(
             point = snapped_point;
             snap = Some(kind);
         }
-        if ui.input(|i| i.modifiers.shift)
-            && let Some(last) = state.points.last()
+        if shift && state.page == Some(page)
+            && let Some(last) = state.points.last().copied()
         {
-            point = measure::snap::constrain(*last, point);
+            let constrained = state.lock_vertex(last, point);
+            if measure::distance(constrained, point) > 1e-6 {
+                snap = None;
+            }
+            point = constrained;
         }
         hover = Some(point);
         if clicks.single {
@@ -356,7 +384,15 @@ pub(crate) fn page_input(
             );
         }
         if let (Some(p), Some(reading)) = (hover, &state.reading) {
-            ui.painter().text(screen(p) + egui::vec2(12.0, 12.0), egui::Align2::LEFT_TOP, &reading.label, crate::theme::semibold(12.0), stroke.color);
+            let label = if tool.kind() == Kind::Perimeter
+                && let (Some(last), Some(scale)) = (state.points.last(), &state.scale)
+                && let Ok(segment) = measure::reading(Kind::Distance, &[*last, p], scale)
+            {
+                format!("{}: {}\n{}: {}", tl!("Segment"), segment.label, tl!("Total"), reading.label)
+            } else {
+                reading.label.clone()
+            };
+            ui.painter().text(screen(p) + egui::vec2(12.0, 12.0), egui::Align2::LEFT_TOP, label, crate::theme::semibold(12.0), stroke.color);
         }
     }
 }
@@ -378,8 +414,16 @@ fn finish(state: &mut MeasureView, pending: &mut Option<Edit>, doc: &Document, p
         state.error = Some(crate::i18n::fmt(tl!("This measurement needs at least {n} points."), &[("n", &minimum.to_string())]));
         return;
     }
+    if let Some(hvac) = &state.hvac
+        && tool == Tool::Perimeter
+        && let Err(error) = hvac.validate()
+    {
+        state.error = Some(error.to_string());
+        return;
+    }
     if let Some(scale) = state.scale.clone() {
         *pending = Some(Edit::AddMeasurement(NewMeasurement {
+            hvac: if tool == Tool::Perimeter { state.hvac.clone() } else { None },
             page,
             kind: tool.kind(),
             points: state.points.clone(),
@@ -403,7 +447,7 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
     };
     let mut tool = None;
     ui.horizontal(|ui| {
-        for (label, value) in [("Distance", Tool::Distance), ("Perimeter", Tool::Perimeter), ("Area", Tool::Area)] {
+        for (label, value) in [("Distance", Tool::Distance), ("Continuous length", Tool::Perimeter), ("Area", Tool::Area)] {
             if ui.selectable_label(app.quick_tool == QuickTool::Measure(value), tl!(label)).clicked() {
                 tool = Some(value);
             }
@@ -563,6 +607,54 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
         ui.add(crate::widgets::line(&mut state.name).desired_width(130.0).char_limit(128)).labelled_by(viewport.id);
     });
     let apply = ui.add_enabled(doc.allows_annotation(), egui::Button::new(tl!("Apply scale"))).clicked();
+    egui::CollapsingHeader::new(tl!("HVAC takeoff specifications")).open(state.hvac.as_ref().map(|_| true)).show(ui, |ui| {
+        if ui.button(tl!("Pipe preset")).clicked() {
+            state.hvac = Some(measure::hvac::Takeoff::pipe());
+            tool = Some(Tool::Perimeter);
+        }
+        if ui.button(tl!("Sheet-metal preset")).clicked() {
+            state.hvac = Some(measure::hvac::Takeoff::duct());
+            tool = Some(Tool::Perimeter);
+        }
+        let mut clear = false;
+        if let Some(hvac) = &mut state.hvac {
+            let previous_profile = hvac.profile.clone();
+            for (name, value, options) in [
+                (tl!("Profile"), &mut hvac.profile, &["pipe", "round duct", "rectangular duct"][..]),
+                (tl!("Material"), &mut hvac.material, &["Copper", "Carbon steel", "Stainless steel", "PVC", "CPVC", "PEX", "Galvanized steel", "Aluminum"][..]),
+                (tl!("System"), &mut hvac.service, &["Supply", "Return", "Exhaust", "Outside air", "Hydronic supply", "Hydronic return", "Refrigerant", "Condensate"][..]),
+            ] {
+                craft_ui::ComboBox::from_id_salt(("hvac", name)).selected_text(value.as_str()).show_ui(ui, |ui| {
+                    for option in options {
+                        ui.selectable_value(value, (*option).into(), *option);
+                    }
+                });
+            }
+            if hvac.profile != previous_profile {
+                hvac.size = match hvac.profile.as_str() {
+                    "pipe" => "1 in",
+                    "round duct" => "12 in",
+                    _ => "12 x 12 in",
+                }.into();
+            }
+            let size = ui.label(tl!("Nominal size with units (diameter or width x height)"));
+            let sizes = match hvac.profile.as_str() {
+                "pipe" => measure::hvac::PIPE_SIZES,
+                "round duct" => measure::hvac::ROUND_DUCT_SIZES,
+                _ => measure::hvac::RECTANGULAR_DUCT_SIZES,
+            };
+            craft_ui::ComboBox::from_id_salt("hvac-nominal-size").selected_text(tl!("Common sizes")).show_ui(ui, |ui| {
+                for option in sizes {
+                    ui.selectable_value(&mut hvac.size, (*option).into(), *option);
+                }
+            });
+            ui.add(widgets::line(&mut hvac.size).char_limit(64)).labelled_by(size.id);
+            clear = ui.button(tl!("Clear HVAC specifications")).clicked();
+        }
+        if clear {
+            state.hvac = None;
+        }
+    });
     if let Some(error) = &state.error {
         ui.colored_label(Color32::from_rgb(190, 50, 50), error);
     }
@@ -695,6 +787,13 @@ pub(crate) fn command(app: &mut PdfCraftApp, id: &str) {
         app.views[index].measure.cancel();
         app.quick_tool = QuickTool::Measure(tool);
     }
+    if let Some((index, _)) = app.active_ids()
+        && matches!(id, "measure.pipe" | "measure.duct")
+    {
+        app.views[index].measure.cancel();
+        app.views[index].measure.hvac = Some(if id == "measure.pipe" { measure::hvac::Takeoff::pipe() } else { measure::hvac::Takeoff::duct() });
+        app.quick_tool = QuickTool::Measure(Tool::Perimeter);
+    }
     if id == "measure.export" {
         export_csv(app);
     }
@@ -739,6 +838,21 @@ fn export_csv(app: &mut PdfCraftApp) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn shift_keeps_the_initial_direction_until_released() {
+        let mut state = super::MeasureView::default();
+        let horizontal = state.lock_vertex([0.0, 0.0], [10.0, 1.0]);
+        assert!(horizontal[1].abs() < 1e-9);
+        let still_horizontal = state.lock_vertex([10.0, 0.0], [11.0, 10.0]);
+        assert!(still_horizontal[1].abs() < 1e-9);
+        state.locked_angle = None;
+        let vertical = state.lock_vertex([10.0, 0.0], [11.0, 10.0]);
+        assert!((vertical[0] - 10.0).abs() < 1e-9);
+        state.locked_angle = None;
+        let diagonal = state.lock_vertex([0.0, 0.0], [9.0, 10.0]);
+        assert!((diagonal[0] - diagonal[1]).abs() < 1e-9);
+    }
+
     use super::*;
 
     /// What Apply scale builds from the panel's fields, then a distance read with it.

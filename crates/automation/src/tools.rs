@@ -47,7 +47,7 @@ fn measure_points() -> Value {
 }
 fn measure_schema() -> Value {
     schema(
-        json!({"doc":doc(),"page":{"type":"integer","minimum":1},"points":measure_points(),"label":{"type":"string","maxLength":512},"author":{"type":"string","maxLength":512}}),
+        json!({"doc":doc(),"page":{"type":"integer","minimum":1},"points":measure_points(),"hvac":{"type":"object","properties":{"profile":{"type":"string","enum":["pipe","round duct","rectangular duct"]},"material":{"type":"string","minLength":1,"maxLength":64},"size":{"type":"string","minLength":1,"maxLength":64},"service":{"type":"string","minLength":1,"maxLength":64}},"required":["profile","material","size","service"],"additionalProperties":false},"label":{"type":"string","maxLength":512},"author":{"type":"string","maxLength":512}}),
         &["doc", "page", "points"],
     )
 }
@@ -798,6 +798,10 @@ pub fn tools() -> Vec<ToolDef> {
             .with(schema(json!({ "doc": doc(), "pages": pages("whose links to remove (default: all)") }), &["doc"])),
         t("measure_distance", "Measure distance", "Add an undoable two-point distance annotation using the scale of the first point's viewport.")
             .cmd("measure.distance").with(measure_schema()),
+        t("takeoff_pipe", "Pipe takeoff", "Add a continuous centerline route with HVAC specifications. Defaults to copper pipe, 1 in, hydronic supply. Set hvac for custom specifications. Undoable.")
+            .cmd("measure.pipe").with(measure_schema()),
+        t("takeoff_duct", "Sheet-metal takeoff", "Add a continuous centerline route with HVAC specifications. Defaults to round galvanized steel duct, 12 in, supply. Set hvac for custom specifications. Undoable.")
+            .cmd("measure.duct").with(measure_schema()),
         t("measure_perimeter", "Measure perimeter", "Add an undoable connected-line length annotation. To include a closing edge, repeat the first point at the end.")
             .cmd("measure.perimeter").with(measure_schema()),
         t("measure_area", "Measure area", "Add an undoable area annotation from a simple polygon. The last edge closes automatically.")

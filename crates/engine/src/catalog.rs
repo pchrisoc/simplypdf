@@ -427,7 +427,9 @@ pub static TOOL_GROUPS: &[ToolGroup] = &[
             title: "Measure",
             items: &[
                 item("Distance", "ruler", "measure.distance", Ready),
-                item("Perimeter", "ruler", "measure.perimeter", Ready),
+                item("Continuous length", "ruler", "measure.perimeter", Ready),
+                item("Pipe takeoff", "ruler", "measure.pipe", Ready),
+                item("Sheet-metal takeoff", "ruler", "measure.duct", Ready),
                 item("Area", "ruler", "measure.area", Ready),
                 item("Drawing scale", "ruler", "measure.scale", Ready),
                 item("Measurement information", "ruler", "measure.info", Ready),

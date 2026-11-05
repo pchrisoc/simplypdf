@@ -32,6 +32,36 @@ correction as `vertical_multiplier` with a horizontal ratio.
 The XLSX export is an on-demand snapshot. Live publishing to a Calc-linked workbook and
 end-to-end validation on Windows and Linux are pending.
 
+## HVAC takeoffs
+
+Use **Continuous length** to click successive route vertices. Each click places the next
+segment. The cursor preview shows the current segment and running total. Press **Enter** or
+double-click to finish, **Backspace** to remove the last vertex, and **Escape** to cancel.
+Hold **Shift** to lock the nearest 45° direction, then release it to choose a new direction.
+
+The tool palette and command search include **Pipe takeoff** and **Sheet-metal takeoff**.
+Shortcuts use **Ctrl** on Windows/Linux and **⌘** on macOS.
+
+| Tool | Shortcut |
+| --- | --- |
+| Continuous length | Ctrl/⌘ + Shift + U |
+| Pipe takeoff | Ctrl/⌘ + Shift + J |
+| Sheet-metal takeoff | Ctrl/⌘ + Shift + K |
+
+Expand **HVAC takeoff specifications** in Measure to choose pipe, round duct, or rectangular
+duct, material, nominal size, and system. Square ducts use equal width and height. Material
+options include copper, carbon steel, stainless steel, galvanized steel, aluminum, and
+plastic piping. System options include supply, return, exhaust, outside air, hydronic,
+refrigerant, and condensate.
+
+Common nominal sizes are selectable, and the size field also accepts custom sizes with units.
+Specifications are saved with the PDF measurement and exported in dedicated XLSX columns.
+Quantities measure the drawn centerline. Fittings, rise/drop, insulation, duct surface area,
+and fabrication allowances remain on the roadmap.
+
+MCP exposes `takeoff_pipe` and `takeoff_duct`, with the same optional `hvac` fields
+(`profile`, `material`, `size`, and `service`).
+
 ## SimplyPDF roadmap
 
 The first release targets a local estimating workflow. Open a plan, calibrate it, take off
@@ -80,6 +110,11 @@ features. Keep the proprietary installer and any captured artifacts outside the 
 
 ### Checkpoint 2 · Make takeoffs reviewable and repeatable
 
+- [x] Add continuous route takeoff with segment/total preview and a held Shift direction lock.
+- [x] Add pipe and duct presets, shortcuts, nominal sizes, materials, and system tags saved to
+  PDF measurements and exported to XLSX.
+- [ ] Add fitting counts, rise/drop lengths, insulation, sheet-metal surface area, and
+  fabrication allowances with explicit formulas and unit tests.
 - [x] Apply separate horizontal and vertical calibration factors to distances and areas.
   Verify rotated pages and save/reopen through MCP.
 - [x] Add architectural, engineering, and metric construction presets with full-size and

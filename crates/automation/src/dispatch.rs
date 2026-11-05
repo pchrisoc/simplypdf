@@ -763,6 +763,8 @@ impl Automation {
             "fill_sign_add" => self.fill_sign_add(&a)?,
             "fill_sign_date_format" => self.fill_sign_date_format(&a)?,
             "measure_distance" => self.measurement_add(&a, pdfcraft_engine::measure::Kind::Distance)?,
+            "takeoff_pipe" => self.measurement_hvac(&a, true)?,
+            "takeoff_duct" => self.measurement_hvac(&a, false)?,
             "measure_perimeter" => self.measurement_add(&a, pdfcraft_engine::measure::Kind::Perimeter)?,
             "measure_area" => self.measurement_add(&a, pdfcraft_engine::measure::Kind::Area)?,
             "measure_info" => self.measurement_info(&a)?,

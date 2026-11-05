@@ -8204,7 +8204,7 @@ fn takeoff_export_xlsx_writes_numeric_cells_and_preserves_existing_files() {
         zip.by_name(name).unwrap().read_to_string(&mut text).unwrap();
         text
     };
-    assert!(xml("xl/workbook.xml").contains(r#"<definedName name="TakeoffData">Takeoff!$A$1:$I$2</definedName>"#));
+    assert!(xml("xl/workbook.xml").contains(r#"<definedName name="TakeoffData">Takeoff!$A$1:$M$2</definedName>"#));
     let sheet = xml("xl/worksheets/sheet1.xml");
     assert!(sheet.contains(r#"<c r="D2"><v>6</v></c>"#));
     assert!(!sheet.contains("<f>"));
@@ -8282,6 +8282,34 @@ fn measurement_scale_ratio_takes_the_page_side_in_a_unit() {
         ok(&mut a, "measure_scale", json!({"doc":doc,"page":1,"preset":preset,"sheet_size":size}));
         let reading = ok(&mut a, "measure_info", json!({"doc":doc,"page":1,"points":[[10.0,10.0],[10.0+points,10.0]]}));
         assert!((reading["reading"]["value"].as_f64().unwrap() - expected).abs() < 1e-9, "{preset} {size}: {reading}");
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn hvac_takeoff_specs_survive_save_and_xlsx_export() {
+    let dir = workdir("hvac-route");
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({"path":"a.pdf"}))["doc"].as_u64().unwrap();
+    ok(&mut a, "measure_scale", json!({"doc":doc,"page":1,"preset":"1/4\" = 1'"}));
+    let hvac = json!({"profile":"rectangular duct","material":"Stainless steel","size":"24 x 12 in","service":"Exhaust"});
+    ok(&mut a, "takeoff_duct", json!({"doc":doc,"page":1,"points":[[10,10],[28,10],[28,28]],"hvac":hvac}));
+    let list = ok(&mut a, "measure_list", json!({"doc":doc}));
+    assert_eq!(list["measurements"][0]["hvac"], hvac);
+    assert_eq!(list["measurements"][0]["reading"]["value"], 2.0);
+    ok(&mut a, "edit_undo", json!({"doc":doc}));
+    assert_eq!(ok(&mut a, "measure_list", json!({"doc":doc}))["count"], 0);
+    ok(&mut a, "edit_redo", json!({"doc":doc}));
+    ok(&mut a, "doc_save", json!({"doc":doc,"path":"hvac.pdf"}));
+    let reopened = ok(&mut a, "doc_open", json!({"path":"hvac.pdf"}))["doc"].as_u64().unwrap();
+    assert_eq!(ok(&mut a, "measure_list", json!({"doc":reopened}))["measurements"][0]["hvac"], hvac);
+    ok(&mut a, "takeoff_export_xlsx", json!({"doc":reopened,"out":"hvac.xlsx"}));
+    use std::io::Read;
+    let mut zip = zip::ZipArchive::new(std::fs::File::open(dir.join("hvac.xlsx")).unwrap()).unwrap();
+    let mut strings = String::new();
+    zip.by_name("xl/sharedStrings.xml").unwrap().read_to_string(&mut strings).unwrap();
+    for expected in ["Stainless steel", "24 x 12 in", "Exhaust"] {
+        assert!(strings.contains(expected), "{strings}");
     }
     let _ = std::fs::remove_dir_all(dir);
 }

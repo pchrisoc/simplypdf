@@ -6029,6 +6029,7 @@ fn measurement_edits_are_transactional_and_honour_annotation_permissions() {
     let mut session = Session::default();
     let id = session.open("plan.pdf", None, Arc::new(fixture(1)), None).unwrap();
     let m = measure::NewMeasurement {
+        hvac: None,
         page: 0,
         kind: measure::Kind::Distance,
         points: vec![[10.0, 20.0], [40.0, 60.0]],

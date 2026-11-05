@@ -1571,6 +1571,18 @@ fn measurement_tools_draw_live_calibrate_save_and_export() {
     h.get_by_label("Export takeoff as XLSX").click();
     h.run_steps(2);
     assert_eq!(std::fs::read(&workbook).unwrap(), b"existing estimate");
+    ok(&mut h, &c, "ui.key", json!({"key":"J","modifiers":["command","shift"]}));
+    h.run_steps(2);
+    h.state_mut().views[0].measure.hvac.as_mut().unwrap().size = "2 in".into();
+    for (x, y) in [(20.0, 30.0), (80.0, 30.0), (80.0, 110.0)] {
+        click(&mut h, &c, x, y);
+    }
+    ok(&mut h, &c, "ui.key", json!({"key":"Enter"}));
+    h.run_steps(3);
+    let saved = h.state().session.get(doc).unwrap().measurements().unwrap();
+    let pipe = saved.measurements.last().unwrap().hvac.as_ref().unwrap();
+    assert_eq!(pipe.profile, "pipe");
+    assert_eq!(pipe.size, "2 in");
     h.state_mut().set_option("quick", "measure-calibrate").unwrap();
     click(&mut h, &c, 30.0, 50.0);
     click(&mut h, &c, 130.0, 50.0);

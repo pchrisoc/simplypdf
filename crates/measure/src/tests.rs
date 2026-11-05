@@ -18,6 +18,7 @@ fn close(a: f64, b: f64) {
     assert!((a - b).abs() < 1e-8, "{a} != {b}");
 }
 fn new(kind: Kind, points: Vec<Point>) -> NewMeasurement {
+        hvac: None,
     NewMeasurement {
         page: 0,
         kind,

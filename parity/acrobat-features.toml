@@ -4387,7 +4387,7 @@ notes = "Two-point distance annotations with saved numeric captions and rectilin
 
 [[feature]]
 id = "comment.measure-perimeter"
-title = "Perimeter measuring tool"
+title = "Continuous length and perimeter measuring tool"
 area = "E"
 tier = "P2"
 milestone = "M12"
@@ -4395,7 +4395,7 @@ status = "shipped"
 commands = ["measure.perimeter"]
 tools = ["measure_perimeter"]
 evidence = ["crates/automation/tests/it/automation.rs::measurements_calibrate_draw_save_reopen_and_export", "crates/measure/src/tests.rs::calibrated_lengths_concave_areas_and_axis_scales", "crates/ui-egui/tests/it/control.rs::measurement_tools_draw_live_calibrate_save_and_export"]
-notes = "Connected-line lengths with click vertices and double-click/Enter finish. Repeat the first point to include a closing edge. Saved standard PolyLineDimension annotations."
+notes = "Connected-line lengths with click vertices and double-click/Enter finish. Repeat the first point to include a closing edge. Saved standard PolyLineDimension annotations. Cursor readout includes segment and cumulative length; Shift latches the nearest 45-degree ray until released."
 
 [[feature]]
 id = "comment.measure-area"
@@ -10332,3 +10332,16 @@ commands = []
 tools = []
 evidence = []
 notes = ""
+
+
+[[feature]]
+id = "comment.hvac-takeoff"
+title = "HVAC pipe and sheet-metal route takeoff"
+area = "E"
+tier = "P2"
+milestone = "M12"
+status = "partial"
+commands = ["measure.pipe", "measure.duct"]
+tools = ["takeoff_pipe", "takeoff_duct"]
+evidence = ["crates/automation/tests/it/automation.rs::hvac_takeoff_specs_survive_save_and_xlsx_export", "crates/ui-egui/tests/it/control.rs::measurement_tools_draw_live_calibrate_save_and_export"]
+notes = "Continuous centerline routes with pipe/round/rectangular duct profile, material, nominal size and system. Metadata survives undo/redo, PDF save/reopen and XLSX export. Fitting counts, rise/drop, insulation, duct surface area, fabrication allowances and cross-platform qualification are pending."

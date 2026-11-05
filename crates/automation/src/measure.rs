@@ -8,6 +8,18 @@ use serde_json::{Value, json};
 use std::path::Path;
 
 impl Automation {
+    pub(crate) fn measurement_hvac(&mut self, a: &Args, pipe: bool) -> Result<Value> {
+        let mut args = a.0.clone();
+        if a.get("hvac").is_none() {
+            args["hvac"] = json!(if pipe { measure::hvac::Takeoff::pipe() } else { measure::hvac::Takeoff::duct() });
+        }
+        let profile = args.get("hvac").and_then(|value| value.get("profile")).and_then(Value::as_str);
+        if pipe && profile != Some("pipe") || !pipe && !matches!(profile, Some("round duct" | "rectangular duct")) {
+            return Err(failed("choose a pipe profile for takeoff_pipe or a duct profile for takeoff_duct"));
+        }
+        self.measurement_add(&Args(&args), Kind::Perimeter)
+    }
+
     fn measurement_points(&self, a: &Args) -> Result<(usize, Vec<measure::Point>)> {
         let page = self.page(a)?;
         let arr = a.get("points").and_then(Value::as_array).ok_or_else(|| ToolError::InvalidArgs("points must be arrays of [x,y]".into()))?;
@@ -30,7 +42,9 @@ impl Automation {
         let (page, points) = self.measurement_points(a)?;
         let at = points.first().copied().ok_or_else(|| failed("measurement needs points"))?;
         let scale = self.doc(a)?.measurement_scale(page, at).map_err(failed)?;
+        let hvac = a.get("hvac").map(|value| serde_json::from_value(value.clone()).map_err(failed)).transpose()?;
         let edit = Edit::AddMeasurement(NewMeasurement {
+            hvac,
             page,
             kind,
             points,

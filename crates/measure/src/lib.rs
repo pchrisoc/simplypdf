@@ -3,6 +3,7 @@
 //! annotations use the measurement intents of line, polygon and polyline annotations (§12.5.6).
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
+pub mod hvac;
 pub mod presets;
 pub mod snap;
 #[cfg(not(target_arch = "wasm32"))]
@@ -342,6 +343,7 @@ pub struct NewMeasurement {
     pub style: Style,
     pub label: String,
     pub author: String,
+    pub hvac: Option<hvac::Takeoff>,
 }
 /// An area's vertices without a repeated closing vertex (last == first), which some
 /// writers include; the closing edge is implicit.
@@ -396,6 +398,12 @@ fn annot(doc: &Document, page_index: usize, index: usize) -> Result<(ObjRef, Dic
 }
 pub fn add(doc: &mut Document, new: &NewMeasurement, meta: &Meta) -> Result<usize> {
     validate_geometry(new.kind, &new.points)?;
+    if let Some(hvac) = &new.hvac {
+        hvac.validate()?;
+        if new.kind != Kind::Perimeter {
+            return Err(invalid("HVAC takeoffs require a continuous length measurement"));
+        }
+    }
     let info = reading(new.kind, &new.points, &new.scale)?;
     if info.value <= 0.0 {
         return Err(invalid("measurement must have a positive length or area"));
@@ -424,6 +432,13 @@ pub fn add(doc: &mut Document, new: &NewMeasurement, meta: &Meta) -> Result<usiz
     d.set(b"IT".to_vec(), Object::name(new.kind.intent()));
     d.set(b"Measure".to_vec(), Object::Dict(new.scale.dictionary()?));
     d.set(b"Subj".to_vec(), PdfString::text(new.kind.name()));
+    if let Some(hvac) = &new.hvac {
+        let mut props = Dict::new();
+        for (key, value) in [(b"Profile".as_slice(), &hvac.profile), (b"Material".as_slice(), &hvac.material), (b"Size".as_slice(), &hvac.size), (b"Service".as_slice(), &hvac.service)] {
+            props.set(key.to_vec(), PdfString::text(value));
+        }
+        d.set(b"SimplyPDFHVAC".to_vec(), Object::Dict(props));
+    }
     d.set(b"PCMeasureLabel".to_vec(), PdfString::text(&new.label));
     d.set(b"PCMeasureValue".to_vec(), PdfString::text(&info.label));
     if new.kind == Kind::Distance {
@@ -454,6 +469,7 @@ pub struct Measurement {
     pub points: Vec<Point>,
     pub scale: Scale,
     pub reading: Reading,
+    pub hvac: Option<hvac::Takeoff>,
 }
 /// A measurement annotation that couldn't be read (unsupported scale format, invalid
 /// geometry). Its PDF data is left untouched.
@@ -478,7 +494,8 @@ const MAX_LISTED_BYTES: usize = 32 << 20;
 /// The bytes a listed measurement keeps in points and text.
 fn retained(m: &Measurement) -> usize {
     let s = &m.scale;
-    [m.id.len(), m.author.len(), m.label.len(), s.unit.len(), s.area_unit.len(), s.ratio.len()]
+    let hvac_bytes = m.hvac.as_ref().map_or(0, |hvac| hvac.profile.len() + hvac.material.len() + hvac.size.len() + hvac.service.len());
+    [hvac_bytes, m.id.len(), m.author.len(), m.label.len(), s.unit.len(), s.area_unit.len(), s.ratio.len()]
         .into_iter()
         .fold(m.points.len().saturating_mul(std::mem::size_of::<Point>()), usize::saturating_add)
 }
@@ -494,7 +511,10 @@ fn read_measurement(doc: &Document, d: &Dict, kind: Kind, page: usize, index: us
     let points: Vec<Point> = v.as_chunks::<2>().0.to_vec();
     validate_geometry(kind, &points)?;
     let reading = reading(kind, &points, &scale)?;
-    Ok(Measurement { page, index, id: text(d, b"NM"), author: text(d, b"T"), label: text(d, b"PCMeasureLabel"), points, scale, reading })
+    let hvac = d.get(b"SimplyPDFHVAC").and_then(Object::as_dict).map(|props| hvac::Takeoff {
+        profile: text(props, b"Profile"), material: text(props, b"Material"), size: text(props, b"Size"), service: text(props, b"Service"),
+    });
+    Ok(Measurement { hvac, page, index, id: text(d, b"NM"), author: text(d, b"T"), label: text(d, b"PCMeasureLabel"), points, scale, reading })
 }
 /// Every measurement annotation. One that can't be read is reported in `unsupported`
 /// rather than failing the whole list.

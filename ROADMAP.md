@@ -223,6 +223,8 @@ Ranked; detail and the full milestone table in [docs/roadmap.md](docs/roadmap.md
 
 ## Progress log
 
+- **2026-11-04 (M12, HVAC routes):** Continuous route previews show segment and cumulative length. Shift holds a selected 45-degree ray until release. Pipe and sheet-metal tools have shortcuts and persist nominal specifications with the PDF and XLSX takeoff.
+
 - **2026-11-04 (M12, construction presets):** Desktop and MCP share architectural, engineering, and metric presets. Half-size sheets use half of the nominal paper distance for the same real-world distance.
 
 - **2026-11-04 (M12, construction scale):** A vertical correction can be applied to a horizontal drawing scale in the Measure panel and through automation. The persisted factors follow the displayed axes when set on a rotated page.
