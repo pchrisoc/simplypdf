@@ -13,3 +13,8 @@ Bluebeam documents wheel zoom in single-page mode and scrolling in continuous mo
 SimplyPDF currently displays one sheet at a time. Its Rust viewer uses wheel or gesture zoom around the pointer, middle-button drag, a Pan toggle for primary-button dragging, and a Fit page button. Zoom limits of 50% to 800% of fit and the anchor calculation are SimplyPDF design choices. The selected point stays in canonical page coordinates as the canvas moves. Continuous mode and configurable wheel behavior are future comparison items.
 
 Keep the installer, assemblies, extracted code, and analysis dumps outside Git. This note records evidence identifiers and behavior summaries.
+
+
+## Cursor and temporary pan
+
+Bluebeam documents V for Select, Shift+V for Pan, middle-button dragging, and holding Space to temporarily pan. SimplyPDF uses V for Inspect, Shift+V for Pan, and supports both temporary pan gestures. The viewer uses a system crosshair for point inspection, an open hand when Pan is ready, and a closed hand while the canvas is held. These are SimplyPDF cursor choices. Bluebeam cursor assets and exact runtime cursor transitions were outside this comparison. [Revu mouse navigation and shortcuts](https://support.bluebeam.com/revu/resources/keyboard-shortcuts.html)

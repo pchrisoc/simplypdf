@@ -2,7 +2,7 @@
 
 use std::path::{Path, PathBuf};
 
-use eframe::egui::{self, Color32, ColorImage, Key, Modifiers, PointerButton, Pos2, Rect, TextureHandle, Vec2};
+use eframe::egui::{self, Color32, ColorImage, CursorIcon, Key, Modifiers, PointerButton, Pos2, Rect, TextureHandle, Vec2};
 use simplypdf_core::geometry::{PageGeometry, Point};
 use simplypdf_draw::zoom_history::ZoomHistory;
 
@@ -19,6 +19,7 @@ pub struct Viewer {
     navigation: Navigation,
     zoom_history: ZoomHistory<Navigation>,
     pan_tool: bool,
+    primary_pan: bool,
     error: Option<String>,
 }
 
@@ -33,6 +34,7 @@ impl Viewer {
             navigation: Navigation::default(),
             zoom_history: ZoomHistory::default(),
             pan_tool: false,
+            primary_pan: false,
             error: None,
         };
         viewer.open(context, &path);
@@ -71,6 +73,7 @@ impl Viewer {
         self.image = Some((texture, page.geometry, uv));
         self.page_index = index;
         self.selected = None;
+        self.primary_pan = false;
         self.navigation = Navigation::default();
         self.zoom_history = ZoomHistory::default();
         self.zoom_history.insert(self.navigation);
@@ -158,6 +161,13 @@ impl Viewer {
 
         let count = self.document.as_ref().map_or(0, Document::page_count);
         if count > 0 {
+            context.input_mut(|input| {
+                if input.consume_key(Modifiers::SHIFT, Key::V) {
+                    self.pan_tool = true;
+                } else if input.consume_key(Modifiers::NONE, Key::V) {
+                    self.pan_tool = false;
+                }
+            });
             let next = context.input_mut(|input| {
                 if input.consume_key(Modifiers::NONE, Key::PageDown) {
                     self.page_index.saturating_add(1).min(count - 1)
@@ -197,7 +207,10 @@ impl Viewer {
                         self.apply_navigation(Command::FitPage);
                     }
                     ui.separator();
-                    ui.toggle_value(&mut self.pan_tool, "Pan");
+                    ui.selectable_value(&mut self.pan_tool, false, "Inspect")
+                        .on_hover_text("Inspect a drawing point (V)");
+                    ui.selectable_value(&mut self.pan_tool, true, "Pan")
+                        .on_hover_text("Pan the drawing (Shift+V)");
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     egui::widgets::global_theme_preference_switch(ui);
@@ -241,7 +254,7 @@ impl Viewer {
                     ui.label(if self.pan_tool {
                         "Drag to pan"
                     } else {
-                        "Click to inspect · Scroll to zoom · Middle-drag to pan"
+                        "Click to inspect · Scroll to zoom · Hold Space to pan"
                     });
                 }
             });
@@ -264,8 +277,22 @@ impl Viewer {
             if response.double_clicked_by(PointerButton::Middle) {
                 self.apply_navigation(Command::FitPage);
             }
+            let (space_pan, primary_pressed, primary_down, middle_down) = ui.input(|input| {
+                (
+                    input.key_down(Key::Space),
+                    input.pointer.button_pressed(PointerButton::Primary),
+                    input.pointer.button_down(PointerButton::Primary),
+                    input.pointer.button_down(PointerButton::Middle),
+                )
+            });
+            let pan_mode = self.pan_tool || space_pan;
+            let canvas_pressed = response.is_pointer_button_down_on();
+            if primary_pressed {
+                // Keep the press intent through release, even if Space is released first.
+                self.primary_pan = canvas_pressed && pan_mode;
+            }
             if response.dragged_by(PointerButton::Middle)
-                || (self.pan_tool && response.dragged_by(PointerButton::Primary))
+                || (self.primary_pan && response.dragged_by(PointerButton::Primary))
             {
                 self.navigation.pan += response.drag_delta();
             }
@@ -286,10 +313,23 @@ impl Viewer {
             let painter = ui.painter().with_clip_rect(canvas);
             painter.image(texture, rect, uv, Color32::WHITE);
 
-            if !self.pan_tool && response.clicked_by(PointerButton::Primary) {
+            if canvas_pressed && (middle_down || (self.primary_pan && primary_down)) {
+                context.set_cursor_icon(CursorIcon::Grabbing);
+            } else if let Some(pointer) = response.hover_pos() {
+                if pan_mode {
+                    context.set_cursor_icon(CursorIcon::Grab);
+                } else if rect.contains(pointer) {
+                    context.set_cursor_icon(CursorIcon::Crosshair);
+                }
+            }
+
+            if !pan_mode && !self.primary_pan && response.clicked_by(PointerButton::Primary) {
                 if let Some(position) = response.interact_pointer_pos().filter(|p| rect.contains(*p)) {
                     self.selected = view.canvas_to_page([position.x.into(), position.y.into()]).ok();
                 }
+            }
+            if !primary_down {
+                self.primary_pan = false;
             }
             if let Some(point) = self.selected {
                 if let Ok([x, y]) = view.page_to_canvas(point) {
@@ -340,14 +380,14 @@ mod tests {
         Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures/page-geometry.pdf")
     }
 
-    fn frame(viewer: &mut Viewer, context: &egui::Context, input: egui::RawInput) {
-        let _ = context.run(
+    fn frame(viewer: &mut Viewer, context: &egui::Context, input: egui::RawInput) -> CursorIcon {
+        context.run(
             egui::RawInput {
                 screen_rect: Some(Rect::from_min_size(Pos2::ZERO, Vec2::new(900.0, 650.0))),
                 ..input
             },
             |ctx| viewer.draw(ctx),
-        );
+        ).platform_output.cursor_icon
     }
 
     fn pointer_button(pos: Pos2, button: PointerButton, pressed: bool) -> egui::Event {
@@ -377,6 +417,34 @@ mod tests {
             assert_eq!(viewer.navigation.pan, delta);
             assert_eq!(viewer.selected, Some([150.0, 120.0]));
         }
+    }
+
+    #[test]
+    fn canvas_cursor_follows_inspect_pan_and_temporary_pan() {
+        let context = egui::Context::default();
+        let mut viewer = Viewer::new(&context, fixture());
+        frame(&mut viewer, &context, egui::RawInput::default());
+        let pos = Pos2::new(450.0, 300.0);
+        let mut send = |events| {
+            frame(&mut viewer, &context, egui::RawInput { events, ..Default::default() })
+        };
+        let key = |key, pressed, modifiers| egui::Event::Key {
+            key, physical_key: None, pressed, repeat: false, modifiers,
+        };
+
+        assert_eq!(send(vec![egui::Event::PointerMoved(pos)]), CursorIcon::Crosshair);
+        assert_eq!(send(vec![key(Key::V, true, Modifiers::SHIFT)]), CursorIcon::Grab);
+        assert_eq!(send(vec![pointer_button(pos, PointerButton::Primary, true)]), CursorIcon::Grabbing);
+        assert_eq!(send(vec![pointer_button(pos, PointerButton::Primary, false)]), CursorIcon::Grab);
+        assert_eq!(send(vec![key(Key::V, true, Modifiers::NONE)]), CursorIcon::Crosshair);
+        assert_eq!(send(vec![pointer_button(pos, PointerButton::Middle, true)]), CursorIcon::Grabbing);
+        assert_eq!(send(vec![pointer_button(pos, PointerButton::Middle, false)]), CursorIcon::Crosshair);
+
+        assert_eq!(send(vec![key(Key::Space, true, Modifiers::NONE)]), CursorIcon::Grab);
+        assert_eq!(send(vec![pointer_button(pos, PointerButton::Primary, true)]), CursorIcon::Grabbing);
+        assert_eq!(send(vec![key(Key::Space, false, Modifiers::NONE)]), CursorIcon::Grabbing);
+        assert_eq!(send(vec![pointer_button(pos, PointerButton::Primary, false)]), CursorIcon::Crosshair);
+        assert!(viewer.selected.is_none());
     }
 
     #[test]

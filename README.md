@@ -31,7 +31,7 @@ Project remote (SSH) `git@github.com:pchrisoc/simplypdf.git`
 - [x] Compare PDFium with the macOS reference on the four-page fixture and record its UserUnit behavior.
 - [x] Read page boxes, rotation, and UserUnit from the actual PDF in the PDFium probe.
 - [ ] Verify PDFium on Windows and Linux and validate parser agreement on a broader fixture corpus before wiring a production adapter.
-- [x] Add single-page zoom, pan, and Fit page controls informed by the [Revu navigation study](docs/revu-navigation-study.md).
+- [x] Add single-page zoom, pan, Fit Page, and mode-specific cursors informed by the [Revu navigation study](docs/revu-navigation-study.md).
 - [x] Add the macOS file picker, file drop, and keyboard navigation. Exercise both pan gestures through egui input tests.
 - [x] Put File and View in the macOS system menu bar. Verify File → Open, ⌘O, selection, and cancellation.
 - [ ] Connect the in-window menu to the Windows viewer and verify native input on supported desktop platforms.

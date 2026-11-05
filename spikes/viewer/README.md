@@ -1,6 +1,6 @@
 # macOS viewer spike
 
-This Rust prototype opens a local PDF, lists its pages, fits the selected page to the window, and reports canonical page coordinates when clicked. Use +/− or scroll over the drawing to zoom. Middle-drag or enable Pan and drag with the primary button. Use Fit page to reset the view. It defaults to SimplyPDF's synthetic four-page fixture. Use only trusted PDFs while parsing and rendering run inside the desktop process.
+This Rust prototype opens a local PDF, lists its pages, fits the selected page to the window, and reports canonical page coordinates when clicked. Use +/− or scroll over the drawing to zoom. Use **V** for Inspect (crosshair) and **Shift+V** for Pan (open hand). Drag in Pan mode, hold Space and drag, or middle-drag to pan with a closed hand cursor. Use Fit page to reset the view. It defaults to SimplyPDF's synthetic four-page fixture. Use only trusted PDFs while parsing and rendering run inside the desktop process.
 
 From the repository root on macOS:
 

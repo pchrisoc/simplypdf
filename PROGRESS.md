@@ -100,3 +100,11 @@ Next slice is to connect zoom history to the viewer's View menu and expand the D
 - Ran fourteen workspace tests and eight viewer and metadata tests on macOS arm64. The updated native submenu was compiled. Live menu testing and Windows verification were outside this pass.
 
 Next slice is to map the standard toolbar and File/Edit menu IDs to their Draw handlers and port the next set of executable commands.
+
+## 2026-11-04 · Viewer mode cursors
+
+- Added system crosshair, open-hand, and closed-hand cursors for Inspect, Pan, and an active pan gesture. Added V and Shift+V for mode switching and Space for temporary pan, following Revu's documented navigation controls.
+- The primary gesture remembers whether it began as a pan, so releasing Space before the mouse button neither stops the drag nor places an inspection point. Verified cursor requests through egui input events for Inspect, Pan, middle-button pan, and temporary pan.
+- Ran nine viewer and metadata tests and fourteen workspace tests on macOS arm64. Native cursor appearance and Windows behavior remain unverified.
+
+Next viewer tools should define their cursor and temporary pan behavior alongside their input tests.
