@@ -770,6 +770,7 @@ impl Automation {
             "measure_scale" => self.measurement_scale(&a)?,
             "measure_snap" => self.measurement_snap(&a)?,
             "measure_export" => self.measurement_export(&a)?,
+            "takeoff_export_xlsx" => self.takeoff_export_xlsx(&a)?,
             "comment_list" => self.comment_list(&a)?,
             "comment_add" => self.comment_add(&a)?,
             "stamp_custom" => self.stamp_custom(&a)?,

@@ -7,6 +7,17 @@ Agent control for PdfCraft: a headless tool table over the engine, and an opt-in
 
 `fill_sign_add` text accepts line breaks, including blank lines. Its typewriter box grows to hold all wrapped rows, and saving/reopening preserves the contents and appearance.
 
+## Takeoff workbook
+
+Call `takeoff_export_xlsx` with `{"doc":1,"out":"takeoff.xlsx"}` through the CLI or MCP.
+It creates a workbook from the current document, including measurement edits made in the
+current session. The result reports unsupported measurements and whether enumeration reached
+its limits. Choose a fresh output path for each export.
+
+The `TakeoffData` named range contains the header and all measurement rows. In a separate
+LibreOffice Calc estimate, use **Sheet → External Links** to import this range. Calc can poll
+the source workbook at a configured interval. Automatic publication from PDF edits is pending.
+
 ## API
 
 ```rust

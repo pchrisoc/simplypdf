@@ -78,7 +78,7 @@ config works across the suite) keep the agent to the folders you give it:
   root instead of the installed fonts.
 - Every file a tool writes must lie inside the **write root**: `doc_save` (also saving in place),
   `page_extract`, `doc_combine`, `doc_create_multiple`, `doc_split`, `doc_reduce`, `doc_optimize`,
-  `doc_print` to a file, the `doc_export_*` tools, `image_save`, `measure_export`,
+  `doc_print` to a file, the `doc_export_*` tools, `image_save`, `measure_export`, `takeoff_export_xlsx`,
   `comments_summarize`, the accessibility report and review record, `doc_compare_report`,
   `form_merge_data`, the output folders of `action_run` and `ocr_recognize_files`, `sign_id_create`
   and `sign_document`.

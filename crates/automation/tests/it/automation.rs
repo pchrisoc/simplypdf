@@ -8182,6 +8182,54 @@ fn measurements_calibrate_draw_save_reopen_and_export() {
 }
 
 #[test]
+fn takeoff_export_xlsx_writes_numeric_cells_and_preserves_existing_files() {
+    use std::io::Read;
+
+    let dir = workdir("takeoff-xlsx");
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({"path":"a.pdf"}))["doc"].as_u64().unwrap();
+    ok(&mut a, "measure_scale", json!({"doc":doc,"page":1,"units_per_point":0.5,"unit":"m"}));
+    ok(&mut a, "measure_distance", json!({"doc":doc,"page":1,"points":[[10,10],[22,10]],"label":"=1+1"}));
+
+    let args = json!({"doc":doc,"out":"takeoff.xlsx"});
+    let result = ok(&mut a, "takeoff_export_xlsx", args.clone());
+    assert_eq!(result["count"], 1);
+    assert_eq!(result["unsupported"], 0);
+    assert_eq!(result["truncated"], false);
+
+    let bytes = std::fs::read(dir.join("takeoff.xlsx")).unwrap();
+    let mut zip = zip::ZipArchive::new(std::io::Cursor::new(&bytes)).unwrap();
+    let mut xml = |name| {
+        let mut text = String::new();
+        zip.by_name(name).unwrap().read_to_string(&mut text).unwrap();
+        text
+    };
+    assert!(xml("xl/workbook.xml").contains(r#"<definedName name="TakeoffData">Takeoff!$A$1:$I$2</definedName>"#));
+    let sheet = xml("xl/worksheets/sheet1.xml");
+    assert!(sheet.contains(r#"<c r="D2"><v>6</v></c>"#));
+    assert!(!sheet.contains("<f>"));
+    assert!(xml("xl/sharedStrings.xml").contains("<t>=1+1</t>"));
+    assert!(a.call("takeoff_export_xlsx", &args).is_err());
+    assert_eq!(std::fs::read(dir.join("takeoff.xlsx")).unwrap(), bytes);
+    assert!(a.call("takeoff_export_xlsx", &json!({"doc":doc,"out":"../outside.xlsx"})).is_err());
+    assert!(a.call("takeoff_export_xlsx", &json!({"doc":doc,"out":"a.pdf"})).is_err());
+
+    #[cfg(feature = "mcp")]
+    {
+        let mut server = McpServer::new(a);
+        let reply = rpc(
+            &mut server,
+            1,
+            "tools/call",
+            json!({"name":"takeoff_export_xlsx","arguments":{"doc":doc,"out":"mcp.xlsx"}}),
+        );
+        assert_ne!(reply["result"]["isError"], true, "{reply}");
+        assert!(dir.join("mcp.xlsx").is_file(), "{reply}");
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
 fn measurement_scale_ratio_takes_the_page_side_in_a_unit() {
     // #2752: a plan drawn at 1:50 is "1 mm = 50 mm", so a line 10 mm long on the page is 500 mm.
     let dir = workdir("measurement-ratio");

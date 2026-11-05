@@ -4458,6 +4458,17 @@ evidence = ["crates/automation/tests/it/automation.rs::measurements_calibrate_dr
 notes = "Atomic CSV export of page, annotation index, type, numeric value, unit, label, author and scale. Quotes embedded delimiters and prefixes spreadsheet formula triggers."
 
 [[feature]]
+id = "comment.takeoff-xlsx"
+title = "Takeoff workbook and live spreadsheet link"
+area = "E"
+tier = "P3"
+milestone = "M12"
+status = "partial"
+tools = ["takeoff_export_xlsx"]
+evidence = ["crates/automation/tests/it/automation.rs::takeoff_export_xlsx_writes_numeric_cells_and_preserves_existing_files"]
+notes = "CLI and MCP can create a measurement snapshot with numeric values and a named data range. Automatic publication and desktop setup are pending."
+
+[[feature]]
 id = "comment.geospatial"
 title = "Geospatial location and measuring"
 area = "E"

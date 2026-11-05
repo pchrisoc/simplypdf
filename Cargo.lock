@@ -4282,10 +4282,12 @@ dependencies = [
  "pdfcraft-render",
  "pdfcraft-xfa",
  "png 0.18.1",
+ "rust_xlsxwriter",
  "rustix 1.1.5",
  "serde_json",
  "sha2 0.11.1",
  "tempfile",
+ "zip",
 ]
 
 [[package]]
@@ -5789,6 +5791,15 @@ checksum = "1007f05160f9ea2ce4e9c67324e5bafb27ae1e5302d0c6b1ea4db0d35fed78ee"
 dependencies = [
  "rten-base",
  "rten-simd",
+]
+
+[[package]]
+name = "rust_xlsxwriter"
+version = "0.102.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ca3d0e879a578c1313c2800ab0c6c029d38eed18098675e50341a30d32372ed"
+dependencies = [
+ "zip",
 ]
 
 [[package]]
