@@ -4,13 +4,13 @@ SimplyPDF will translate LibreOffice Draw source to Rust in reviewable slices. T
 
 ## Local upstream checkout
 
-The complete pinned LibreOffice Core tree is checked out at `references/libreoffice/core`. It contains 149,176 tracked paths, including 2,269 under `sd/`. The checkout is shallow and includes every tracked file at the pinned revision. The parent repository ignores it.
+The complete pinned LibreOffice Core tree is checked out at `references/libreoffice/core`. It contains 149,176 tracked paths, including 2,269 under `sd/`. The checkout is shallow and includes every tracked file at the pinned revision. The parent repository ignores it. The dictionaries, help, and translations submodules are checked out at their pinned revisions.
 
 ```sh
 mkdir -p references/libreoffice
 git clone --depth 1 --single-branch --branch libreoffice-26.8.0.3 \
   https://github.com/LibreOffice/core.git references/libreoffice/core
-git -C references/libreoffice/core submodule update --init --jobs 3
+git -C references/libreoffice/core submodule update --init --depth 1 --jobs 3
 git -C references/libreoffice/core rev-parse HEAD
 git -C references/libreoffice/core submodule status
 git -C references/libreoffice/core status --short

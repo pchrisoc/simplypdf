@@ -111,7 +111,7 @@ Next viewer tools should define their cursor and temporary pan behavior alongsid
 
 ## 2026-11-04 · Full Draw source checkout and viewport translation
 
-- Cloned all 149,176 tracked paths in LibreOffice Core 26.8.0.3 at `bce0998afefdbc355585ca324285661a2170ba77` into ignored `references/libreoffice/core`. Verified the revision, full working tree, and clean checkout. The source stayed local.
+- Cloned all 149,176 tracked paths in LibreOffice Core 26.8.0.3 at `bce0998afefdbc355585ca324285661a2170ba77` into ignored `references/libreoffice/core`. Verified the revision, full working tree, and clean checkout. Checked out and verified the pinned dictionaries, help, and translations submodules. The source stayed local.
 - Ported three Draw viewport calculations from `sdwindow.cxx` and the drag and release decisions from `fuzoom.cxx` into the standalone Rust Draw crate. Retained source notices. The new code has no SimplyPDF viewer dependency or UI wiring.
 - All 22 workspace tests passed on macOS arm64. A temporary C++ harness compiled the original three viewport methods with stub window effects and matched Rust output on all 1,024 seeded cases. The harness and original C++ stayed local. Native Draw UI behavior and cross-platform builds remain unverified.
 
