@@ -80,6 +80,7 @@ impl PdfCraftApp {
             left: LeftPanel::AllTools,
             side_panels: Default::default(),
             left_open: true,
+            takeoff_workspace: Default::default(),
             right: None,
             last_right: RightPanel::Comments,
             right_before_read: None,
@@ -675,6 +676,7 @@ impl eframe::App for PdfCraftApp {
             self.all_tools_full = false;
         }
         side_panels::show(self, ui);
+        crate::takeoff_workspace::show(self, ui);
         let t = theme::Tokens::get(&ctx);
         egui::CentralPanel::default().frame(egui::Frame::NONE.fill(t.pasteboard)).show(ui, |ui| {
             if self.mode == Mode::AllTools && self.all_tools_full {
@@ -690,6 +692,7 @@ impl eframe::App for PdfCraftApp {
                 }
             }
         });
+        crate::takeoff_workspace::settings_window(self, &ctx);
         self.process_pending_edits();
         palette::show(self, &ctx);
         dialogs::show(self, &ctx);

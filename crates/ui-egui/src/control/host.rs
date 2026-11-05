@@ -73,6 +73,7 @@ impl Host for crate::PdfCraftApp {
         let pending_opens: Vec<Value> = Vec::new();
         json!({
             "side_panels": crate::side_panels::state(self),
+            "takeoff_workspace": crate::takeoff_workspace::state(self),
             "documents": docs,
             "pending_opens": pending_opens,
             "active": active.map(|v| json!({

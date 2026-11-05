@@ -62,6 +62,24 @@ and fabrication allowances remain on the roadmap.
 MCP exposes `takeoff_pipe` and `takeoff_duct`, with the same optional `hvac` fields
 (`profile`, `material`, `size`, and `service`).
 
+## Measurement workspace
+
+The **Takeoff table** opens at the bottom when a drawing is open. Drag its top border to make
+it taller or shorter. Search across measurement and HVAC fields, then click any column header
+to sort. Clicking the header again reverses the order. Quantities sort numerically, and the
+filtered totals keep each unit separate. Selecting a row selects its markup and page.
+
+Use **Table placement** to attach the table to the bottom, left, or right, or open it in a
+floating window. Drag a floating window by its title bar and resize its edges. The table
+contains saved measurements and HVAC routes.
+
+In Measure, **Settings placement** moves the measurement controls to the left sidebar, right
+sidebar, or a floating window. Positions and the bottom table height are remembered.
+
+The opt-in UI control channel supports `ui.set` keys `measurement-settings`,
+`takeoff-table`, `takeoff-search`, and `takeoff-sort`. Sort values are column names such as
+`Value` or `-Value` for descending order.
+
 ## SimplyPDF roadmap
 
 The first release targets a local estimating workflow. Open a plan, calibrate it, take off
@@ -110,6 +128,9 @@ features. Keep the proprietary installer and any captured artifacts outside the 
 
 ### Checkpoint 2 · Make takeoffs reviewable and repeatable
 
+- [x] Add a resizable bottom takeoff table with search, column sorting, unit-separated totals,
+  and selection linked to the drawing.
+- [x] Support left/right docking and floating measurement settings and takeoff table windows.
 - [x] Add continuous route takeoff with segment/total preview and a held Shift direction lock.
 - [x] Add pipe and duct presets, shortcuts, nominal sizes, materials, and system tags saved to
   PDF measurements and exported to XLSX.
@@ -127,8 +148,8 @@ features. Keep the proprietary installer and any captured artifacts outside the 
   visibility and assignment from the desktop and MCP.
 - [ ] Add point counts with editable groups and visible totals. Verify click, delete, regroup,
   save/reopen, undo, MCP, and XLSX export.
-- [ ] Build a takeoff table with selection synced to the drawing. Add filter, sort, and grouped
-  totals by sheet, type, subject, label, and unit. Keep incompatible units separate.
+- [ ] Extend the takeoff table with grouped totals by sheet, type, subject, and label, plus
+  general markup rows and custom columns. Keep incompatible units separate.
 - [ ] Add reusable takeoff presets, named spaces, and multi-sheet quantity totals. Verify a
   fixture with two scales and two trades produces the expected totals in the app, MCP, and Calc.
 - [ ] Add area cutouts and depth-based volume after the core quantities and sync pass.

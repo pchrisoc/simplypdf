@@ -77,6 +77,7 @@ impl PdfCraftApp {
         let trusted: Vec<String> = self.session.trusted_certificates().iter().map(pdfcraft_engine::sign::x509::to_pem).collect();
         let mut v = serde_json::json!({
             "side_panels": self.side_panels.to_json(self.left_open),
+            "takeoff_workspace": self.takeoff_workspace,
             "docking_right": self.right,
             "recent": self.recent.iter().take(self.recent_limit).collect::<Vec<_>>(),
             "reopen_last_session": self.reopen_last_session,
@@ -165,6 +166,9 @@ impl PdfCraftApp {
             }
             bar.normalize();
             self.hotbar = bar;
+        }
+        if let Some(workspace) = v.get("takeoff_workspace").and_then(|v| serde_json::from_value(v.clone()).ok()) {
+            self.takeoff_workspace = workspace;
         }
         let panels = side_panels::restore(&v);
         self.side_panels = panels.panels;

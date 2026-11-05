@@ -301,6 +301,7 @@ pub fn state(app: &PdfCraftApp) -> Value {
 pub fn command(app: &mut PdfCraftApp, reset: bool, params: &Value) -> Result<Value, String> {
     if reset {
         app.side_panels = SidePanels::default();
+        app.takeoff_workspace = Default::default();
         app.left_open = true;
         return Ok(json!({ "side_panels": state(app) }));
     }
@@ -380,7 +381,9 @@ fn state_of(panels: &SidePanels, pane: Pane) -> PaneState {
 fn open_panes(app: &PdfCraftApp) -> Vec<Pane> {
     let mut open = Vec::new();
     // Read mode hides the tools, not the navigation panes.
-    if app.left_open && app.mode != Mode::Read {
+    if app.left_open && app.mode != Mode::Read
+        && !(app.takeoff_workspace.settings_floating && matches!(app.left, crate::LeftPanel::Tool("measure")))
+    {
         open.push(Pane::Tools);
     }
     // Home and Combine files have no side panel; the choice is kept for the next document.

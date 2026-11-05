@@ -225,6 +225,9 @@ impl PdfCraftApp {
                     _ => return Err("always-default-view must be on or off".into()),
                 };
             }
+            ("measurement-settings" | "takeoff-table" | "takeoff-search" | "takeoff-sort", _) => {
+                crate::takeoff_workspace::set_option(self, key, value)?;
+            }
             ("tools-side", _) => {
                 self.side_panels.tools_side = match value {
                     "left" => side_panels::ToolsSide::Left,

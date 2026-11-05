@@ -1514,6 +1514,77 @@ fn control_default_workspace_and_session_override() {
 }
 
 #[test]
+fn takeoff_workspace_searches_sorts_resizes_and_docks() {
+    let _gpu = crate::gpu();
+    use pdfcraft_engine::{Edit, Style, measure::{Kind, NewMeasurement, Scale, hvac}};
+    let (mut h, c) = harness_pages(1);
+    let doc = h.state().views[0].id;
+    for (label, length, hvac) in [("Small pipe", 3.0, Some(hvac::Takeoff::pipe())), ("Large route", 20.0, None)] {
+        h.state_mut().session.apply(doc, Edit::AddMeasurement(NewMeasurement {
+            page: 0, kind: Kind::Perimeter, points: vec![[20.0, 20.0], [20.0 + length, 20.0]],
+            scale: Scale::new(1.0, "ft", 2).unwrap(), style: Style::default(), label: label.into(), author: "Estimator".into(), hvac,
+        })).unwrap();
+    }
+    h.run_steps(3);
+    let workspace = |h: &mut Harness<'static, PdfCraftApp>| ok(h, &c, "ui.state", json!({}))["takeoff_workspace"].clone();
+    let initial = workspace(&mut h);
+    assert_eq!(initial["table_location"], "bottom");
+    assert_eq!(initial["visible_count"], 2);
+    assert_eq!(initial["totals"][0], json!(["ft", 23.0]));
+    if let Ok(dir) = std::env::var("PDFCRAFT_SHOTS") {
+        h.render().unwrap().save(format!("{dir}/takeoff-workspace-initial.png")).unwrap();
+    }
+    let rect = initial["table_rect"].as_array().unwrap();
+    let x = rect[0].as_f64().unwrap() + rect[2].as_f64().unwrap() / 2.0;
+    let top = rect[1].as_f64().unwrap();
+    let height = rect[3].as_f64().unwrap();
+    ok(&mut h, &c, "ui.drag", json!({"from":[x,top+2.0],"to":[x,top-60.0],"steps":10}));
+    h.run_steps(3);
+    assert!(workspace(&mut h)["table_rect"][3].as_f64().unwrap() > height + 20.0, "before {initial}, after {}", workspace(&mut h));
+
+    ok(&mut h, &c, "ui.set", json!({"key":"takeoff-search","value":"Copper"}));
+    h.run_steps(2);
+    assert_eq!(workspace(&mut h)["visible_count"], 1);
+    assert_eq!(workspace(&mut h)["totals"][0], json!(["ft", 3.0]));
+    ok(&mut h, &c, "ui.set", json!({"key":"takeoff-search","value":""}));
+    ok(&mut h, &c, "ui.set", json!({"key":"takeoff-sort","value":"-Value"}));
+    h.run_steps(2);
+    assert_eq!(workspace(&mut h)["visible_rows"][0], 1);
+    h.get_by_label("Value ▼").click_accesskit();
+    h.run_steps(3);
+    assert_eq!(workspace(&mut h)["visible_rows"][0], 0);
+    h.get_by_label("Small pipe").click();
+    h.run_steps(2);
+    assert_eq!(h.state().views[0].comments.selected, Some((0, 0)));
+
+    ok(&mut h, &c, "ui.command", json!({"id":"measure.scale"}));
+    for location in ["floating", "right", "left"] {
+        ok(&mut h, &c, "ui.set", json!({"key":"measurement-settings","value":location}));
+        h.run_steps(3);
+        assert_eq!(workspace(&mut h)["settings_floating"], location == "floating");
+    }
+    for location in ["left", "right", "floating", "bottom"] {
+        ok(&mut h, &c, "ui.set", json!({"key":"takeoff-table","value":location}));
+        h.run_steps(3);
+        assert_eq!(workspace(&mut h)["table_location"], location);
+        assert_eq!(workspace(&mut h)["visible_count"], 2);
+    }
+    ok(&mut h, &c, "ui.set", json!({"key":"takeoff-table","value":"floating"}));
+    if let Ok(dir) = std::env::var("PDFCRAFT_SHOTS") {
+        ok(&mut h, &c, "ui.set", json!({"key":"takeoff-table","value":"bottom"}));
+        ok(&mut h, &c, "ui.set", json!({"key":"measurement-settings","value":"right"}));
+        h.run_steps(4);
+        h.render().unwrap().save(format!("{dir}/takeoff-workspace.png")).unwrap();
+        ok(&mut h, &c, "ui.set", json!({"key":"takeoff-table","value":"floating"}));
+        h.run_steps(3);
+    }
+    let saved = h.state().persist();
+    let mut restored = PdfCraftApp::new();
+    restored.restore(&saved);
+    assert_eq!(restored.takeoff_workspace.table_location, pdfcraft_ui_egui::takeoff_workspace::Location::Floating);
+}
+
+#[test]
 fn measurement_tools_draw_live_calibrate_save_and_export() {
     let (mut h, c) = harness_pages(1);
     let doc = h.state().views[0].id;

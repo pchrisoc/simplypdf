@@ -10345,3 +10345,14 @@ commands = ["measure.pipe", "measure.duct"]
 tools = ["takeoff_pipe", "takeoff_duct"]
 evidence = ["crates/automation/tests/it/automation.rs::hvac_takeoff_specs_survive_save_and_xlsx_export", "crates/ui-egui/tests/it/control.rs::measurement_tools_draw_live_calibrate_save_and_export"]
 notes = "Continuous centerline routes with pipe/round/rectangular duct profile, material, nominal size and system. Metadata survives undo/redo, PDF save/reopen and XLSX export. Fitting counts, rise/drop, insulation, duct surface area, fabrication allowances and cross-platform qualification are pending."
+
+[[feature]]
+id = "view.takeoff-workspace"
+title = "Dockable measurement settings and takeoff table"
+area = "B"
+tier = "P2"
+milestone = "M12"
+status = "partial"
+tools = ["measure_list"]
+evidence = ["crates/ui-egui/tests/it/control.rs::takeoff_workspace_searches_sorts_resizes_and_docks"]
+notes = "Default bottom takeoff table with resizable height, search across displayed fields, numeric quantity sorting, totals per unit and row selection linked to the drawing. Table attaches left/right/bottom or floats inside the workspace. Measurement settings attach left/right or float. Placement and bottom height persist. UI control keys expose placement, search and sort with bounded state snapshots. General comment rows, custom columns, drag-to-dock and separate operating-system windows are pending."

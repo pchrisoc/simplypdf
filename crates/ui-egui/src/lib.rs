@@ -37,6 +37,7 @@ macro_rules! tl_ctx {
 }
 pub mod canvas;
 mod chrome;
+pub mod takeoff_workspace;
 mod image_engine;
 pub use combine_grid::ThumbState as CombineThumb;
 pub use combine_ui::{Columns as CombineColumns, CombineView, Lock as CombineLock, SortKey};
@@ -277,6 +278,7 @@ pub struct PdfCraftApp {
     mode_override: Option<Mode>,
     pub left: LeftPanel,
     pub left_open: bool,
+    pub takeoff_workspace: takeoff_workspace::State,
     pub right: Option<RightPanel>,
     /// The side panel F4 reopens: the one open last.
     pub(crate) last_right: RightPanel,
