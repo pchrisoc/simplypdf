@@ -4,7 +4,6 @@ use pdfcraft_engine::{
     Edit, Style,
     measure::{self, Kind, NewMeasurement, PageUnit, Scale},
 };
-use rust_xlsxwriter::Workbook;
 use serde_json::{Value, json};
 use std::path::Path;
 
@@ -173,30 +172,7 @@ impl Automation {
             return Err(failed("this PDF's security settings restrict copying measurements"));
         }
         let all = doc.measurements().map_err(failed)?;
-        let mut book = Workbook::new();
-        let sheet = book.add_worksheet();
-        sheet.set_name("Takeoff").map_err(failed)?;
-        sheet
-            .write_row(0, 0, ["Page", "Index", "Type", "Value", "Unit", "Label", "Author", "Scale", "Annotation ID"])
-            .map_err(failed)?;
-        sheet.set_freeze_panes(1, 0).map_err(failed)?;
-        for (offset, m) in all.measurements.iter().enumerate() {
-            let row = u32::try_from(offset.saturating_add(1)).map_err(failed)?;
-            sheet.write_number(row, 0, m.page.saturating_add(1) as f64).map_err(failed)?;
-            sheet.write_number(row, 1, m.index.saturating_add(1) as f64).map_err(failed)?;
-            sheet.write_string(row, 2, m.reading.kind.name()).map_err(failed)?;
-            sheet.write_number(row, 3, m.reading.value).map_err(failed)?;
-            sheet
-                .write_row(row, 4, [m.reading.unit.as_str(), &m.label, &m.author, &m.scale.ratio, &m.id])
-                .map_err(failed)?;
-        }
-        let count = all.measurements.len();
-        book.define_name("TakeoffData", &format!("=Takeoff!$A$1:$I${}", count.saturating_add(1))).map_err(failed)?;
-        let parent = target.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
-        let mut staged = tempfile::NamedTempFile::new_in(parent).map_err(failed)?;
-        book.save_to_writer(staged.as_file_mut()).map_err(failed)?;
-        staged.as_file().sync_all().map_err(failed)?;
-        staged.persist_noclobber(&target).map_err(|e| failed(format!("{}: {}", target.display(), e.error)))?;
-        Ok(json!({"path":target,"count":count,"unsupported":all.unsupported.len(),"truncated":all.truncated}))
+        measure::xlsx::write_new(&target, &all.measurements).map_err(failed)?;
+        Ok(json!({"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}))
     }
 }

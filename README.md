@@ -4,6 +4,10 @@ SimplyPDF is a Rust desktop PDF workbench for construction takeoff and estimatin
 [PdfCraft](https://github.com/storytold/pdfcraft). The desktop targets Windows, macOS, and Linux.
 Agents can use the same measurement tools through the CLI or an opt-in MCP server.
 
+**Upstream credit:** SimplyPDF builds on [PDFCraft](https://github.com/storytold/pdfcraft) by the
+ArtCraft team and PDFCraft contributors. [Planned project website](https://pdf.simplyhost.org)
+(not live yet).
+
 ## What works today
 
 - Calibrate a drawing from two points or a scale ratio, then measure distance, perimeter, and area.
@@ -44,9 +48,8 @@ features. Keep the proprietary installer and any captured artifacts outside the 
 
 ### Checkpoint 1 · Publish live takeoff quantities to Calc
 
-- [ ] Move workbook encoding out of the [automation tool](crates/automation/src/measure.rs)
-  into a shared Rust module. Have CLI/MCP export and the desktop publisher produce the same
-  typed rows and `TakeoffData` range.
+- [x] Share the [Rust workbook writer](crates/measure/src/xlsx.rs) between desktop export and
+  CLI/MCP. Both produce the same typed rows and `TakeoffData` range.
 - [ ] Define persistent measurement IDs and a versioned row schema for saved and imported
   markups. Verify IDs survive edits, page reordering, save/reopen, and undo/redo.
 - [ ] Add an opt-in managed workbook link to the [Measure panel](crates/ui-egui/src/tools/measure_ui.rs)
@@ -72,6 +75,8 @@ features. Keep the proprietary installer and any captured artifacts outside the 
 
 ### Checkpoint 3 · Ship the desktop workflow
 
+- [ ] Finish the SimplyPDF release identity, including original icons, application IDs, executable
+  names, and installers. Verify a SimplyPDF install can coexist with PDFCraft.
 - [ ] Package SimplyPDF for Windows, macOS, and Linux. Test opening a PDF and starting the opt-in
   MCP server from a clean install on each platform.
 - [ ] Run a release smoke test on each platform using the same synthetic drawing and linked
@@ -95,6 +100,9 @@ cargo run --locked --release -p pdfcraft-cli -- mcp --root ./work
 See the [MCP guide](docs/mcp.md) for client configuration.
 
 ## Export a takeoff workbook
+
+In the desktop app, open **Measure → Export takeoff as XLSX** and choose a new workbook path.
+The desktop and automation exports use the same workbook format.
 
 Save the example below as `takeoff.json` and place a PDF with measurements at
 `work/drawing.pdf`. The second step uses the document ID returned by the first open in a fresh

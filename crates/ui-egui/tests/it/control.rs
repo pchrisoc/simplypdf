@@ -1563,6 +1563,14 @@ fn measurement_tools_draw_live_calibrate_save_and_export() {
     ok(&mut h, &c, "ui.command", json!({"id":"measure.export"}));
     h.run_steps(2);
     assert!(std::fs::read_to_string(dir.join("measurements.csv")).unwrap().contains("m^2"));
+    h.get_by_label("Export takeoff as XLSX").click();
+    h.run_steps(2);
+    let workbook = dir.join("takeoff.xlsx");
+    assert!(std::fs::read(&workbook).unwrap().starts_with(b"PK\x03\x04"));
+    std::fs::write(&workbook, b"existing estimate").unwrap();
+    h.get_by_label("Export takeoff as XLSX").click();
+    h.run_steps(2);
+    assert_eq!(std::fs::read(&workbook).unwrap(), b"existing estimate");
     h.state_mut().set_option("quick", "measure-calibrate").unwrap();
     click(&mut h, &c, 30.0, 50.0);
     click(&mut h, &c, 130.0, 50.0);

@@ -10,7 +10,7 @@ pub const APP: &str = "pdfcraft";
 pub const DISCORD: &str = "https://discord.gg/artcraft";
 pub const WEBSITE: &str = "https://getartcraft.com";
 pub const APP_PAGE: &str = "https://getartcraft.com/apps/pdfcraft";
-pub const GITHUB: &str = "https://github.com/storytold/pdfcraft";
+pub const GITHUB: &str = "https://github.com/pchrisoc/simplypdf";
 
 /// A link and the registry command that opens it.
 #[derive(Clone, Copy, Debug)]
@@ -25,8 +25,8 @@ pub struct Link {
 /// In the order they are shown. Discord comes first: it is where people get help fastest.
 pub const LINKS: &[Link] = &[
     Link { command: "help.discord", label: "Join the ArtCraft Discord", url: DISCORD, icon: "messages-square" },
-    Link { command: "help.app_page", label: "PdfCraft web page", url: APP_PAGE, icon: "globe" },
-    Link { command: "help.github", label: "PdfCraft on GitHub", url: GITHUB, icon: "code-xml" },
+    Link { command: "help.app_page", label: "PDFCraft upstream website", url: APP_PAGE, icon: "globe" },
+    Link { command: "help.github", label: "SimplyPDF on GitHub", url: GITHUB, icon: "code-xml" },
     Link { command: "help.website", label: "ArtCraft website", url: WEBSITE, icon: "external-link" },
 ];
 

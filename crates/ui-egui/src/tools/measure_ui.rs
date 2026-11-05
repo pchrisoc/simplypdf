@@ -402,6 +402,8 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
         }
     });
     let Some(doc) = app.session.get(id) else { return };
+    #[cfg(not(target_arch = "wasm32"))]
+    let export_xlsx = ui.add_enabled(doc.allows_copying(), egui::Button::new(tl!("Export takeoff as XLSX"))).clicked();
     let units = app.units;
     let page = app.views[index].current;
     let info = doc.info.pages.get(page).cloned();
@@ -590,7 +592,46 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
     if export {
         export_csv(app);
     }
+    #[cfg(not(target_arch = "wasm32"))]
+    if export_xlsx {
+        export_workbook(app);
+    }
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+fn export_workbook(app: &mut PdfCraftApp) {
+    let Some((_, id)) = app.active_ids() else { return };
+    let Some(doc) = app.session.get(id) else { return };
+    if !doc.allows_copying() {
+        return;
+    }
+    let listing = match doc.measurements() {
+        Ok(listing) => listing,
+        Err(error) => {
+            app.notify(error);
+            return;
+        }
+    };
+    let write = move |app: &mut PdfCraftApp, mut path: std::path::PathBuf| {
+        if !path.extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("xlsx")) {
+            path.set_extension("xlsx");
+        }
+        match measure::xlsx::write_new(&path, &listing.measurements) {
+            Ok(()) if listing.truncated || !listing.unsupported.is_empty() => {
+                app.notify(tl!("Saved an incomplete takeoff workbook. Some measurements were omitted."));
+            }
+            Ok(()) => app.notify(tl!("Saved measurements.")),
+            Err(error) => app.notify(error),
+        }
+    };
+    if let Some(dir) = &app.export_dir_override {
+        write(app, std::path::PathBuf::from(dir).join("takeoff.xlsx"));
+    } else {
+        let dialog = rfd::AsyncFileDialog::new().set_file_name("takeoff.xlsx").add_filter_any_case("XLSX", &["xlsx"]);
+        app.ask_one(crate::pickers::Ask::Save(dialog), None, write);
+    }
+}
+
 pub(crate) fn command(app: &mut PdfCraftApp, id: &str) {
     app.left = LeftPanel::Tool("measure");
     app.left_open = true;

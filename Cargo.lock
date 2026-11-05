@@ -4282,7 +4282,6 @@ dependencies = [
  "pdfcraft-render",
  "pdfcraft-xfa",
  "png 0.18.1",
- "rust_xlsxwriter",
  "rustix 1.1.5",
  "serde_json",
  "sha2 0.11.1",
@@ -4492,7 +4491,9 @@ dependencies = [
  "pdfcraft-cos",
  "pdfcraft-model",
  "pdfcraft-testkit",
+ "rust_xlsxwriter",
  "serde",
+ "tempfile",
  "thiserror 2.0.21",
 ]
 

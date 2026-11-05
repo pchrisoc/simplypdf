@@ -1563,7 +1563,7 @@ fn dialog_about(ui: &mut egui::Ui, req: &mut Pending) -> bool {
         1 => crate::credits::contributors_ui(ui),
         2 => crate::credits::models_ui(ui),
         _ => {
-            ui.label(egui::RichText::new("SimplyPDF").font(theme::semibold(20.0)));
+            ui.label(egui::RichText::new(pdfcraft_engine::build_info::APP_NAME).font(theme::semibold(20.0)));
             ui.label(crate::i18n::fmt(tl!("Version {v}"), &[("v", &pdfcraft_engine::build_info::version())]));
             ui.add_space(6.0);
             ui.label(tl!("A clean-room, open-source PDF application written in Rust. MIT OR Apache-2.0."));
@@ -1575,7 +1575,7 @@ fn dialog_about(ui: &mut egui::Ui, req: &mut Pending) -> bool {
                 .small(),
             );
             ui.add_space(12.0);
-            ui.label("Based on PdfCraft by the ArtCraft team.");
+            ui.label("Based on PDFCraft by the ArtCraft team and contributors.");
             ui.add_space(6.0);
             if let Some(cmd) = widgets::community_links(ui) {
                 req.link_command = Some(cmd);

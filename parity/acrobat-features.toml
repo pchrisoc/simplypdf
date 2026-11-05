@@ -4465,8 +4465,8 @@ tier = "P3"
 milestone = "M12"
 status = "partial"
 tools = ["takeoff_export_xlsx"]
-evidence = ["crates/automation/tests/it/automation.rs::takeoff_export_xlsx_writes_numeric_cells_and_preserves_existing_files"]
-notes = "CLI and MCP can create a measurement snapshot with numeric values and a named data range. Automatic publication and desktop setup are pending."
+evidence = ["crates/automation/tests/it/automation.rs::takeoff_export_xlsx_writes_numeric_cells_and_preserves_existing_files", "crates/ui-egui/tests/it/control.rs::measurement_tools_draw_live_calibrate_save_and_export"]
+notes = "Desktop, CLI and MCP use a shared Rust writer for XLSX snapshots with numeric values and a named data range. Automatic publication and Calc link setup are pending."
 
 [[feature]]
 id = "comment.geospatial"

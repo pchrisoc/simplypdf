@@ -3,6 +3,9 @@
 //! it can be told from the release of the same version. The version itself stays the release's:
 //! the update check compares it with published releases.
 
+/// The public application name.
+pub const APP_NAME: &str = "SimplyPDF";
+
 /// The release version from the workspace `Cargo.toml`.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
