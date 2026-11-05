@@ -1,13 +1,32 @@
 # LibreOffice Draw Rust port
 
-SimplyPDF will translate LibreOffice Draw source to Rust in reviewable slices. The reference is LibreOffice 26.8.0.3, commit `bce0998afefdbc355585ca324285661a2170ba77`. Existing SimplyPDF viewer, geometry, and takeoff code provide a runnable integration point during the port. [Pinned LibreOffice source](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77)
+SimplyPDF will translate LibreOffice Draw source to Rust in reviewable slices. The reference is LibreOffice 26.8.0.3, commit `bce0998afefdbc355585ca324285661a2170ba77`. The current phase builds Draw independently in Rust. The existing SimplyPDF integration is limited to the earlier zoom-history work. Further integration follows the standalone Draw port. [Pinned LibreOffice source](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77)
+
+## Local upstream checkout
+
+The complete pinned LibreOffice Core tree is checked out at `references/libreoffice/core`. It contains 149,176 tracked paths, including 2,269 under `sd/`. The checkout is shallow and includes every tracked file at the pinned revision. The parent repository ignores it.
+
+```sh
+mkdir -p references/libreoffice
+git clone --depth 1 --single-branch --branch libreoffice-26.8.0.3 \
+  https://github.com/LibreOffice/core.git references/libreoffice/core
+git -C references/libreoffice/core submodule update --init --jobs 3
+git -C references/libreoffice/core rev-parse HEAD
+git -C references/libreoffice/core submodule status
+git -C references/libreoffice/core status --short
+```
+
+Expected revision is `bce0998afefdbc355585ca324285661a2170ba77`. Use the complete source tree when following a Draw dependency out of `sd/`. The upstream source tree and other local reference material stay outside the parent Git history.
 
 ## Scope and order
 
 The upstream `sd` tree contains 867 files under `source/`, 82 under `inc/`, 256 under `uiconfig/`, and 976 under `qa/` at this revision. Those counts include shared Draw/Impress files and fixtures. They measure inventory size, rather than the number of Draw functions to translate. Follow the Draw targets and shared dependencies before deciding ownership of each slice. [Draw UI target](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/UIConfig_sdraw.mk) · [Shared library manifest](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/Library_sd.mk)
 
-- [x] Pin the upstream revision and inventory the shared Draw/Impress module.
+- [x] Pull the complete pinned upstream tree and inventory the shared Draw/Impress module.
 - [x] Translate Draw's zoom history and test insertion, traversal, and capacity.
+- [x] Translate Draw's viewport fit and integral zoom calculations and compare them to the C++ methods.
+- [x] Translate Draw's zoom tool motion and release decisions for drag outlines, pan, click zoom, and modifier zoom-out.
+- [ ] Port the zoom tool's event capture, cursor, drag outline, force-scroll, and view effects into the standalone Draw shell.
 - [x] Preserve the complete classic menu bar and 48 toolbar definitions as pinned, licensed port references.
 - [x] Connect zoom history to the viewer's View commands and verify a page switch starts fresh history.
 - [ ] Map the classic menu and toolbar command IDs to upstream handlers, Rust handlers, and parity tests. Port standard File/Edit actions, view and navigation, drawing and formatting, then context-sensitive toolbars. Review Notebookbar, context menus, icons, and localization separately.
@@ -20,18 +39,32 @@ The upstream `sd` tree contains 867 files under `source/`, 82 under `inc/`, 256 
 
 For each translated slice, record the upstream revision and paths, Rust destinations, dependencies, any deliberate behavioral changes, and verification. Keep source notices with each translated file. The [upstream license page](https://www.libreoffice.org/licenses/) describes the mix of licenses. The initial Rust crate includes the MPL text, Apache license, and Apache OpenOffice attribution. Review each additional file's notices independently. Keep Bluebeam and other proprietary source, binaries, assets, and analysis dumps out of Git.
 
-## First source mapping
+## Source areas to trace
+
+| Area | Pinned source and build anchors | What the Rust port must account for |
+| --- | --- | --- |
+| Draw entry points | `sd/sdi/sdraw.sdi`, `sd/sdi/grdocsh.sdi`, `sd/sdi/grviewsh.sdi`, `sd/UIConfig_sdraw.mk` | Draw-specific command routing, menu configuration, toolbars, and document and view shell behavior |
+| Shared document model | `sd/source/core/`, `sd/source/ui/docshell/`, `sd/Library_sd.mk` | Draw pages and shared model behavior across 32 core files and six document-shell files |
+| View and tools | `sd/source/ui/view/`, `sd/source/ui/func/`, `sd/source/ui/inc/` | Zoom and gesture work starts here. Classify the rest of the 67 view, 59 tool, and 214 UI include files against Draw command reachability. |
+| Formats and integration | `sd/source/filter/`, `sd/source/ui/unoidl/`, `sd/qa/unit/` | 49 filter paths and 26 UNO model paths to classify against the supported Draw formats and their tests |
+| Shared and Impress paths | `sd/UIConfig_simpress.mk`, `sd/source/ui/slideshow/`, `sd/source/console/`, `sd/source/ui/slidesorter/` | Trace calls from Draw before marking these paths shared or Impress-specific. Directory names alone do not establish ownership. |
+
+## Source mapping
 
 | Upstream | Rust destination | Status |
 | --- | --- | --- |
 | [`sd/source/ui/view/zoomlist.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/view/zoomlist.cxx) | `crates/simplypdf-draw/src/zoom_history.rs` | Translated and tested |
 | [`sd/source/ui/inc/zoomlist.hxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/inc/zoomlist.hxx) | Same module | Rust API adapted to generic view state |
+| [`sd/source/ui/view/sdwindow.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/view/sdwindow.cxx) | `crates/simplypdf-draw/src/viewport.rs` | Translated `GetZoomForRect`, `SetZoomRect` arithmetic, and `SetZoomIntegral` arithmetic |
+| [`sd/source/ui/func/fuzoom.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/func/fuzoom.cxx) | `crates/simplypdf-draw/src/zoom_tool.rs` | Translated the geometry decisions in `MouseMove` and `MouseButtonUp`. Native effects pending. |
 | LibreOffice view-shell command invalidation | SimplyPDF viewer command availability | Integrated for Zoom Previous and Zoom Next |
 | [`sd/uiconfig/sdraw/menubar` and `toolbar`](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77/sd/uiconfig/sdraw) | [Pinned XML references](../crates/simplypdf-draw/upstream/README.md) | Layout copied. Rust command parity pending. |
 
 The Rust translation preserves the ten-entry cap, insertion after the current position while below capacity, forward entries after stepping back, and oldest-entry eviction with cursor reuse at capacity. Rust returns `None` for empty history and lets the caller update command availability. It carries no LibreOffice UI or runtime dependency.
 
-The viewer exposes **View → Zoom → Zoom Previous / Zoom Next**. History starts at Fit Page for each loaded sheet and tracks discrete toolbar or menu zoom changes. Wheel zoom and pan remain interactive; their last view becomes a history entry when the next discrete zoom changes it. This is the viewer's integration policy for the translated history.
+The viewport port takes logical dimensions directly. Native windows must supply the pixel-to-logical conversion, apply the resulting map mode and repaint effects, and record history. The Rust APIs saturate values outside their representable coordinate ranges. A local comparison compiled the three pinned C++ methods against lightweight window and geometry stubs. The Rust results matched all 1,024 seeded inputs, including degenerate geometry, clamped zoom, and centering. This comparison covers the calculations and excludes VCL effects.
+
+The existing SimplyPDF viewer exposes **View → Zoom → Zoom Previous / Zoom Next**. History starts at Fit Page for each loaded sheet and tracks discrete toolbar or menu zoom changes. Wheel zoom and pan remain interactive; their last view becomes a history entry when the next discrete zoom changes it. This is the viewer's integration policy for the translated history.
 
 ```sh
 cargo test -p simplypdf-draw --locked --offline

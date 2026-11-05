@@ -8,7 +8,7 @@ See the [architecture and backend maintenance guide](docs/architecture.md), [des
 
 ## LibreOffice Draw port
 
-The [Draw port plan and source ledger](docs/libreoffice-draw-port.md) tracks the upstream revision, Rust translations, and verification. Draw’s classic menu bar and toolbar definitions are preserved as port references. Draw’s translated zoom history is available in the Rust viewer under **View → Zoom**.
+The [Draw port plan and source ledger](docs/libreoffice-draw-port.md) tracks the upstream revision, Rust translations, and verification. The full pinned source checkout lives under ignored local references. Draw’s classic menu bar and toolbar definitions are preserved as port references, and the Rust Draw crate can be built and tested independently. Draw’s translated zoom history is available in the Rust viewer under **View → Zoom**.
 
 ## Repository policy
 
