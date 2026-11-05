@@ -18,3 +18,5 @@ lopdf = { version = "=0.42.0", default-features = false }
 eframe = { version = "=0.31.1", default-features = false, features = ["default_fonts", "glow"] }
 objc2-core-foundation = { version = "=0.3.2", default-features = false, features = ["std", "CFURL", "CFCGTypes"] }
 objc2-core-graphics = { version = "=0.3.2", default-features = false, features = ["std", "CGBitmapContext", "CGColorSpace", "CGContext", "CGImage", "CGPDFDictionary", "CGPDFObject", "CGPDFDocument", "CGPDFPage"] }
+objc2 = "=0.6.5"
+objc2-app-kit = { version = "=0.3.2", default-features = false, features = ["std", "NSApplication", "NSOpenPanel", "NSSavePanel", "NSPanel", "NSResponder", "NSWindow"] }

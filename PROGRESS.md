@@ -68,3 +68,11 @@ Next viewer slice is file opening, zoom, and pan. Keep the click marker anchored
 - All five viewer and metadata tests and all eleven core tests passed on macOS arm64. The desktop smoke test confirmed toolbar zoom, pointer-centered wheel zoom, marker alignment, and fit reset. The automated drag attempt did not establish panning behavior; gesture verification is still open.
 
 Next slice is the file picker and input verification, then sharper zoom via background rendering. Vendor artifacts and analysis dumps remain excluded from Git.
+
+## 2026-11-04 · Stage 0, document opening and viewer input
+
+- Added a macOS Open control and shortcut through AppKit, file drop, keyboard page navigation, keyboard zoom, and fit reset. Launch paths, the chooser, and drop events share one open method. An unsuccessful replacement leaves the current sheet and selection intact and shows an error.
+- Added egui event-driven tests for both middle-button and Pan-tool dragging, keyboard page selection, and successful and failed file drops. Both pan routes move the canvas while preserving the canonical selection.
+- Ran the seven viewer and metadata tests and eleven core tests on macOS arm64. The native app launched and showed the Open control. Desktop automation did not establish native chooser selection or cancellation. OS-level drag and drop and cross-platform input remain unverified.
+
+Next slice is native chooser verification and background rendering for sharper zoom. The separately tracked PDFium adapter still needs Windows and Linux evidence.

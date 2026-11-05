@@ -1,4 +1,6 @@
 #[cfg(target_os = "macos")]
+mod file_picker;
+#[cfg(target_os = "macos")]
 mod pdf;
 #[cfg(target_os = "macos")]
 mod viewer;
