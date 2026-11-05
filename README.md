@@ -6,6 +6,10 @@ See the [implementation brief](SimplyPDF-implementation-plan.md) for data contra
 
 See the [architecture and backend maintenance guide](docs/architecture.md), [desktop UI direction](docs/desktop-ui.md), and [synthetic fixture manifest](tests/fixtures/README.md).
 
+## LibreOffice Draw port
+
+The [Draw port plan and source ledger](docs/libreoffice-draw-port.md) tracks the upstream revision, Rust translations, and verification. The first translated subsystem is Draw's zoom history. The existing Rust viewer remains the integration target as subsystems land.
+
 ## Repository policy
 
 Do not commit or push Bluebeam code or any proprietary source code or files to GitHub. This includes vendor installers, extracted or decompiled files, binaries, bundled fonts and assets, and proprietary sample documents. Keep local vendor material under the ignored `references/` directory or outside the checkout. Use original code and generated or explicitly redistributable fixtures. Review staged paths and content before committing, and review outgoing commits before pushing. Git ignore rules can be bypassed and do not protect files Git already tracks.

@@ -84,3 +84,11 @@ Next slice is native chooser verification and background rendering for sharper z
 - Ran seven viewer and metadata tests and eleven core tests on macOS arm64. Windows viewer integration and runtime verification are pending.
 
 Next slice is background rendering for sharper zoom and wiring the Windows viewer to the shared in-window menu.
+
+## 2026-11-04 · LibreOffice Draw Rust port kickoff
+
+- Pinned LibreOffice 26.8.0.3 and inventoried its shared Draw/Impress `sd` tree. Recorded dependency groups and the staged port checklist in `docs/libreoffice-draw-port.md`.
+- Translated Draw's zoom-history implementation and header into the dependency-free `simplypdf-draw` Rust crate. Preserved the original license notices and recorded the exact source revision and files. No Bluebeam or proprietary source was added.
+- Ran `cargo test --workspace --all-targets --locked --offline` on macOS arm64. All fourteen workspace tests passed, including three new Draw translation tests. Viewer integration, live comparison with Draw, and Windows and Linux verification remain pending.
+
+Next slice is to connect zoom history to the viewer's View menu and expand the Draw source inventory into a per-subsystem ownership ledger.
