@@ -1,6 +1,6 @@
 # LibreOffice Draw Rust port
 
-SimplyPDF will translate LibreOffice Draw source to Rust in reviewable slices. The reference is LibreOffice 26.8.0.3, commit `bce0998afefdbc355585ca324285661a2170ba77`. The current phase builds Draw independently in Rust. The existing SimplyPDF integration is limited to the earlier zoom-history work. Further integration follows the standalone Draw port. [Pinned LibreOffice source](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77)
+SimplyPDF will translate LibreOffice Draw source to Rust in reviewable slices. The reference is LibreOffice 26.8.0.3, commit `bce0998afefdbc355585ca324285661a2170ba77`. The Draw crate remains independently testable. The combined SimplyPDF Rust app uses the translated Draw zoom and history code on its PDF canvas. Remaining Draw features follow the staged source port. [Pinned LibreOffice source](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77)
 
 ## Local upstream checkout
 
@@ -26,7 +26,8 @@ The upstream `sd` tree contains 867 files under `source/`, 82 under `inc/`, 256 
 - [x] Translate Draw's zoom history and test insertion, traversal, and capacity.
 - [x] Translate Draw's viewport fit and integral zoom calculations and compare them to the C++ methods.
 - [x] Translate Draw's zoom tool motion and release decisions for drag outlines, pan, click zoom, and modifier zoom-out.
-- [ ] Port the zoom tool's event capture, cursor, drag outline, force-scroll, and view effects into the standalone Draw shell.
+- [x] Connect Draw zoom geometry, click zoom, modifier zoom-out, drag outlines, and history to the SimplyPDF canvas.
+- [ ] Port Draw's edge auto-scroll and remaining native zoom-tool behavior.
 - [x] Preserve the complete classic menu bar and 48 toolbar definitions as pinned, licensed port references.
 - [x] Connect zoom history to the viewer's View commands and verify a page switch starts fresh history.
 - [ ] Map the classic menu and toolbar command IDs to upstream handlers, Rust handlers, and parity tests. Port standard File/Edit actions, view and navigation, drawing and formatting, then context-sensitive toolbars. Review Notebookbar, context menus, icons, and localization separately.
@@ -56,7 +57,7 @@ For each translated slice, record the upstream revision and paths, Rust destinat
 | [`sd/source/ui/view/zoomlist.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/view/zoomlist.cxx) | `crates/simplypdf-draw/src/zoom_history.rs` | Translated and tested |
 | [`sd/source/ui/inc/zoomlist.hxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/inc/zoomlist.hxx) | Same module | Rust API adapted to generic view state |
 | [`sd/source/ui/view/sdwindow.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/view/sdwindow.cxx) | `crates/simplypdf-draw/src/viewport.rs` | Translated `GetZoomForRect`, `SetZoomRect` arithmetic, and `SetZoomIntegral` arithmetic |
-| [`sd/source/ui/func/fuzoom.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/func/fuzoom.cxx) | `crates/simplypdf-draw/src/zoom_tool.rs` | Translated the geometry decisions in `MouseMove` and `MouseButtonUp`. Native effects pending. |
+| [`sd/source/ui/func/fuzoom.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/func/fuzoom.cxx) | `crates/simplypdf-draw/src/zoom_tool.rs` | Translated the geometry decisions in `MouseMove` and `MouseButtonUp`. SimplyPDF canvas integration verified by input tests. |
 | LibreOffice view-shell command invalidation | SimplyPDF viewer command availability | Integrated for Zoom Previous and Zoom Next |
 | [`sd/uiconfig/sdraw/menubar` and `toolbar`](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77/sd/uiconfig/sdraw) | [Pinned XML references](../crates/simplypdf-draw/upstream/README.md) | Layout copied. Rust command parity pending. |
 

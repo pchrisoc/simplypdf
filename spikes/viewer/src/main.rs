@@ -11,9 +11,10 @@ mod viewer;
 
 #[cfg(target_os = "macos")]
 fn main() -> eframe::Result {
-    let path = std::env::args_os().nth(1).map(std::path::PathBuf::from)
-        .unwrap_or_else(|| std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
-            .join("../../tests/fixtures/page-geometry.pdf"));
+    let path = std::env::args_os()
+        .nth(1)
+        .map(std::path::PathBuf::from)
+        .unwrap_or_else(default_fixture);
     let options = eframe::NativeOptions {
         viewport: eframe::egui::ViewportBuilder::default()
             .with_inner_size([1080.0, 760.0])
@@ -25,6 +26,20 @@ fn main() -> eframe::Result {
         viewer.install_native_menu(&context.egui_ctx);
         Ok(Box::new(viewer))
     }))
+}
+
+#[cfg(target_os = "macos")]
+fn default_fixture() -> std::path::PathBuf {
+    if let Ok(executable) = std::env::current_exe() {
+        if let Some(contents) = executable.parent().and_then(std::path::Path::parent) {
+            let bundled = contents.join("Resources/page-geometry.pdf");
+            if bundled.is_file() {
+                return bundled;
+            }
+        }
+    }
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/fixtures/page-geometry.pdf")
 }
 
 #[cfg(not(target_os = "macos"))]

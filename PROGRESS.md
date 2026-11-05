@@ -116,3 +116,9 @@ Next viewer tools should define their cursor and temporary pan behavior alongsid
 - All 22 workspace tests passed on macOS arm64. A temporary C++ harness compiled the original three viewport methods with stub window effects and matched Rust output on all 1,024 seeded cases. The harness and original C++ stayed local. Native Draw UI behavior and cross-platform builds remain unverified.
 
 Next Draw slice is the standalone event path for zoom and pan, including cursor, drag outline, and history, followed by the page and object model. Full Draw parity and the standalone desktop application remain open.
+
+## 2026-11-04 · Combined SimplyPDF Rust app
+
+- Integrated Draw-derived zoom selection, viewport fit, and zoom history into the SimplyPDF canvas. Added a Zoom toolbar mode and Z shortcut. Click zoom, box zoom, and Command-click zoom-out share the Draw crate and preserve canonical PDF selections.
+- Added a local macOS app packaging script. Built and ad-hoc signed the 5.4 MiB arm64 bundle at `build/macos/SimplyPDF.app`. Verified its signature and bundled fixture and launched it in the macOS desktop environment. The app opened the sample PDF and displayed its native menus.
+- All 22 workspace tests and 10 viewer and metadata tests passed on macOS arm64. The combined app covers the translated zoom features. Full Draw parity, edge auto-scroll, Windows and Linux packaging, and macOS distribution signing remain pending.

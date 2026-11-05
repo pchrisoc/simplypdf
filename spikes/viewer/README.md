@@ -1,6 +1,6 @@
 # macOS viewer spike
 
-This Rust prototype opens a local PDF, lists its pages, fits the selected page to the window, and reports canonical page coordinates when clicked. Use +/− or scroll over the drawing to zoom. Use **V** for Inspect (crosshair) and **Shift+V** for Pan (open hand). Drag in Pan mode, hold Space and drag, or middle-drag to pan with a closed hand cursor. Use Fit page to reset the view. It defaults to SimplyPDF's synthetic four-page fixture. Use only trusted PDFs while parsing and rendering run inside the desktop process.
+This Rust desktop app opens a local PDF, lists its pages, fits the selected page to the window, and reports canonical page coordinates when clicked. Use +/− or scroll over the drawing to zoom. Use **V** for Inspect (crosshair) and **Shift+V** for Pan (open hand). Drag in Pan mode, hold Space and drag, or middle-drag to pan with a closed hand cursor. Use Fit Page to reset the view. Press **Z** or select **Zoom** to click-zoom or drag a zoom rectangle. Command-click zooms out. It defaults to SimplyPDF's synthetic four-page fixture. Use only trusted PDFs while parsing and rendering run inside the desktop process.
 
 From the repository root on macOS:
 
@@ -15,6 +15,17 @@ Choose **File → Open…** from the macOS system menu bar, press **⌘O**, or d
 The document toolbar sits at the top of the window and groups sheet navigation, zoom, Fit Page, and Pan. File and View use native AppKit menus on macOS. **View → Zoom** includes Zoom Previous and Zoom Next for discrete zoom changes on the current sheet. The shared egui presentation puts those menus inside the window above the toolbar for Windows-style placement. The viewer currently launches on macOS. Windows integration and verification are pending.
 
 The first build downloads dependencies from crates.io. This spike has a separate Cargo lockfile, so the headless workspace continues to build offline without GUI dependencies.
+
+## macOS app bundle
+
+```sh
+sh spikes/viewer/packaging/macos/build-app.sh
+open build/macos/SimplyPDF.app
+```
+
+The packaging script creates a release build for the host architecture, bundles the synthetic PDF and Draw license notices, and ad-hoc signs it for local development. The app looks for the bundled PDF at startup and can be opened from Finder. Distribution signing, notarization, and installers remain pending.
+
+The Zoom tool uses the translated Draw crate for outline geometry, click-versus-drag decisions, rectangle fit, and history. SimplyPDF adapts the result to its centered PDF viewport and preserves its existing zoom limits.
 
 ## Replacing the renderer
 

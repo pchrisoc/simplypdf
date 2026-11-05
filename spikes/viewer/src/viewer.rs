@@ -4,11 +4,20 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui::{self, Color32, ColorImage, CursorIcon, Key, Modifiers, PointerButton, Pos2, Rect, TextureHandle, Vec2};
 use simplypdf_core::geometry::{PageGeometry, Point};
+use simplypdf_draw::viewport::ZoomWindow;
 use simplypdf_draw::zoom_history::ZoomHistory;
+use simplypdf_draw::zoom_tool::{DragEffect, DragMove, Mode, Release, ZoomRect};
 
 use crate::mac_menu::NativeMenu;
 use crate::menu::{self, Command};
 use crate::pdf::{Document, RasterPage};
+
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Tool {
+    Inspect,
+    Pan,
+    Zoom,
+}
 
 pub struct Viewer {
     native_menu: Option<NativeMenu>,
@@ -18,7 +27,8 @@ pub struct Viewer {
     selected: Option<Point>,
     navigation: Navigation,
     zoom_history: ZoomHistory<Navigation>,
-    pan_tool: bool,
+    tool: Tool,
+    zoom_start: Option<Pos2>,
     primary_pan: bool,
     error: Option<String>,
 }
@@ -33,7 +43,8 @@ impl Viewer {
             selected: None,
             navigation: Navigation::default(),
             zoom_history: ZoomHistory::default(),
-            pan_tool: false,
+            tool: Tool::Inspect,
+            zoom_start: None,
             primary_pan: false,
             error: None,
         };
@@ -74,6 +85,7 @@ impl Viewer {
         self.page_index = index;
         self.selected = None;
         self.primary_pan = false;
+        self.zoom_start = None;
         self.navigation = Navigation::default();
         self.zoom_history = ZoomHistory::default();
         self.zoom_history.insert(self.navigation);
@@ -113,6 +125,10 @@ impl Viewer {
             Command::ZoomOut => self.navigation.zoom_at(1.0 / 1.25, Vec2::ZERO),
             Command::FitPage => self.navigation = Navigation::default(),
         }
+        self.record_navigation(before);
+    }
+
+    fn record_navigation(&mut self, before: Navigation) {
         if self.navigation != before {
             if self.zoom_history.current() != Some(&before) {
                 self.zoom_history.insert(before);
@@ -163,9 +179,11 @@ impl Viewer {
         if count > 0 {
             context.input_mut(|input| {
                 if input.consume_key(Modifiers::SHIFT, Key::V) {
-                    self.pan_tool = true;
+                    self.tool = Tool::Pan;
                 } else if input.consume_key(Modifiers::NONE, Key::V) {
-                    self.pan_tool = false;
+                    self.tool = Tool::Inspect;
+                } else if input.consume_key(Modifiers::NONE, Key::Z) {
+                    self.tool = Tool::Zoom;
                 }
             });
             let next = context.input_mut(|input| {
@@ -207,10 +225,12 @@ impl Viewer {
                         self.apply_navigation(Command::FitPage);
                     }
                     ui.separator();
-                    ui.selectable_value(&mut self.pan_tool, false, "Inspect")
+                    ui.selectable_value(&mut self.tool, Tool::Inspect, "Inspect")
                         .on_hover_text("Inspect a drawing point (V)");
-                    ui.selectable_value(&mut self.pan_tool, true, "Pan")
+                    ui.selectable_value(&mut self.tool, Tool::Pan, "Pan")
                         .on_hover_text("Pan the drawing (Shift+V)");
+                    ui.selectable_value(&mut self.tool, Tool::Zoom, "Zoom")
+                        .on_hover_text("Click or drag to zoom (Z)");
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     egui::widgets::global_theme_preference_switch(ui);
@@ -251,10 +271,10 @@ impl Viewer {
                 if let Some([x, y]) = self.selected {
                     ui.monospace(format!("Page coordinates  x {x:.2} pt   y {y:.2} pt"));
                 } else {
-                    ui.label(if self.pan_tool {
-                        "Drag to pan"
-                    } else {
-                        "Click to inspect · Scroll to zoom · Hold Space to pan"
+                    ui.label(match self.tool {
+                        Tool::Pan => "Drag to pan",
+                        Tool::Zoom => "Click or drag to zoom · ⌘-click to zoom out",
+                        Tool::Inspect => "Click to inspect · Scroll to zoom · Hold Space to pan",
                     });
                 }
             });
@@ -285,7 +305,10 @@ impl Viewer {
                     input.pointer.button_down(PointerButton::Middle),
                 )
             });
-            let pan_mode = self.pan_tool || space_pan;
+            let pan_mode = self.tool == Tool::Pan || space_pan;
+            if self.tool != Tool::Zoom {
+                self.zoom_start = None;
+            }
             let canvas_pressed = response.is_pointer_button_down_on();
             if primary_pressed {
                 // Keep the press intent through release, even if Space is released first.
@@ -305,6 +328,42 @@ impl Viewer {
                 self.navigation.zoom_at(zoom, pointer - bounds.center());
             }
 
+            let mut zoom_outline = None;
+            if self.tool == Tool::Zoom {
+                let (pointer, released, zoom_out) = ui.input(|input| {
+                    (
+                        input.pointer.latest_pos(),
+                        input.pointer.button_released(PointerButton::Primary),
+                        input.modifiers.command,
+                    )
+                });
+                if primary_pressed && !pan_mode && canvas_pressed {
+                    self.zoom_start = pointer;
+                }
+                if let (Some(start), Some(end)) = (self.zoom_start, pointer) {
+                    let selection = zoom_selection(start, end, bounds);
+                    if primary_down {
+                        if response.dragged_by(PointerButton::Primary) {
+                            zoom_outline = Some(Rect::from_two_pos(start, end));
+                        }
+                    } else if released {
+                        let before = self.navigation;
+                        self.navigation.apply_draw_zoom(bounds, end, selection, zoom_out);
+                        self.record_navigation(before);
+                    }
+                } else if !pan_mode && !self.primary_pan && response.clicked_by(PointerButton::Primary) {
+                    // A click can be delivered as press and release in the same frame.
+                    if let Some(end) = response.interact_pointer_pos() {
+                        let before = self.navigation;
+                        self.navigation.apply_draw_zoom(bounds, end, zoom_selection(end, end, bounds), zoom_out);
+                        self.record_navigation(before);
+                    }
+                }
+                if !primary_down {
+                    self.zoom_start = None;
+                }
+            }
+
             let scale = fit * f64::from(self.navigation.zoom);
             let center = bounds.center() + self.navigation.pan;
             let size = Vec2::new((width * scale) as f32, (height * scale) as f32);
@@ -312,18 +371,32 @@ impl Viewer {
             let Ok(view) = geometry.viewport([rect.min.x.into(), rect.min.y.into()], scale) else { return };
             let painter = ui.painter().with_clip_rect(canvas);
             painter.image(texture, rect, uv, Color32::WHITE);
+            if let Some(outline) = zoom_outline {
+                painter.rect_stroke(
+                    outline, 0.0, egui::Stroke::new(1.5_f32, ui.visuals().selection.stroke.color),
+                    egui::StrokeKind::Inside,
+                );
+            }
 
             if canvas_pressed && (middle_down || (self.primary_pan && primary_down)) {
                 context.set_cursor_icon(CursorIcon::Grabbing);
             } else if let Some(pointer) = response.hover_pos() {
                 if pan_mode {
                     context.set_cursor_icon(CursorIcon::Grab);
+                } else if self.tool == Tool::Zoom {
+                    context.set_cursor_icon(if ui.input(|input| input.modifiers.command) {
+                        CursorIcon::ZoomOut
+                    } else {
+                        CursorIcon::ZoomIn
+                    });
                 } else if rect.contains(pointer) {
                     context.set_cursor_icon(CursorIcon::Crosshair);
                 }
             }
 
-            if !pan_mode && !self.primary_pan && response.clicked_by(PointerButton::Primary) {
+            if self.tool == Tool::Inspect && !pan_mode && !self.primary_pan
+                && response.clicked_by(PointerButton::Primary)
+            {
                 if let Some(position) = response.interact_pointer_pos().filter(|p| rect.contains(*p)) {
                     self.selected = view.canvas_to_page([position.x.into(), position.y.into()]).ok();
                 }
@@ -349,6 +422,26 @@ impl eframe::App for Viewer {
     }
 }
 
+fn canvas_point(point: Pos2, bounds: Rect) -> [i32; 2] {
+    [(point.x - bounds.min.x).round() as i32, (point.y - bounds.min.y).round() as i32]
+}
+
+fn zoom_selection(start: Pos2, end: Pos2, bounds: Rect) -> ZoomRect {
+    let movement = DragMove {
+        mode: Mode::Zoom,
+        shift: false,
+        outline_visible: false,
+        begin: canvas_point(start, bounds),
+        end: canvas_point(end, bounds),
+        work_size: [0, 0],
+        page_size: [0, 0],
+    };
+    let DragEffect::Outline(selection) = movement.effect() else {
+        unreachable!("a zoom drag produces an outline");
+    };
+    selection
+}
+
 /// Zoom relative to fit and pan in logical canvas units.
 #[derive(Clone, Copy, PartialEq)]
 struct Navigation {
@@ -363,6 +456,32 @@ impl Default for Navigation {
 }
 
 impl Navigation {
+    fn apply_draw_zoom(&mut self, bounds: Rect, pointer: Pos2, selection: ZoomRect, zoom_out: bool) {
+        let output_size = [bounds.width().round() as u32, bounds.height().round() as u32];
+        let release = Release {
+            mode: Mode::Zoom,
+            shift: false,
+            modifier_one: zoom_out,
+            point: canvas_point(pointer, bounds),
+            output_size,
+            selection,
+            selection_pixels: selection.size,
+            drag_threshold_pixels: 3,
+        };
+        let Some(rect) = release.zoom_rect() else { return };
+        let Some(window) = ZoomWindow::new(output_size, (self.zoom * 100.0).round() as u16, 50) else {
+            return;
+        };
+        let zoom = f32::from(window.zoom_for_rect(rect.size)) / 100.0;
+        let center = Vec2::new(
+            rect.origin[0] as f32 + rect.size[0] as f32 * 0.5,
+            rect.origin[1] as f32 + rect.size[1] as f32 * 0.5,
+        );
+        let anchor = bounds.min + center - bounds.center();
+        self.zoom_at(zoom / self.zoom, anchor);
+        self.pan -= anchor;
+    }
+
     /// Keep the point at the anchor stationary as the drawing changes size.
     /// The anchor is relative to the fitted canvas center.
     fn zoom_at(&mut self, factor: f32, anchor: Vec2) {
@@ -400,7 +519,7 @@ mod tests {
             let context = egui::Context::default();
             let mut viewer = Viewer::new(&context, fixture());
             viewer.selected = Some([150.0, 120.0]);
-            viewer.pan_tool = pan_tool;
+            viewer.tool = if pan_tool { Tool::Pan } else { Tool::Inspect };
             frame(&mut viewer, &context, egui::RawInput::default());
 
             let start = Pos2::new(450.0, 300.0);
@@ -445,6 +564,45 @@ mod tests {
         assert_eq!(send(vec![key(Key::Space, false, Modifiers::NONE)]), CursorIcon::Grabbing);
         assert_eq!(send(vec![pointer_button(pos, PointerButton::Primary, false)]), CursorIcon::Crosshair);
         assert!(viewer.selected.is_none());
+    }
+
+    #[test]
+    fn zoom_tool_uses_draw_click_drag_and_modifier_zoom() {
+        let context = egui::Context::default();
+        let mut viewer = Viewer::new(&context, fixture());
+        viewer.tool = Tool::Zoom;
+        let start = Pos2::new(450.0, 300.0);
+        let send = |viewer: &mut Viewer, events, modifiers| {
+            frame(viewer, &context, egui::RawInput { events, modifiers, ..Default::default() })
+        };
+        let button = |point, pressed, modifiers| egui::Event::PointerButton {
+            pos: point, button: PointerButton::Primary, pressed, modifiers,
+        };
+        frame(&mut viewer, &context, egui::RawInput::default());
+        assert_eq!(
+            send(&mut viewer, vec![egui::Event::PointerMoved(start)], Modifiers::NONE),
+            CursorIcon::ZoomIn,
+        );
+        for pressed in [true, false] {
+            send(&mut viewer, vec![button(start, pressed, Modifiers::NONE)], Modifiers::NONE);
+        }
+        assert!((viewer.navigation.zoom - 2.0).abs() < 0.02);
+        assert!(viewer.selected.is_none());
+        viewer.apply_navigation(Command::ZoomPrevious);
+        assert_eq!(viewer.navigation.zoom, 1.0);
+
+        let end = start + Vec2::new(140.0, 100.0);
+        send(&mut viewer, vec![button(start, true, Modifiers::NONE)], Modifiers::NONE);
+        send(&mut viewer, vec![egui::Event::PointerMoved(end)], Modifiers::NONE);
+        send(&mut viewer, vec![button(end, false, Modifiers::NONE)], Modifiers::NONE);
+        let after_drag = viewer.navigation.zoom;
+        assert!(after_drag > 3.0);
+
+        assert_eq!(send(&mut viewer, vec![], Modifiers::COMMAND), CursorIcon::ZoomOut);
+        for pressed in [true, false] {
+            send(&mut viewer, vec![button(end, pressed, Modifiers::COMMAND)], Modifiers::COMMAND);
+        }
+        assert!((viewer.navigation.zoom - after_drag / 2.0).abs() < 0.02);
     }
 
     #[test]

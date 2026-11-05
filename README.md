@@ -6,9 +6,20 @@ See the [implementation brief](SimplyPDF-implementation-plan.md) for data contra
 
 See the [architecture and backend maintenance guide](docs/architecture.md), [desktop UI direction](docs/desktop-ui.md), and [synthetic fixture manifest](tests/fixtures/README.md).
 
+## Run the macOS app
+
+Build and open a local app bundle from the repository root:
+
+```sh
+sh spikes/viewer/packaging/macos/build-app.sh
+open build/macos/SimplyPDF.app
+```
+
+The bundle opens the included test drawing. Choose **File → Open…** to load another PDF. Use **Z** for the Draw-derived Zoom tool. This is a host-architecture development bundle.
+
 ## LibreOffice Draw port
 
-The [Draw port plan and source ledger](docs/libreoffice-draw-port.md) tracks the upstream revision, Rust translations, and verification. The full pinned source checkout lives under ignored local references. Draw’s classic menu bar and toolbar definitions are preserved as port references, and the Rust Draw crate can be built and tested independently. Draw’s translated zoom history is available in the Rust viewer under **View → Zoom**.
+The [Draw port plan and source ledger](docs/libreoffice-draw-port.md) tracks the upstream revision, Rust translations, and verification. The full pinned source checkout lives under ignored local references. Draw’s classic menu bar and toolbar definitions are preserved as port references, and the Rust Draw crate can be built and tested independently. The Rust app uses translated Draw zoom calculations, gestures, and history in the PDF viewer.
 
 ## Repository policy
 
