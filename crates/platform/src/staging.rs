@@ -1,5 +1,5 @@
-//! Staging files for atomic saves: a new, unpredictably named file beside the target, written and
-//! then renamed over it. Writing, closing, renaming and cleaning up stay with the caller.
+//! Staging for atomic saves and fresh export snapshots. Replacement saves use an unpredictable
+//! file beside the target; fresh snapshots publish without replacing any existing destination.
 
 use std::path::{Path, PathBuf};
 
@@ -122,6 +122,30 @@ pub fn staging_suffixes() -> impl Iterator<Item = u64> {
     use std::hash::BuildHasher;
     let state = std::hash::RandomState::new();
     (0u64..).map(move |i| state.hash_one(i))
+}
+
+/// Publish a complete, synced file only if `path` is free, including at publication time.
+/// Existing files, directories and symlinks are never replaced. Staging stays beside the
+/// destination and is removed on failure. Parent-directory power-loss durability is not promised.
+pub fn write_new_atomically(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    write_new_atomically_syncing(path, bytes, std::fs::File::sync_all)
+}
+
+fn write_new_atomically_syncing(path: &Path, bytes: &[u8], sync_all: impl FnOnce(&std::fs::File) -> std::io::Result<()>) -> std::io::Result<()> {
+    use std::io::Write as _;
+    let dir = path.parent().filter(|d| !d.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    let mut staged = tempfile::NamedTempFile::new_in(dir)?;
+    staged.write_all(bytes)?;
+    sync_staged(staged.as_file(), sync_all)?;
+    staged.persist_noclobber(path).map_err(|error| {
+        let reason = if error.error.kind() == std::io::ErrorKind::AlreadyExists {
+            "output already exists; choose a new output path".to_string()
+        } else {
+            error.error.to_string()
+        };
+        std::io::Error::new(error.error.kind(), format!("{}: {reason}", path.display()))
+    })?;
+    Ok(())
 }
 
 /// Write `bytes` to `path` through a staging file beside it (see [`create_staging`]; `form`

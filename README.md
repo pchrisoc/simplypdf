@@ -425,8 +425,16 @@ rewrite history on subsequent iterations. Upstream contributions still use PRs.
 - [ ] **ENG-08.04 — Snapshot exports.** Verify CSV and typed XLSX exports share engine rows and
   numeric quantities. Check escaping, named ranges, empty data, and existing-file protection.
   Partial audit: shared schema/empty-export coverage is recorded under ENG-08.01. CSV and
-  XLSX now share the engine copying-permission guard; unrestricted CSV replacement policy
-  still needs reconciliation with the fresh-path workbook policy before this box is checked.
+  XLSX share the engine copying-permission guard and fresh-output-path policy. CSV now
+  uses the shared platform no-replacement writer, including when a competing output appears
+  during staging. Remaining audit: CSV's success toast must retain unsupported/truncated-scan
+  warnings instead of replacing them with an unqualified success message.
+  Fresh-path evidence on macOS: `cargo test -p simplypdf-platform -j 2 fresh_output` (three
+  race/sync/symlink cases) and `cargo test -p simplypdf-automation -j 2 takeoff_` (seven
+  cases, including `takeoff_csv_snapshot_never_replaces_existing_files`) pass. The rebuilt
+  CLI creates one snapshot, rejects a repeated export, and retains the original bytes.
+  The desktop export regression, strict platform/automation/UI Clippy, scoped WASM compilation
+  (existing warnings), fmt, assets and layers also pass.
   macOS evidence: `takeoff_exports_honor_copy_permissions_and_preserve_outputs` (observed
   failing before the fix) and `copy_restricted_documents_refuse_extraction_unless_opened_by_the_owner`
   pass. Native `--control` inspect/command/screenshot verifies disabled takeoff export while
@@ -859,7 +867,8 @@ session.
 cargo run --locked --release -p simplypdf-cli -- run --script takeoff.json --root ./work
 ```
 
-The export creates `work/takeoff.xlsx` and requires a fresh output path. In a separate
+Both CSV and XLSX exports require a fresh output path and never replace an existing file.
+The example creates `work/takeoff.xlsx`. In a separate
 LibreOffice Calc estimate, use **Sheet → External Links** to import the `TakeoffData` named range.
 Keep estimate formulas and pricing in that separate workbook. See the
 [automation guide](crates/automation/README.md#takeoff-workbook) for export behavior.

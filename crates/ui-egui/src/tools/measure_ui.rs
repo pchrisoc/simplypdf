@@ -749,8 +749,8 @@ pub(crate) fn export_csv(app: &mut SimplyPDFApp) {
             }
             #[cfg(not(target_arch = "wasm32"))]
             {
-                let write = move |app: &mut SimplyPDFApp, path: std::path::PathBuf| match crate::editing::write_atomically(
-                    &path.to_string_lossy(),
+                let write = move |app: &mut SimplyPDFApp, path: std::path::PathBuf| match simplypdf_platform::staging::write_new_atomically(
+                    &path,
                     csv.as_bytes(),
                 ) {
                     Ok(()) => app.notify(tl!("Saved measurements.")),

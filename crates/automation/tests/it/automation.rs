@@ -8297,6 +8297,24 @@ fn takeoff_exports_honor_copy_permissions_and_preserve_outputs() {
 }
 
 #[test]
+fn takeoff_csv_snapshot_never_replaces_existing_files() {
+    let dir = workdir("takeoff-csv-new-only");
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({"path":"a.pdf"}))["doc"].clone();
+    ok(&mut a, "measure_distance", json!({"doc":doc,"page":1,"points":[[10,10],[82,10]]}));
+    let args = json!({"doc":doc,"out":"takeoff.csv"});
+    ok(&mut a, "measure_export", args.clone());
+    let original = std::fs::read(dir.join("takeoff.csv")).unwrap();
+    assert!(a.call("measure_export", &args).is_err());
+    assert_eq!(std::fs::read(dir.join("takeoff.csv")).unwrap(), original);
+    std::fs::write(dir.join("estimate.csv"), b"estimate formulas").unwrap();
+    assert!(a.call("measure_export", &json!({"doc":doc,"out":"estimate.csv"})).is_err());
+    assert_eq!(std::fs::read(dir.join("estimate.csv")).unwrap(), b"estimate formulas");
+    assert!(a.call("measure_export", &json!({"doc":doc,"out":"../outside.csv"})).is_err());
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
 fn takeoff_empty_exports_keep_headers_and_schema_metadata() {
     use std::io::Read;
 

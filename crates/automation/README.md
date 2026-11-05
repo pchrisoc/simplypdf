@@ -13,7 +13,10 @@ Call `takeoff_export_xlsx` with `{"doc":1,"out":"takeoff.xlsx"}` through the CLI
 XLSX export requires the native desktop CLI/app; browser builds return an actionable error
 and support `measure_export` CSV instead. It creates a workbook from the current document, including measurement edits made in the
 current session. The result reports unsupported measurements and whether enumeration reached
-its limits. Choose a fresh output path for each export.
+its limits. Both CSV and XLSX require a fresh output path for each export; neither format
+replaces an existing file. CSV uses the same atomic, no-replacement platform helper as the
+desktop app. If another process creates the output during staging, publication fails and
+preserves that file. Choose another filename and retry.
 
 CSV and XLSX extraction both require the PDF's copying permission, through the shared
 engine `measurements_for_export` API. Opening with the permissions password lifts that

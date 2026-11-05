@@ -1748,6 +1748,10 @@ fn measurement_tools_draw_live_calibrate_save_and_export() {
     ok(&mut h, &c, "ui.command", json!({"id":"measure.export"}));
     h.run_steps(2);
     assert!(std::fs::read_to_string(dir.join("measurements.csv")).unwrap().contains("m^2"));
+    std::fs::write(dir.join("measurements.csv"), b"existing estimate").unwrap();
+    ok(&mut h, &c, "ui.command", json!({"id":"measure.export"}));
+    h.run_steps(2);
+    assert_eq!(std::fs::read(dir.join("measurements.csv")).unwrap(), b"existing estimate");
     h.get_by_label("Export takeoff…").click();
     h.run_steps(2);
     h.get_by_label("Export").click();

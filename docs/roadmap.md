@@ -1,5 +1,11 @@
 # PdfCraft roadmap: milestones and what's next
 
+> SimplyPDF update 2026-11-05 (ENG-08.04 partial): CSV snapshot output now requires a fresh
+> path, including at atomic publication time, through a shared platform writer. Incomplete-scan
+> CSV success notices remain to be qualified before the snapshot checkbox is complete.
+> Seven automation cases, three platform safety cases, the desktop export regression, strict
+> Clippy, scoped WASM checks (existing warnings), fmt, assets and layers pass.
+
 > SimplyPDF update 2026-11-05 (ENG-08.04 partial): CSV/XLSX exports share the engine
 > copying-permission check; encrypted user/owner regressions and native control verification
 > pass. Scoped engine/automation/UI strict Clippy, WASM compilation (existing warnings), native
@@ -306,6 +312,11 @@ M2 (renderer), M7 (content editing), M10 (OCR and Office), M11 (Preflight and st
 - Unmeasured fidelity: without an Acrobat comparison harness, quality gaps surface as user reports.
 
 ## Revision history
+
+**2026-11-05 · minor · ENG-08.04 partial:** CSV snapshots now preserve existing outputs
+and competing writers through the shared platform no-replacement writer. Synthetic tests
+cover publication races, failed-sync cleanup and destination symlinks. Snapshot qualification
+remains partial; no upstream parity change.
 
 **2026-11-05 · minor · ENG-08.04 partial:** Restricted PDF takeoff export now uses one
 engine guard across desktop and automation. The failing-before/passing-after regression

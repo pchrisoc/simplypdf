@@ -448,3 +448,52 @@ fn a_replaced_link_keeps_its_own_attributes_not_its_targets() {
     assert_ne!(std::fs::metadata(&referent).unwrap().file_attributes() & HIDDEN, 0, "and still hidden");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn fresh_output_refuses_a_destination_created_during_sync() {
+    let dir = test_dir("fresh-race");
+    let target = dir.join("takeoff.csv");
+    let error = write_new_atomically_syncing(&target, b"takeoff rows", |file| {
+        file.sync_all()?;
+        std::fs::write(&target, b"other writer")
+    })
+    .unwrap_err();
+    assert_eq!(error.kind(), std::io::ErrorKind::AlreadyExists);
+    assert!(error.to_string().contains("choose a new output path"));
+    assert_eq!(std::fs::read(&target).unwrap(), b"other writer");
+    assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn fresh_output_sync_failure_leaves_no_partial_file_or_staging() {
+    let dir = test_dir("fresh-sync-refusal");
+    let target = dir.join("takeoff.csv");
+    let error = write_new_atomically_syncing(&target, b"takeoff rows", |_| Err(std::io::Error::other("disk sync failed"))).unwrap_err();
+    assert!(error.to_string().contains("disk sync failed"));
+    assert!(!target.exists());
+    assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 0);
+    write_new_atomically(&target, b"complete rows").unwrap();
+    assert_eq!(std::fs::read(&target).unwrap(), b"complete rows");
+    assert!(write_new_atomically(&target, b"replacement").is_err());
+    assert_eq!(std::fs::read(&target).unwrap(), b"complete rows");
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[cfg(unix)]
+#[test]
+fn fresh_output_never_replaces_or_follows_a_destination_symlink() {
+    let dir = test_dir("fresh-symlink");
+    let target = dir.join("takeoff.csv");
+    let original = dir.join("estimate.csv");
+    std::fs::write(&original, b"estimate formulas").unwrap();
+    std::os::unix::fs::symlink(&original, &target).unwrap();
+    assert!(write_new_atomically(&target, b"takeoff rows").is_err());
+    assert!(std::fs::symlink_metadata(&target).unwrap().file_type().is_symlink());
+    assert_eq!(std::fs::read(&original).unwrap(), b"estimate formulas");
+    std::fs::remove_file(&original).unwrap();
+    assert!(write_new_atomically(&target, b"takeoff rows").is_err());
+    assert!(!original.exists());
+    assert_eq!(std::fs::read_dir(&dir).unwrap().count(), 1);
+    let _ = std::fs::remove_dir_all(dir);
+}

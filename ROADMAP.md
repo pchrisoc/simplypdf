@@ -225,6 +225,17 @@ Ranked; detail and the full milestone table in [docs/roadmap.md](docs/roadmap.md
 
 ## Progress log
 
+- 2026-11-05 (ENG-08.04 partial): CSV snapshot publication now refuses existing outputs,
+  matching XLSX. Desktop and automation use `platform::staging::write_new_atomically`,
+  backed by the already-pinned tempfile package. The CSV regression was observed failing
+  before the fix. Platform tests verify a competing writer during sync, failed-sync cleanup,
+  and existing/dangling destination symlinks. No dependency package was added to Cargo.lock.
+  Seven automation takeoff cases, the desktop measurement/export regression (now checking
+  CSV replacement refusal), strict all-target Clippy for platform/automation/UI, scoped WASM
+  compilation (existing warnings), fmt, assets and layers pass. The rebuilt CLI verifies repeat
+  export refusal and identical retained bytes. The snapshot task remains unchecked pending CSV
+  incomplete-scan success-notice qualification.
+
 - 2026-11-05 (ENG-08.04 partial): Closed the CSV takeoff copying-permission bypass.
   Desktop CSV/XLSX and CLI/MCP share `Document::measurements_for_export`; the CSV command
   requires copying permission. The new automation regression failed before the fix and

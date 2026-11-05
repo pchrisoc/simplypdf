@@ -204,7 +204,7 @@ impl Automation {
         let all = self.doc(a)?.measurements_for_export().map_err(failed)?;
         let csv = measure::csv(&all.measurements);
         let target = self.resolve(a.str("out")?, true)?;
-        crate::write_atomic(&target, csv.as_bytes())?;
+        simplypdf_platform::staging::write_new_atomically(&target, csv.as_bytes()).map_err(failed)?;
         Ok(
             json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}),
         )
