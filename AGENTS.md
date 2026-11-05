@@ -120,6 +120,26 @@ PdfCraft opens files from strangers, and people trust it with their work. A malf
 
 Follow `CLAUDE.md`. It covers quality gates, layering, commit rules and how to run and look at the app.
 
+### SimplyPDF engineering task checkpoints
+
+The owner authorized the engineering backlog and direct checkpoint publishing on 2026-11-05.
+Use `README.md`'s **Engineering feature checklist** and **Agent completion and push loop** as
+the persistent SimplyPDF work queue. Inspect existing implementations before adding code.
+Keep a task unchecked until its acceptance conditions, shared definition of done, headless
+tool/end-to-end coverage, and relevant UI verification pass. Record exact passing evidence
+beside the checkbox; commit the implementation and checked box together under its task ID.
+Update the progress documents, push the verified checkpoint, verify the remote tip, and continue
+with the next unblocked task during the active session. Record partial work and blockers honestly.
+
+For this fork, integrate work into `main` and publish to the `simplypdf` remote at
+`https://github.com/pchrisoc/simplypdf.git` using `git push simplypdf main`.
+`origin` points to `storytold/pdfcraft` and is not the publishing target. This owner instruction
+overrides the upstream PR-only integration rule in `CLAUDE.md` for SimplyPDF only. Fetch and
+reconcile concurrent changes before publishing; do not routinely force-push. Preserve the older
+Draw prototype's main tip on an archive branch before the authorized one-time main replacement.
+Do not delete other branches or unrelated work. Upstream contributions still require PRs.
+This workflow does not authorize default servers, background agents, or scheduled execution.
+
 ## Contributor credits (About window)
 
 - About ▸ Contributors/Models are compiled into the binary from `contributors/contributors.json`

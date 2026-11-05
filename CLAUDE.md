@@ -11,6 +11,15 @@ PdfCraft is a clean-room, open-source, Rust-native PDF application targeting Ado
 
 `plan/` is gitignored (local-only, like PhotoCraft). The machine-readable parity checklist lives in `parity/` (committed).
 
+## SimplyPDF task workflow
+
+For this fork, follow `AGENTS.md`'s **SimplyPDF engineering task checkpoints** and the README's
+**Agent completion and push loop**. The owner authorized checked, tested task checkpoints on
+`simplypdf/main` (`pchrisoc/simplypdf`), followed by continued iteration. This is the fork-specific
+exception to the upstream PR-only rule below. Never publish fork changes to `origin` (PdfCraft).
+If the gitignored `plan/` directory is absent, use the README checkpoints and `ENG-*` acceptance
+criteria with the committed architecture/crate documentation; do not invent missing plan contents.
+
 ## Non-negotiables
 - **Assets: read `AGENTS.md` §1 before adding or showing any icon, image, font or document.** No assets from Adobe products, ever. Only openly licensed or contributor-original assets are allowed, each with an entry in `ATTRIBUTION.toml`. `cargo xtask assets` enforces this. `AGENTS.md` overrides this file.
 - **Fonts live in [storytold/craft-fonts](https://github.com/storytold/craft-fonts).** Never commit font files here (`AGENTS.md` §1.4). It is the optional build input `CRAFT_FONTS_DIR`: `git clone https://github.com/storytold/craft-fonts ../craft-fonts && CRAFT_FONTS_DIR=../craft-fonts cargo test --workspace` embeds the Japanese fonts (UI fallback, Japanese text in edited PDFs) and runs their tests, which otherwise skip. Code using `pdfcraft_fonts::CRAFT_FONTS` must work when it is empty.

@@ -225,6 +225,15 @@ Ranked; detail and the full milestone table in [docs/roadmap.md](docs/roadmap.md
 
 ## Progress log
 
+- 2026-11-05 (ENG roadmap): Added the complete engineering feature checklist to README with stable
+  task IDs, implementation routes, acceptance criteria, discipline workflows, and evidence-based
+  completion/push instructions for SimplyPDF main. New inventory remains unchecked pending audit;
+  no additional product capabilities or upstream parity gains claimed. Documentation validation
+  confirms 200 unique IDs across 30 sections, valid local file links, and balanced code fences.
+  `git diff --check`, `cargo fmt --check`, scoped xtask Clippy with `-D warnings`, all 65 xtask
+  tests, `cargo xtask layers`, and `cargo xtask assets` pass. `cargo xtask wasm` could not check
+  product code because `wasm32-unknown-unknown` is not installed; this is a documentation-only change.
+
 - 2026-11-05: SimplyPDF naming and takeoff workspace controls verified: native build, clippy, 30 measurement tests, four UI regressions, three automation regressions, CLI render/save/XLSX smoke test, assets and layering.
 
 - **2026-11-04 (M12, takeoff workspace):** A bottom takeoff table supports search, column sorting, numeric quantities, unit-separated totals and selection linked to the drawing. Placement controls attach the table and measurement settings to sidebars or float them within the workspace.
