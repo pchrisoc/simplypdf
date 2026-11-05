@@ -1,6 +1,10 @@
 #[cfg(target_os = "macos")]
 mod file_picker;
 #[cfg(target_os = "macos")]
+mod mac_menu;
+#[cfg(target_os = "macos")]
+mod menu;
+#[cfg(target_os = "macos")]
 mod pdf;
 #[cfg(target_os = "macos")]
 mod viewer;
@@ -17,7 +21,9 @@ fn main() -> eframe::Result {
         ..Default::default()
     };
     eframe::run_native("SimplyPDF", options, Box::new(|context| {
-        Ok(Box::new(viewer::Viewer::new(&context.egui_ctx, path)))
+        let mut viewer = viewer::Viewer::new(&context.egui_ctx, path);
+        viewer.install_native_menu(&context.egui_ctx);
+        Ok(Box::new(viewer))
     }))
 }
 

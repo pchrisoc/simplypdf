@@ -10,13 +10,16 @@ cargo run --locked --manifest-path spikes/viewer/Cargo.toml -- /path/to/drawing.
 cargo test --locked --manifest-path spikes/viewer/Cargo.toml
 ```
 
-Click **Open…** or press **⌘O** to request the macOS file chooser, or drop a PDF into the window. The viewer only replaces the current document once the replacement's first page renders. Page Up and Page Down change sheets. **⌘+** and **⌘−** zoom, and **⌘0** fits the page.
+Choose **File → Open…** from the macOS system menu bar, press **⌘O**, or drop a PDF into the window. The viewer only replaces the current document once the replacement's first page renders. Page Up and Page Down change sheets. **⌘+** and **⌘−** zoom, and **⌘0** fits the page.
+
+The document toolbar sits at the top of the window and groups sheet navigation, zoom, Fit Page, and Pan. File and View use native AppKit menus on macOS. The shared egui presentation puts those menus inside the window above the toolbar for Windows-style placement. The viewer currently launches on macOS. Windows integration and verification are pending.
 
 The first build downloads dependencies from crates.io. This spike has a separate Cargo lockfile, so the headless workspace continues to build offline without GUI dependencies.
 
 ## Replacing the renderer
 
 - `src/pdf.rs` owns Quartz document handles and rasterization. The viewer receives RGBA pixels, the pixel dimensions, the drawn portion of the texture, and shared `PageGeometry`.
+- `src/menu.rs` defines the commands and their in-window presentation. `src/mac_menu.rs` presents the same commands through AppKit and queues them back to the viewer.
 - `src/file_picker.rs` wraps AppKit file selection. The selected path goes through the same opening method as launch arguments and dropped files.
 - `src/viewer.rs` owns the sheet list, canvas layout, and pointer feedback. It converts canvas clicks to canonical page points and uses those same points to place the marker when the window changes size.
 - The adapter reads raw box coordinates and UserUnit once. It derives the Quartz drawing affine transform from the shared viewport and flips Y for the Quartz bitmap. The convenience drawing transform produced a different scale on the fixture, so this adapter constructs its own map.
@@ -24,7 +27,7 @@ The first build downloads dependencies from crates.io. This spike has a separate
 
 The spike uses [eframe 0.31.1](https://github.com/emilk/egui/tree/0.31.1/crates/eframe) (MIT or Apache-2.0), Rust objc2 bindings (MIT), and the macOS [Core Graphics framework](https://developer.apple.com/documentation/coregraphics). This is a macOS reference implementation. Cross-platform renderer selection, release dependency auditing, and packaging remain open.
 
-Rendering is synchronous and capped at 2048 pixels on the longest raster side. Zoom scales the existing raster, which can appear soft at high magnification. Next, verify the native chooser end to end and add background rendering and accessibility coverage while verifying the cross-platform PDF adapter. Keep those checks separate from the takeoff workflow.
+Rendering is synchronous and capped at 2048 pixels on the longest raster side. Zoom scales the existing raster, which can appear soft at high magnification. Next, add background rendering and accessibility coverage while verifying the cross-platform PDF adapter. Keep those checks separate from the takeoff workflow.
 
 ## PDFium comparison
 

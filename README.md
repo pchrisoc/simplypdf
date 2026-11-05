@@ -29,7 +29,8 @@ Project remote (SSH) `git@github.com:pchrisoc/simplypdf.git`
 - [ ] Verify PDFium on Windows and Linux and validate parser agreement on a broader fixture corpus before wiring a production adapter.
 - [x] Add single-page zoom, pan, and Fit page controls informed by the [Revu navigation study](docs/revu-navigation-study.md).
 - [x] Add the macOS file picker, file drop, and keyboard navigation. Exercise both pan gestures through egui input tests.
-- [ ] Confirm native chooser selection and cancellation, then verify native input on the supported desktop platforms.
+- [x] Put File and View in the macOS system menu bar. Verify File → Open, ⌘O, selection, and cancellation.
+- [ ] Connect the in-window menu to the Windows viewer and verify native input on supported desktop platforms.
 - [ ] Evaluate Rust desktop UI frameworks and Rust-compatible PDF rendering and editing adapters. Pin the dependencies selected for the spike. Check licensing, reproducibility, installer size, and memory. Open and render a fixture and verify point placement.
 - [ ] Add a restricted PDF worker, tiled rendering, and cancellation. Benchmark first-page display, zoom, pan, and memory on large vector and scanned sheets.
 - [ ] Package each target and verify that all builds open the same fixtures and pass transform and reference-length checks.

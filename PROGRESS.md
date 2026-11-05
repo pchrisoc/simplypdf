@@ -76,3 +76,11 @@ Next slice is the file picker and input verification, then sharper zoom via back
 - Ran the seven viewer and metadata tests and eleven core tests on macOS arm64. The native app launched and showed the Open control. Desktop automation did not establish native chooser selection or cancellation. OS-level drag and drop and cross-platform input remain unverified.
 
 Next slice is native chooser verification and background rendering for sharper zoom. The separately tracked PDFium adapter still needs Windows and Linux evidence.
+
+## 2026-11-04 · Stage 0, platform menu and top toolbar
+
+- Moved Open from the toolbar to File → Open. Added native AppKit File and View menus on macOS and a shared in-window menu presentation for the future Windows viewer. The top document toolbar now groups page navigation, zoom, Fit Page, and Pan. The active filename appears in the window title.
+- Verified the native File and View entries in the macOS menu bar. Opened the native chooser from File and with ⌘O, canceled once, and selected the synthetic fixture on the second pass. The app returned to the drawing.
+- Ran seven viewer and metadata tests and eleven core tests on macOS arm64. Windows viewer integration and runtime verification are pending.
+
+Next slice is background rendering for sharper zoom and wiring the Windows viewer to the shared in-window menu.

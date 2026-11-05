@@ -5,10 +5,12 @@ use std::path::{Path, PathBuf};
 use eframe::egui::{self, Color32, ColorImage, Key, Modifiers, PointerButton, Pos2, Rect, TextureHandle, Vec2};
 use simplypdf_core::geometry::{PageGeometry, Point};
 
+use crate::mac_menu::NativeMenu;
+use crate::menu::{self, Command};
 use crate::pdf::{Document, RasterPage};
 
 pub struct Viewer {
-    title: String,
+    native_menu: Option<NativeMenu>,
     document: Option<Document>,
     page_index: usize,
     image: Option<(TextureHandle, PageGeometry, Rect)>,
@@ -21,7 +23,7 @@ pub struct Viewer {
 impl Viewer {
     pub fn new(context: &egui::Context, path: PathBuf) -> Self {
         let mut viewer = Self {
-            title: String::new(),
+            native_menu: None,
             document: None,
             page_index: 0,
             image: None,
@@ -42,7 +44,7 @@ impl Viewer {
         let title = path.file_name().unwrap_or(path.as_os_str()).to_string_lossy();
         match result {
             Ok((document, first_page)) => {
-                self.title = title.into_owned();
+                context.send_viewport_cmd(egui::ViewportCommand::Title(format!("{title} — SimplyPDF")));
                 self.document = Some(document);
                 self.display_page(context, 0, first_page);
             }
@@ -70,27 +72,50 @@ impl Viewer {
         self.error = None;
     }
 
+    pub fn install_native_menu(&mut self, context: &egui::Context) {
+        self.native_menu = NativeMenu::install(context);
+    }
+
     fn draw(&mut self, context: &egui::Context) {
-        let open_dialog = context.input_mut(|input| input.consume_key(Modifiers::COMMAND, Key::O));
         let dropped = context.input(|input| input.raw.dropped_files.first().and_then(|file| file.path.clone()));
         if let Some(path) = dropped {
             self.open(context, &path);
         }
-        let count = self.document.as_ref().map_or(0, Document::page_count);
-        if count > 0 {
+        let document_open = self.image.is_some();
+        let commands = if let Some(menu) = &self.native_menu {
+            menu.take_commands(document_open)
+        } else {
+            let mut commands: Vec<_> = menu::window_menu(context, document_open).into_iter().collect();
             context.input_mut(|input| {
-                if input.consume_key(Modifiers::COMMAND, Key::Num0) {
-                    self.navigation = Navigation::default();
-                }
-                if input.consume_key(Modifiers::COMMAND, Key::Plus)
-                    || input.consume_key(Modifiers::COMMAND, Key::Equals)
-                {
-                    self.navigation.zoom_at(1.25, Vec2::ZERO);
-                }
-                if input.consume_key(Modifiers::COMMAND, Key::Minus) {
-                    self.navigation.zoom_at(1.0 / 1.25, Vec2::ZERO);
+                for (key, command) in [
+                    (Key::O, Command::Open),
+                    (Key::Equals, Command::ZoomIn),
+                    (Key::Plus, Command::ZoomIn),
+                    (Key::Minus, Command::ZoomOut),
+                    (Key::Num0, Command::FitPage),
+                ] {
+                    if input.consume_key(Modifiers::COMMAND, key) {
+                        commands.push(command);
+                    }
                 }
             });
+            commands
+        };
+        for command in commands.into_iter().filter(|command| command.enabled(document_open)) {
+            match command {
+                Command::Open => match crate::file_picker::open_document() {
+                    Ok(Some(path)) => self.open(context, &path),
+                    Ok(None) => {}
+                    Err(error) => self.error = Some(error.into()),
+                },
+                Command::ZoomIn => self.navigation.zoom_at(1.25, Vec2::ZERO),
+                Command::ZoomOut => self.navigation.zoom_at(1.0 / 1.25, Vec2::ZERO),
+                Command::FitPage => self.navigation = Navigation::default(),
+            }
+        }
+
+        let count = self.document.as_ref().map_or(0, Document::page_count);
+        if count > 0 {
             let next = context.input_mut(|input| {
                 if input.consume_key(Modifiers::NONE, Key::PageDown) {
                     self.page_index.saturating_add(1).min(count - 1)
@@ -104,14 +129,19 @@ impl Viewer {
                 self.show_page(context, next);
             }
         }
-        let mut open_dialog = open_dialog;
-        egui::TopBottomPanel::top("document").show(context, |ui| {
+        egui::TopBottomPanel::top("viewer_toolbar").show(context, |ui| {
             ui.horizontal(|ui| {
-                ui.heading("SimplyPDF");
-                ui.separator();
-                open_dialog |= ui.button("Open…").on_hover_text("Open PDF (⌘O)").clicked();
-                if !self.title.is_empty() {
-                    ui.label(&self.title);
+                ui.add_space(4.0);
+                if ui.add_enabled(self.page_index > 0, egui::Button::new("‹"))
+                    .on_hover_text("Previous page (Page Up)").clicked()
+                {
+                    self.show_page(context, self.page_index - 1);
+                }
+                ui.label(if count == 0 { "No PDF".into() } else { format!("{} / {count}", self.page_index + 1) });
+                if ui.add_enabled(self.page_index + 1 < count, egui::Button::new("›"))
+                    .on_hover_text("Next page (Page Down)").clicked()
+                {
+                    self.show_page(context, self.page_index + 1);
                 }
                 ui.separator();
                 ui.add_enabled_ui(self.image.is_some(), |ui| {
@@ -121,9 +151,10 @@ impl Viewer {
                     if ui.button("+").on_hover_text("Zoom in").clicked() {
                         self.navigation.zoom_at(1.25, Vec2::ZERO);
                     }
-                    if ui.button("Fit page").clicked() {
+                    if ui.button("Fit Page").clicked() {
                         self.navigation = Navigation::default();
                     }
+                    ui.separator();
                     ui.toggle_value(&mut self.pan_tool, "Pan");
                 });
                 ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
@@ -131,17 +162,6 @@ impl Viewer {
                 });
             });
         });
-        if open_dialog {
-            match crate::file_picker::open_document() {
-                Ok(Some(path)) => {
-                    self.open(context, &path);
-                    context.request_repaint();
-                    return;
-                }
-                Ok(None) => {}
-                Err(error) => self.error = Some(error.into()),
-            }
-        }
         egui::SidePanel::left("sheets").default_width(144.0).show(context, |ui| {
             ui.heading("Sheets");
             ui.separator();
