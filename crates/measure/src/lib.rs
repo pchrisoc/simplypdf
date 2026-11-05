@@ -126,6 +126,22 @@ impl Scale {
         out.validate()?;
         Ok(out)
     }
+    /// Correct the vertical display scale relative to the horizontal scale. The two points
+    /// are the user-space ends of a horizontal display segment, so rotation selects the axis.
+    pub fn with_vertical_multiplier(mut self, a: Point, b: Point, multiplier: f64) -> Result<Self> {
+        check_points(&[a, b])?;
+        if multiplier == 1.0 {
+            return Ok(self);
+        }
+        if (b[0] - a[0]).abs() > (b[1] - a[1]).abs() {
+            self.y *= multiplier;
+        } else {
+            self.x *= multiplier;
+        }
+        self.ratio.push_str(&format!(" (vertical × {})", ratio_number(multiplier)));
+        self.validate()?;
+        Ok(self)
+    }
     pub fn validate(&self) -> Result<()> {
         for f in [self.x, self.y, self.distance_factor, self.area_factor] {
             if !f.is_finite() || !(1e-12..=1e12).contains(&f) {

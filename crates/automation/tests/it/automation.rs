@@ -8275,6 +8275,30 @@ fn measurement_scale_ratio_takes_the_page_side_in_a_unit() {
 }
 
 #[test]
+fn measurement_vertical_scale_follows_display_axes_on_rotated_pages() {
+    let dir = workdir("measurement-vertical-scale");
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({"path":"a.pdf"}))["doc"].as_u64().unwrap();
+    ok(&mut a, "page_rotate", json!({"doc":doc,"pages":[1],"degrees":90}));
+    ok(&mut a, "measure_scale", json!({"doc":doc,"page":1,"page_distance":1,"page_unit":"pt","distance":1,"unit":"m","vertical_multiplier":2}));
+    for (kind, points, expected) in [
+        ("distance", json!([[10,10],[13,10]]), 3.0),
+        ("distance", json!([[10,10],[10,14]]), 8.0),
+        ("distance", json!([[10,10],[16,14]]), 10.0),
+        ("area", json!([[10,10],[13,10],[13,14],[10,14]]), 24.0),
+    ] {
+        let value = ok(&mut a, "measure_info", json!({"doc":doc,"page":1,"type":kind,"points":points}))["reading"]["value"].as_f64().unwrap();
+        assert!((value - expected).abs() < 1e-9, "{kind}: {value}");
+    }
+    ok(&mut a, "measure_distance", json!({"doc":doc,"page":1,"points":[[10,10],[16,14]]}));
+    ok(&mut a, "doc_save", json!({"doc":doc,"path":"vertical.pdf"}));
+    let reopened = ok(&mut a, "doc_open", json!({"path":"vertical.pdf"}))["doc"].as_u64().unwrap();
+    let saved = ok(&mut a, "measure_list", json!({"doc":reopened}));
+    assert_eq!(saved["measurements"][0]["reading"]["value"], 10.0);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
 fn measurements_bad_arguments_leave_document_and_history_unchanged() {
     let dir = workdir("measurement-errors");
     let mut a = auto(&dir);

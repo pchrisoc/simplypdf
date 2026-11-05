@@ -14,6 +14,12 @@ ArtCraft team and PDFCraft contributors. [Planned project website](https://pdf.s
 - Save measurements as PDF annotations and export their quantities as numeric XLSX cells.
 - Use MCP to open drawings, create and list measurements, and export a takeoff workbook.
 
+For a drawing stretched in one direction, enter its horizontal scale and a **Vertical scale
+multiplier** in the Measure panel. For example, a multiplier of `1.02` makes a vertical
+segment read 2% longer while leaving horizontal distances unchanged. **Calibrate from two
+points** starts a new uniform calibration. The MCP `measure_scale` tool accepts the same
+correction as `vertical_multiplier` with a horizontal ratio.
+
 The XLSX export is an on-demand snapshot. Live publishing to a Calc-linked workbook and
 end-to-end validation on Windows and Linux are pending.
 
@@ -65,6 +71,14 @@ features. Keep the proprietary installer and any captured artifacts outside the 
 
 ### Checkpoint 2 · Make takeoffs reviewable and repeatable
 
+- [x] Apply separate horizontal and vertical calibration factors to distances and areas.
+  Verify rotated pages and save/reopen through MCP.
+- [ ] Add construction scale presets and editable page and viewport scales, with a visible
+  indicator for uncalibrated drawings and the scale applied to each markup.
+- [ ] Make vector snaps respect drawing layer visibility. Test endpoints, midpoints,
+  intersections, and path snaps on synthetic layered and rotated plans.
+- [ ] Add named markup layers with visibility, assignment, and persistence. Verify the same
+  visibility and assignment from the desktop and MCP.
 - [ ] Add point counts with editable groups and visible totals. Verify click, delete, regroup,
   save/reopen, undo, MCP, and XLSX export.
 - [ ] Build a takeoff table with selection synced to the drawing. Add filter, sort, and grouped

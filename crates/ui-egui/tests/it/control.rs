@@ -1608,6 +1608,13 @@ fn a_1_to_50_scale_in_millimetres_measures_a_10_mm_line_as_500_mm() {
     ok(&mut h, &c, "ui.command", json!({"id":"edit.redo"}));
     h.run_steps(2);
     assert_eq!(stored(&h), (value, ratio));
+    h.state_mut().views[0].measure.vertical_multiplier = 2.0;
+    h.get_by_label("Apply scale").click();
+    h.run_steps(3);
+    let scale = h.state().session.get(doc).unwrap().measurement_scale(0, line[0]).unwrap();
+    let vertical = [line[0], [line[0][0], line[0][1] + 10.0 * mm]];
+    let value = measure::reading(Kind::Distance, &vertical, &scale).unwrap().value;
+    assert!((value - 1000.0).abs() < 1e-9, "{value}");
     // Measuring the line on the page with the Distance tool reads the same.
     ok(&mut h, &c, "ui.command", json!({"id":"measure.distance"}));
     for [x, y] in line {

@@ -54,6 +54,7 @@ pub struct MeasureView {
     /// The page side of the drawing scale, in its page unit ([`page_unit_of`]).
     pub drawing_points: f64,
     pub real_distance: f64,
+    pub vertical_multiplier: f64,
     pub unit: String,
     /// The unit picked for the page side of the scale; `None` follows `unit`.
     pub page_unit: Option<PageUnit>,
@@ -87,6 +88,7 @@ impl Default for MeasureView {
             sensitivity: 6.0,
             drawing_points: 1.0,
             real_distance: 1.0,
+            vertical_multiplier: 1.0,
             unit: "in".into(),
             page_unit: None,
             ratio_text: String::new(),
@@ -360,6 +362,7 @@ fn finish(state: &mut MeasureView, pending: &mut Option<Edit>, doc: &Document, p
             let b = doc.measurement_to_view(page, *b);
             if let (Ok(a), Ok(b)) = (a, b) {
                 state.drawing_points = measure::distance(a, b) / page_unit_of(state.page_unit, &state.unit, units).points();
+                state.vertical_multiplier = 1.0;
             }
         }
         state.cancel();
@@ -413,14 +416,19 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
     }
     if state.seeded_page != Some(page) {
         state.seeded_page = Some(page);
+        state.vertical_multiplier = 1.0;
         // One page unit (the one the scale's unit gives) and what it measures.
         if let Ok(a) = doc.measurement_to_user(page, [0.0, 0.0])
             && let Ok(scale) = doc.measurement_scale_or(page, a, units.per_point(), units.label())
             && let Ok(b) = doc.measurement_to_user(page, [page_unit_of(None, &scale.unit, units).points(), 0.0])
+            && let Ok(c) = doc.measurement_to_user(page, [0.0, page_unit_of(None, &scale.unit, units).points()])
             && let Ok(reading) = measure::reading(Kind::Distance, &[a, b], &scale)
+            && let Ok(vertical) = measure::reading(Kind::Distance, &[a, c], &scale)
+            && reading.value > 0.0
         {
             state.drawing_points = 1.0;
             state.real_distance = reading.value;
+            state.vertical_multiplier = vertical.value / reading.value;
             state.unit = scale.unit;
             state.page_unit = None;
             state.precision = scale.precision;
@@ -499,6 +507,10 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
         ui.add(crate::widgets::line(&mut state.unit).desired_width(64.0).char_limit(12)).labelled_by(unit.id);
         ui.add(egui::DragValue::new(&mut state.precision).range(0..=6).prefix(format!("{} ", tl!("Decimals"))));
     });
+    ui.horizontal(|ui| {
+        let label = ui.label(tl!("Vertical scale multiplier"));
+        ui.add(egui::DragValue::new(&mut state.vertical_multiplier).speed(0.001)).labelled_by(label.id);
+    });
     // A hand edit of the fields leaves the 1:N field showing the old ratio: say the new one.
     if scale_fields(state) != fields {
         sync_ratio_text(state, units);
@@ -561,7 +573,9 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
         let result =
             doc.measurement_to_user(page, [0.0, 0.0]).and_then(|a| doc.measurement_to_user(page, [1.0, 0.0]).map(|b| (a, b))).and_then(|(a, b)| {
                 let page_unit = page_unit_of(state.page_unit, &state.unit, units);
-                Scale::ratio(a, b, state.drawing_points, page_unit, state.real_distance, &state.unit, state.precision).map_err(|e| e.to_string())
+                Scale::ratio(a, b, state.drawing_points, page_unit, state.real_distance, &state.unit, state.precision)
+                    .and_then(|scale| scale.with_vertical_multiplier(a, b, state.vertical_multiplier))
+                    .map_err(|e| e.to_string())
             });
         match result {
             Ok(scale) => {

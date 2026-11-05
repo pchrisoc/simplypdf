@@ -79,6 +79,10 @@ impl Automation {
         let info = self.doc(a)?.info.pages.get(page).ok_or_else(|| failed("no such page"))?.clone();
         let precision = u8::try_from(a.opt_int("precision")?.unwrap_or(2)).map_err(|_| failed("precision must be between 0 and 6"))?;
         let unit = a.opt_str("unit")?.unwrap_or("in");
+        let vertical = a.opt_num("vertical_multiplier")?;
+        if vertical.is_some() && a.get("page_distance").is_none() {
+            return Err(failed("vertical_multiplier requires a horizontal scale ratio (page_distance and distance)"));
+        }
         if ["points", "units_per_point", "page_distance"].iter().filter(|k| a.get(k).is_some()).count() > 1 {
             return Err(failed("pass one of calibration points, units_per_point or page_distance"));
         }
@@ -102,7 +106,9 @@ impl Automation {
             let length = a.opt_num("distance")?.ok_or_else(|| failed("a scale ratio needs the real-world distance"))?;
             let from = self.doc(a)?.measurement_to_user(page, [0.0, 0.0]).map_err(failed)?;
             let to = self.doc(a)?.measurement_to_user(page, [1.0, 0.0]).map_err(failed)?;
-            Scale::ratio(from, to, page_distance, page_unit, length, unit, precision).map_err(failed)?
+            Scale::ratio(from, to, page_distance, page_unit, length, unit, precision)
+                .and_then(|scale| scale.with_vertical_multiplier(from, to, vertical.unwrap_or(1.0)))
+                .map_err(failed)?
         } else if let Some(factor) = a.opt_num("units_per_point")? {
             {
                 let from = self.doc(a)?.measurement_to_user(page, [0.0, 0.0]).map_err(failed)?;
