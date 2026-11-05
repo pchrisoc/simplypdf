@@ -1,6 +1,6 @@
 # macOS viewer spike
 
-This Rust prototype opens a local PDF, lists its pages, fits the selected page to the window, and reports canonical page coordinates when clicked. It defaults to SimplyPDF's synthetic four-page fixture. Use only trusted PDFs while parsing and rendering run inside the desktop process.
+This Rust prototype opens a local PDF, lists its pages, fits the selected page to the window, and reports canonical page coordinates when clicked. Use +/− or scroll over the drawing to zoom. Middle-drag or enable Pan and drag with the primary button. Use Fit page to reset the view. It defaults to SimplyPDF's synthetic four-page fixture. Use only trusted PDFs while parsing and rendering run inside the desktop process.
 
 From the repository root on macOS:
 
@@ -21,7 +21,7 @@ The first build downloads dependencies from crates.io. This spike has a separate
 
 The spike uses [eframe 0.31.1](https://github.com/emilk/egui/tree/0.31.1/crates/eframe) (MIT or Apache-2.0), Rust objc2 bindings (MIT), and the macOS [Core Graphics framework](https://developer.apple.com/documentation/coregraphics). This is a macOS reference implementation. Cross-platform renderer selection, release dependency auditing, and packaging remain open.
 
-Rendering is synchronous, fit-to-window, and capped at 2048 pixels on the longest raster side. Next, verify a cross-platform PDF adapter against the same fixture, then add file-open UI, zoom and pan, keyboard and accessibility support, and background rendering. Keep those checks separate from the takeoff workflow.
+Rendering is synchronous and capped at 2048 pixels on the longest raster side. Zoom scales the existing raster, which can appear soft at high magnification. Next, add file-open UI, keyboard and accessibility support, and background rendering while verifying the cross-platform PDF adapter. Keep those checks separate from the takeoff workflow.
 
 ## PDFium comparison
 

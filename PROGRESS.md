@@ -60,3 +60,11 @@ Next slice is to select and test a raw metadata reader for PDFium or identify an
 - The viewer still uses Quartz. PDFium on Windows and Linux, broader parser agreement, and minimum toolchain verification are pending.
 
 Next viewer slice is file opening, zoom, and pan. Keep the click marker anchored in canonical page coordinates. The separate PDFium track still needs cross-platform and broader fixture verification before it can replace Quartz.
+
+## 2026-11-04 · Stage 0, Revu navigation and Rust viewer controls
+
+- Used REA for static inspection of the local Revu 21.11 Windows assembly and recorded evidence and limitations in `docs/revu-navigation-study.md`. The binary contains separate wheel preferences. Bluebeam's public navigation documentation corroborates the default single-page wheel behavior and pan gesture. Exact handler flow and live behavior remain unverified.
+- Added wheel and toolbar zoom, fit reset, and pan controls using the existing Quartz raster and core transform. The selection stays in canonical page coordinates. High magnification scales the current raster.
+- All five viewer and metadata tests and all eleven core tests passed on macOS arm64. The desktop smoke test confirmed toolbar zoom, pointer-centered wheel zoom, marker alignment, and fit reset. The automated drag attempt did not establish panning behavior; gesture verification is still open.
+
+Next slice is the file picker and input verification, then sharper zoom via background rendering. Vendor artifacts and analysis dumps remain excluded from Git.
