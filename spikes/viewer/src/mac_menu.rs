@@ -55,7 +55,21 @@ impl NativeMenu {
 
         for &(label, items) in MENUS {
             let title = NSString::from_str(label);
-            let submenu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &title);
+            let parent = NSMenu::initWithTitle(NSMenu::alloc(mtm), &title);
+            let submenu = if label == "View" {
+                let zoom = NSString::from_str("Zoom");
+                let submenu = NSMenu::initWithTitle(NSMenu::alloc(mtm), &zoom);
+                let zoom_entry = unsafe {
+                    NSMenuItem::initWithTitle_action_keyEquivalent(
+                        NSMenuItem::alloc(mtm), &zoom, None, &NSString::from_str(""),
+                    )
+                };
+                zoom_entry.setSubmenu(Some(&submenu));
+                parent.addItem(&zoom_entry);
+                submenu
+            } else {
+                parent.clone()
+            };
             submenu.setAutoenablesItems(false);
             // Top-level entries only hold a submenu and have no action.
             let entry = unsafe {
@@ -63,7 +77,7 @@ impl NativeMenu {
                     NSMenuItem::alloc(mtm), &title, None, &NSString::from_str(""),
                 )
             };
-            entry.setSubmenu(Some(&submenu));
+            entry.setSubmenu(Some(&parent));
             for item in items {
                 // The selector is defined above and its target is retained by result.
                 let menu_item = unsafe {
@@ -86,10 +100,13 @@ impl NativeMenu {
         Some(result)
     }
 
-    pub fn take_commands(&self, document_open: bool) -> Vec<Command> {
+    pub fn update_enabled(&self, enabled: impl Fn(Command) -> bool) {
         for (command, item) in &self.items {
-            item.setEnabled(command.enabled(document_open));
+            item.setEnabled(enabled(*command));
         }
+    }
+
+    pub fn take_commands(&self) -> Vec<Command> {
         self.target.ivars().pending.take()
     }
 }

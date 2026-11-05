@@ -4,6 +4,7 @@ use std::path::{Path, PathBuf};
 
 use eframe::egui::{self, Color32, ColorImage, Key, Modifiers, PointerButton, Pos2, Rect, TextureHandle, Vec2};
 use simplypdf_core::geometry::{PageGeometry, Point};
+use simplypdf_draw::zoom_history::ZoomHistory;
 
 use crate::mac_menu::NativeMenu;
 use crate::menu::{self, Command};
@@ -16,6 +17,7 @@ pub struct Viewer {
     image: Option<(TextureHandle, PageGeometry, Rect)>,
     selected: Option<Point>,
     navigation: Navigation,
+    zoom_history: ZoomHistory<Navigation>,
     pan_tool: bool,
     error: Option<String>,
 }
@@ -29,6 +31,7 @@ impl Viewer {
             image: None,
             selected: None,
             navigation: Navigation::default(),
+            zoom_history: ZoomHistory::default(),
             pan_tool: false,
             error: None,
         };
@@ -69,6 +72,8 @@ impl Viewer {
         self.page_index = index;
         self.selected = None;
         self.navigation = Navigation::default();
+        self.zoom_history = ZoomHistory::default();
+        self.zoom_history.insert(self.navigation);
         self.error = None;
     }
 
@@ -76,16 +81,52 @@ impl Viewer {
         self.native_menu = NativeMenu::install(context);
     }
 
+    fn command_enabled(&self, command: Command) -> bool {
+        match command {
+            Command::Open => true,
+            Command::ZoomPrevious => self.zoom_history.can_step_back(),
+            Command::ZoomNext => self.zoom_history.can_step_forward(),
+            _ => self.image.is_some(),
+        }
+    }
+
+    fn apply_navigation(&mut self, command: Command) {
+        let before = self.navigation;
+        match command {
+            Command::Open => return,
+            Command::ZoomPrevious => {
+                if let Some(view) = self.zoom_history.step_back() {
+                    self.navigation = *view;
+                }
+                return;
+            }
+            Command::ZoomNext => {
+                if let Some(view) = self.zoom_history.step_forward() {
+                    self.navigation = *view;
+                }
+                return;
+            }
+            Command::ZoomIn => self.navigation.zoom_at(1.25, Vec2::ZERO),
+            Command::ZoomOut => self.navigation.zoom_at(1.0 / 1.25, Vec2::ZERO),
+            Command::FitPage => self.navigation = Navigation::default(),
+        }
+        if self.navigation != before {
+            if self.zoom_history.current() != Some(&before) {
+                self.zoom_history.insert(before);
+            }
+            self.zoom_history.insert(self.navigation);
+        }
+    }
+
     fn draw(&mut self, context: &egui::Context) {
         let dropped = context.input(|input| input.raw.dropped_files.first().and_then(|file| file.path.clone()));
         if let Some(path) = dropped {
             self.open(context, &path);
         }
-        let document_open = self.image.is_some();
         let commands = if let Some(menu) = &self.native_menu {
-            menu.take_commands(document_open)
+            menu.take_commands()
         } else {
-            let mut commands: Vec<_> = menu::window_menu(context, document_open).into_iter().collect();
+            let mut commands: Vec<_> = menu::window_menu(context, |command| self.command_enabled(command)).into_iter().collect();
             context.input_mut(|input| {
                 for (key, command) in [
                     (Key::O, Command::Open),
@@ -101,16 +142,17 @@ impl Viewer {
             });
             commands
         };
-        for command in commands.into_iter().filter(|command| command.enabled(document_open)) {
+        for command in commands {
+            if !self.command_enabled(command) {
+                continue;
+            }
             match command {
                 Command::Open => match crate::file_picker::open_document() {
                     Ok(Some(path)) => self.open(context, &path),
                     Ok(None) => {}
                     Err(error) => self.error = Some(error.into()),
                 },
-                Command::ZoomIn => self.navigation.zoom_at(1.25, Vec2::ZERO),
-                Command::ZoomOut => self.navigation.zoom_at(1.0 / 1.25, Vec2::ZERO),
-                Command::FitPage => self.navigation = Navigation::default(),
+                command => self.apply_navigation(command),
             }
         }
 
@@ -146,13 +188,13 @@ impl Viewer {
                 ui.separator();
                 ui.add_enabled_ui(self.image.is_some(), |ui| {
                     if ui.button("−").on_hover_text("Zoom out").clicked() {
-                        self.navigation.zoom_at(1.0 / 1.25, Vec2::ZERO);
+                        self.apply_navigation(Command::ZoomOut);
                     }
                     if ui.button("+").on_hover_text("Zoom in").clicked() {
-                        self.navigation.zoom_at(1.25, Vec2::ZERO);
+                        self.apply_navigation(Command::ZoomIn);
                     }
                     if ui.button("Fit Page").clicked() {
-                        self.navigation = Navigation::default();
+                        self.apply_navigation(Command::FitPage);
                     }
                     ui.separator();
                     ui.toggle_value(&mut self.pan_tool, "Pan");
@@ -205,7 +247,7 @@ impl Viewer {
             });
         });
         egui::CentralPanel::default().show(context, |ui| {
-            let Some((texture, geometry, uv)) = &self.image else {
+            let Some((texture, geometry, uv)) = self.image.as_ref().map(|(texture, geometry, uv)| (texture.id(), *geometry, *uv)) else {
                 ui.label("Open a PDF or drop one into this window.");
                 return;
             };
@@ -220,7 +262,7 @@ impl Viewer {
             let fit = (f64::from(bounds.width()) / width).min(f64::from(bounds.height()) / height);
 
             if response.double_clicked_by(PointerButton::Middle) {
-                self.navigation = Navigation::default();
+                self.apply_navigation(Command::FitPage);
             }
             if response.dragged_by(PointerButton::Middle)
                 || (self.pan_tool && response.dragged_by(PointerButton::Primary))
@@ -242,7 +284,7 @@ impl Viewer {
             let rect = Rect::from_center_size(center, size);
             let Ok(view) = geometry.viewport([rect.min.x.into(), rect.min.y.into()], scale) else { return };
             let painter = ui.painter().with_clip_rect(canvas);
-            painter.image(texture.id(), rect, *uv, Color32::WHITE);
+            painter.image(texture, rect, uv, Color32::WHITE);
 
             if !self.pan_tool && response.clicked_by(PointerButton::Primary) {
                 if let Some(position) = response.interact_pointer_pos().filter(|p| rect.contains(*p)) {
@@ -255,6 +297,9 @@ impl Viewer {
                 }
             }
         });
+        if let Some(menu) = &self.native_menu {
+            menu.update_enabled(|command| self.command_enabled(command));
+        }
     }
 }
 
@@ -265,6 +310,7 @@ impl eframe::App for Viewer {
 }
 
 /// Zoom relative to fit and pan in logical canvas units.
+#[derive(Clone, Copy, PartialEq)]
 struct Navigation {
     zoom: f32,
     pan: Vec2,
@@ -365,6 +411,26 @@ mod tests {
         frame(&mut viewer, &context, drop(fixture()));
         assert_eq!(viewer.page_index, 0);
         assert!(viewer.error.is_none());
+    }
+
+    #[test]
+    fn zoom_commands_restore_views_and_reset_history_on_page_change() {
+        let context = egui::Context::default();
+        let mut viewer = Viewer::new(&context, fixture());
+        viewer.selected = Some([150.0, 120.0]);
+        assert!(!viewer.command_enabled(Command::ZoomPrevious));
+        viewer.apply_navigation(Command::ZoomIn);
+        viewer.apply_navigation(Command::FitPage);
+        viewer.apply_navigation(Command::ZoomPrevious);
+        assert_eq!(viewer.navigation.zoom, 1.25);
+        assert!(viewer.command_enabled(Command::ZoomNext));
+        viewer.apply_navigation(Command::ZoomNext);
+        assert_eq!(viewer.navigation.zoom, 1.0);
+        assert_eq!(viewer.selected, Some([150.0, 120.0]));
+
+        viewer.show_page(&context, 1);
+        assert!(!viewer.command_enabled(Command::ZoomPrevious));
+        assert!(!viewer.command_enabled(Command::ZoomNext));
     }
 
     #[test]

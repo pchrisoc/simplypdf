@@ -1982,6 +1982,10 @@ name = "simplypdf-core"
 version = "0.1.0"
 
 [[package]]
+name = "simplypdf-draw"
+version = "0.1.0"
+
+[[package]]
 name = "simplypdf-viewer-spike"
 version = "0.1.0"
 dependencies = [
@@ -1994,6 +1998,7 @@ dependencies = [
  "objc2-core-graphics",
  "objc2-foundation 0.3.2",
  "simplypdf-core",
+ "simplypdf-draw",
 ]
 
 [[package]]

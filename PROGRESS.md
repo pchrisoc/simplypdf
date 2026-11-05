@@ -92,3 +92,11 @@ Next slice is background rendering for sharper zoom and wiring the Windows viewe
 - Ran `cargo test --workspace --all-targets --locked --offline` on macOS arm64. All fourteen workspace tests passed, including three new Draw translation tests. Viewer integration, live comparison with Draw, and Windows and Linux verification remain pending.
 
 Next slice is to connect zoom history to the viewer's View menu and expand the Draw source inventory into a per-subsystem ownership ledger.
+
+## 2026-11-04 · Draw menu and toolbar reference, zoom integration
+
+- Copied the complete classic Draw menu bar XML and 48 toolbar definitions from the pinned LibreOffice revision. Verified every copy against its upstream Git blob ID and preserved the license headers. The files serve as port references. The viewer still dispatches implemented commands through Rust.
+- Connected the translated zoom history to View → Zoom → Zoom Previous and Zoom Next in the native and in-window menu implementations. Tested restoring a zoom state, preserving the selection, and clearing history on sheet change.
+- Ran fourteen workspace tests and eight viewer and metadata tests on macOS arm64. The updated native submenu was compiled. Live menu testing and Windows verification were outside this pass.
+
+Next slice is to map the standard toolbar and File/Edit menu IDs to their Draw handlers and port the next set of executable commands.

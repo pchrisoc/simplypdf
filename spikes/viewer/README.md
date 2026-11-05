@@ -12,7 +12,7 @@ cargo test --locked --manifest-path spikes/viewer/Cargo.toml
 
 Choose **File → Open…** from the macOS system menu bar, press **⌘O**, or drop a PDF into the window. The viewer only replaces the current document once the replacement's first page renders. Page Up and Page Down change sheets. **⌘+** and **⌘−** zoom, and **⌘0** fits the page.
 
-The document toolbar sits at the top of the window and groups sheet navigation, zoom, Fit Page, and Pan. File and View use native AppKit menus on macOS. The shared egui presentation puts those menus inside the window above the toolbar for Windows-style placement. The viewer currently launches on macOS. Windows integration and verification are pending.
+The document toolbar sits at the top of the window and groups sheet navigation, zoom, Fit Page, and Pan. File and View use native AppKit menus on macOS. **View → Zoom** includes Zoom Previous and Zoom Next for discrete zoom changes on the current sheet. The shared egui presentation puts those menus inside the window above the toolbar for Windows-style placement. The viewer currently launches on macOS. Windows integration and verification are pending.
 
 The first build downloads dependencies from crates.io. This spike has a separate Cargo lockfile, so the headless workspace continues to build offline without GUI dependencies.
 

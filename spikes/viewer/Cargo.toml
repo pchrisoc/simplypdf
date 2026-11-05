@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 simplypdf-core = { path = "../../crates/simplypdf-core" }
+simplypdf-draw = { path = "../../crates/simplypdf-draw" }
 
 [dev-dependencies]
 libloading = "=0.8.9"

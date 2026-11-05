@@ -8,7 +8,9 @@ The upstream `sd` tree contains 867 files under `source/`, 82 under `inc/`, 256 
 
 - [x] Pin the upstream revision and inventory the shared Draw/Impress module.
 - [x] Translate Draw's zoom history and test insertion, traversal, and capacity.
-- [ ] Connect zoom history to the viewer's View commands and verify a page switch starts fresh history.
+- [x] Preserve the complete classic menu bar and 48 toolbar definitions as pinned, licensed port references.
+- [x] Connect zoom history to the viewer's View commands and verify a page switch starts fresh history.
+- [ ] Map the classic menu and toolbar command IDs to upstream handlers, Rust handlers, and parity tests. Port standard File/Edit actions, view and navigation, drawing and formatting, then context-sensitive toolbars. Review Notebookbar, context menus, icons, and localization separately.
 - [ ] Inventory Draw-owned and shared code using `sd` build targets, command slots, and test targets. Record ownership and dependencies by source unit.
 - [ ] Port document and page models, drawing objects, layers, styles, undo, and selection. Map `svx`, `basegfx`, `docmodel`, and `drawinglayer` dependencies to explicit Rust interfaces.
 - [ ] Port editing tools, text layout, drawing and hit testing, viewport behavior, and the Draw UI. Map `sfx2`, `framework`, `vcl`, and `editeng` behavior behind the appropriate Rust boundaries.
@@ -24,9 +26,12 @@ For each translated slice, record the upstream revision and paths, Rust destinat
 | --- | --- | --- |
 | [`sd/source/ui/view/zoomlist.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/view/zoomlist.cxx) | `crates/simplypdf-draw/src/zoom_history.rs` | Translated and tested |
 | [`sd/source/ui/inc/zoomlist.hxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/inc/zoomlist.hxx) | Same module | Rust API adapted to generic view state |
-| LibreOffice view-shell command invalidation | SimplyPDF viewer command availability | Integration pending |
+| LibreOffice view-shell command invalidation | SimplyPDF viewer command availability | Integrated for Zoom Previous and Zoom Next |
+| [`sd/uiconfig/sdraw/menubar` and `toolbar`](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77/sd/uiconfig/sdraw) | [Pinned XML references](../crates/simplypdf-draw/upstream/README.md) | Layout copied. Rust command parity pending. |
 
 The Rust translation preserves the ten-entry cap, insertion after the current position while below capacity, forward entries after stepping back, and oldest-entry eviction with cursor reuse at capacity. Rust returns `None` for empty history and lets the caller update command availability. It carries no LibreOffice UI or runtime dependency.
+
+The viewer exposes **View → Zoom → Zoom Previous / Zoom Next**. History starts at Fit Page for each loaded sheet and tracks discrete toolbar or menu zoom changes. Wheel zoom and pan remain interactive; their last view becomes a history entry when the next discrete zoom changes it. This is the viewer's integration policy for the translated history.
 
 ```sh
 cargo test -p simplypdf-draw --locked --offline
