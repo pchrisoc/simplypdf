@@ -44,3 +44,11 @@ Next slice is the Rust desktop viewer spike. Open the synthetic drawing, render 
 - Tested on macOS 27.0.1 arm64 with Rust 1.98.1. The viewer test passed using `cargo test --locked --offline --manifest-path spikes/viewer/Cargo.toml` after fetching its dependencies. Windows, Linux, the viewer's minimum toolchain, rustfmt, and packaging remain unverified.
 
 Next slice is a cross-platform renderer comparison against the same fixture, then file-open UI, zoom and pan, and background rendering. Full viewer acceptance remains open.
+
+## 2026-11-04 · Stage 0, PDFium renderer comparison
+
+- Added a standalone Rust probe against PDFium chromium/8138. Checked the downloaded macOS arm64 archive against its published SHA-256. The native library was kept outside the checkout.
+- On macOS arm64, checked actual ink, PDFium's coordinate mapping, and the core inverse transform at the same edge midpoint on all four rotations. PDFium reported crop dimensions without UserUnit on this fixture. Supplying canonical raster dimensions kept the rendered page aligned with pointer placement.
+- Recorded the command and metadata requirement in the viewer guide. The probe supplies fixture metadata directly. Production metadata extraction, Windows and Linux runs, and integration into the desktop UI remain open.
+
+Next slice is to select and test a raw metadata reader for PDFium or identify an engine that supplies the required metadata. File picking, zoom, and pan are separate viewer changes that can use the existing Quartz adapter.

@@ -1764,6 +1764,7 @@ name = "simplypdf-viewer-spike"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "libloading",
  "objc2-core-foundation",
  "objc2-core-graphics",
  "simplypdf-core",

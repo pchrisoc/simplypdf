@@ -22,3 +22,15 @@ The first build downloads dependencies from crates.io. This spike has a separate
 The spike uses [eframe 0.31.1](https://github.com/emilk/egui/tree/0.31.1/crates/eframe) (MIT or Apache-2.0), Rust objc2 bindings (MIT), and the macOS [Core Graphics framework](https://developer.apple.com/documentation/coregraphics). This is a macOS reference implementation. Cross-platform renderer selection, release dependency auditing, and packaging remain open.
 
 Rendering is synchronous, fit-to-window, and capped at 2048 pixels on the longest raster side. Next, verify a cross-platform PDF adapter against the same fixture, then add file-open UI, zoom and pan, keyboard and accessibility support, and background rendering. Keep those checks separate from the takeoff workflow.
+
+## PDFium comparison
+
+The standalone Rust probe checks PDFium against the same four-page fixture. Obtain the trusted library for the host architecture from the pinned [PDFium chromium/8138 release](https://github.com/bblanchon/pdfium-binaries/releases/tag/chromium%2F8138) and verify its archive checksum before unpacking. The tested macOS arm64 archive `pdfium-mac-arm64.tgz` had SHA-256 `21a1567b397b571f4f77f21ca91eac7b892774219c3c715a5127a20950ccb18b`. Keep the library outside the checkout.
+
+```sh
+cargo run --locked --manifest-path spikes/viewer/Cargo.toml --example probe_pdfium -- /absolute/path/to/libpdfium.dylib
+```
+
+The probe expects a full path to the appropriate `.dylib`, `.dll`, or `.so`. It checks PDFium's rendered pixels and its raw-PDF-to-device mapping against the core transform and verifies that the chosen pixel maps back to the original PDF point. It uses the fixture manifest as the metadata source.
+
+On macOS arm64, PDFium reported sizes of 200×150 and 150×200 for this fixture. The canonical sizes are 400×300 and 300×400 after applying UserUnit 2. Rendering into a viewport sized from the canonical geometry aligned all four pages. A production adapter needs reliable raw page boxes, rotation, and UserUnit from document metadata before it can provide the same guarantees on arbitrary PDFs. The tested public PDFium size functions alone are insufficient for canonical geometry. The desktop viewer still uses Quartz.
