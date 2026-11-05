@@ -19,7 +19,7 @@ The bundle opens the included test drawing. Choose **File → Open…** to load 
 
 ## LibreOffice Draw port
 
-The [Draw port plan and source ledger](docs/libreoffice-draw-port.md) tracks the upstream revision, Rust translations, and verification. The full pinned source checkout lives under ignored local references. Draw’s classic menu bar and toolbar definitions are preserved as port references, and the Rust Draw crate can be built and tested independently. The Rust app uses translated Draw zoom calculations, gestures, and history in the PDF viewer.
+The separate [Draw Rust app](apps/draw/README.md) opens an editable drawing and exports the supported subset to Flat OpenDocument. The [Draw port plan and source ledger](docs/libreoffice-draw-port.md) tracks the upstream revision, Rust translations, and verification. The full pinned source checkout lives under ignored local references. Draw’s classic menu bar and toolbar definitions are preserved as port references, and the Rust Draw crate can be built and tested independently. The Rust app uses translated Draw zoom calculations, gestures, and history in the PDF viewer.
 
 ## Repository policy
 

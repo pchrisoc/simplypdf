@@ -1,6 +1,6 @@
 # LibreOffice Draw Rust port
 
-SimplyPDF will translate LibreOffice Draw source to Rust in reviewable slices. The reference is LibreOffice 26.8.0.3, commit `bce0998afefdbc355585ca324285661a2170ba77`. The Draw crate remains independently testable. The combined SimplyPDF Rust app uses the translated Draw zoom and history code on its PDF canvas. Remaining Draw features follow the staged source port. [Pinned LibreOffice source](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77)
+SimplyPDF will translate LibreOffice Draw source to Rust in reviewable slices. The reference is LibreOffice 26.8.0.3, commit `bce0998afefdbc355585ca324285661a2170ba77`. The Draw crate remains independently testable and now powers the separate [Draw Rust app](../apps/draw/README.md). SimplyPDF also uses the translated zoom and history code on its PDF canvas. Feature parity for the standalone app is the target of this ledger. [Pinned LibreOffice source](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77)
 
 ## Local upstream checkout
 
@@ -33,7 +33,9 @@ The upstream `sd` tree contains 867 files under `source/`, 82 under `inc/`, 256 
 - [x] Add working Edit, Insert, Page, and Tools menus and a visible Drawing toolbar to the combined viewer. Rectangle markups are SimplyPDF session objects.
 - [ ] Map the classic menu and toolbar command IDs to upstream handlers, Rust handlers, and parity tests. Port standard File/Edit actions, view and navigation, drawing and formatting, then context-sensitive toolbars. Review Notebookbar, context menus, icons, and localization separately.
 - [ ] Inventory Draw-owned and shared code using `sd` build targets, command slots, and test targets. Record ownership and dependencies by source unit.
-- [ ] Port document and page models, drawing objects, layers, styles, undo, and selection. Map `svx`, `basegfx`, `docmodel`, and `drawinglayer` dependencies to explicit Rust interfaces.
+- [x] Launch the standalone Rust desktop app with standard pages, default layer names, rectangle and ellipse creation, shape undo and redo, and zoom history.
+- [x] Verify that LibreOffice opens an exported Flat OpenDocument drawing and preserves the supported shape subset.
+- [ ] Port the remaining document and page models, drawing objects, layers, styles, undo, and selection. Map `svx`, `basegfx`, `docmodel`, and `drawinglayer` dependencies to explicit Rust interfaces.
 - [ ] Port editing tools, text layout, drawing and hit testing, viewport behavior, and the Draw UI. Map `sfx2`, `framework`, `vcl`, and `editeng` behavior behind the appropriate Rust boundaries.
 - [ ] Port Draw's import, export, and printing flows. Review UNO, ODF, PDF, and other supported formats separately, with round-trip tests for each.
 - [ ] Port or replace the applicable Draw tests and verify behavior on Windows, macOS, and Linux. Track shared and Impress-only code explicitly when assessing coverage.
@@ -59,6 +61,7 @@ For each translated slice, record the upstream revision and paths, Rust destinat
 | [`sd/source/ui/inc/zoomlist.hxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/inc/zoomlist.hxx) | Same module | Rust API adapted to generic view state |
 | [`sd/source/ui/view/sdwindow.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/view/sdwindow.cxx) | `crates/simplypdf-draw/src/viewport.rs` | Translated `GetZoomForRect`, `SetZoomRect` arithmetic, and `SetZoomIntegral` arithmetic |
 | [`sd/source/ui/func/fuzoom.cxx`](https://github.com/LibreOffice/core/blob/bce0998afefdbc355585ca324285661a2170ba77/sd/source/ui/func/fuzoom.cxx) | `crates/simplypdf-draw/src/zoom_tool.rs` | Translated the geometry decisions in `MouseMove` and `MouseButtonUp`. SimplyPDF canvas integration verified by input tests. |
+| `sd/source/core/drawdoc.cxx`, `drawdoc2.cxx`, and `svx/source/svdraw/svdlayer.cxx` | `crates/simplypdf-draw/src/document.rs` | Default layer order, document layer IDs, and standard page defaults in the no-printer case. Master, handout, and notes models are pending. |
 | LibreOffice view-shell command invalidation | SimplyPDF viewer command availability | Integrated for Zoom Previous and Zoom Next |
 | [`sd/uiconfig/sdraw/menubar` and `toolbar`](https://github.com/LibreOffice/core/tree/bce0998afefdbc355585ca324285661a2170ba77/sd/uiconfig/sdraw) | [Pinned XML references](../crates/simplypdf-draw/upstream/README.md) | Layout copied. Rust command parity pending. |
 

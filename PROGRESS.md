@@ -128,3 +128,10 @@ Next Draw slice is the standalone event path for zoom and pan, including cursor,
 - Added native Edit, Insert, Page, and Tools menus and a visible Drawing toolbar. The commands cover rectangle creation, undo, redo, page navigation, and viewer tool selection.
 - Rectangle markups use canonical PDF page coordinates and are scoped to the active document session. They survive zoom and page changes. Persistence and PDF export remain open.
 - Rebuilt and signed the macOS arm64 app. Verified all six native menus, the Drawing toolbar, and rendered rectangles in a test copy of the same build. All 22 workspace tests and 11 viewer and metadata tests passed on macOS arm64.
+
+## 2026-11-04 · Standalone Draw Rust app
+
+- Added an independent Rust executable at `apps/draw` and built the local arm64 bundle at `build/macos/Draw Rust.app`. Verified the standalone desktop window with its toolbar, pages, layers, and rendered shapes.
+- Translated the default layer order and global layer ID allocation, and adapted the standard Draw page defaults for the no-printer case. The app starts with A4 and supports rectangle and ellipse creation, multiple pages, shape undo and redo, and translated zoom history.
+- Added Flat OpenDocument Drawing export with a macOS file chooser. Installed LibreOffice 26.8.0.3 opened a Rust-exported two-page drawing and converted it to ODG. The converted document preserved both shape kinds, layer assignments, and their tested positions and sizes.
+- Verified 25 workspace tests, two standalone app tests, and 11 SimplyPDF viewer regression tests on macOS arm64. Full Draw parity is still open, including editable import, the complete object and selection model, text, styles, and full menu and toolbar command coverage.
