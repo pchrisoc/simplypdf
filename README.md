@@ -48,7 +48,7 @@ Shortcuts use **Ctrl** on Windows/Linux and **⌘** on macOS.
 | Pipe takeoff | Ctrl/⌘ + Shift + J |
 | Sheet-metal takeoff | Ctrl/⌘ + Shift + K |
 
-Expand **HVAC takeoff specifications** in Measure to choose pipe, round duct, or rectangular
+Select **Pipe takeoff** or **Sheet-metal takeoff** in Measure, then use the **HVAC specifications** dropdowns to choose pipe, round duct, or rectangular
 duct, material, nominal size, and system. Square ducts use equal width and height. Material
 options include copper, carbon steel, stainless steel, galvanized steel, aluminum, and
 plastic piping. System options include supply, return, exhaust, outside air, hydronic,
@@ -64,7 +64,7 @@ MCP exposes `takeoff_pipe` and `takeoff_duct`, with the same optional `hvac` fie
 
 ## Measurement workspace
 
-The **Takeoff table** opens at the bottom when a drawing is open. Drag its top border to make
+The **Takeoff table** opens at the bottom after the first measurement is saved. Drag its top border to make
 it taller or shorter. Search across measurement and HVAC fields, then click any column header
 to sort. Clicking the header again reverses the order. Quantities sort numerically, and the
 filtered totals keep each unit separate. Selecting a row selects its markup and page.
@@ -73,11 +73,21 @@ Use **Table placement** to attach the table to the bottom, left, or right, or op
 floating window. Drag a floating window by its title bar and resize its edges. The table
 contains saved measurements and HVAC routes.
 
-In Measure, **Settings placement** moves the measurement controls to the left sidebar, right
-sidebar, or a floating window. Positions and the bottom table height are remembered.
+In Measure, the docking icons move the controls to the left sidebar, right sidebar, or a
+floating window. Positions and the bottom table height are remembered. Scale presets and HVAC
+properties use dropdowns. Expand **Custom scale**, **Snap options**, or **Custom size** for
+additional controls.
+
+The tools sidebar lists pinned tools first, then other tools opened in this session. A dot
+marks the active tool. Use **Browse all tools** for the complete catalog. Right-click a tool
+to pin it. Drag a tool row, catalog tile, or measurement action onto the top mode bar to save
+a quick-access icon. Right-click an icon to remove it. Quick-access icons persist.
+
+Use **Export takeoff…** in the takeoff bar to choose XLSX or CSV before selecting a file.
 
 The opt-in UI control channel supports `ui.set` keys `measurement-settings`,
-`takeoff-table`, `takeoff-search`, and `takeoff-sort`. Sort values are column names such as
+`takeoff-table`, `takeoff-search`, `takeoff-sort`, and `quick-tool`. Quick-tool values are a
+catalog group ID or `command:<command-id>`; prefix `remove:` to remove a shortcut. Sort values are column names such as
 `Value` or `-Value` for descending order.
 
 ## SimplyPDF roadmap
@@ -127,6 +137,11 @@ features. Keep the proprietary installer and any captured artifacts outside the 
   [Calc external links](https://help.libreoffice.org/latest/en-US/text/scalc/01/04090000.html)
 
 ### Checkpoint 2 · Make takeoffs reviewable and repeatable
+
+- [x] Refine measurement settings into icon rows, dropdowns and expandable advanced controls.
+- [x] Open takeoffs after the first saved measurement and move CSV/XLSX export into a format chooser.
+- [x] Add mode-bar drag-and-drop shortcuts and a pinned/open tools sidebar with active indicators.
+- [x] Remove the top-right Discord promotion.
 
 - [x] Add a resizable bottom takeoff table with search, column sorting, unit-separated totals,
   and selection linked to the drawing.
@@ -182,7 +197,8 @@ See the [MCP guide](docs/mcp.md) for client configuration.
 
 ## Export a takeoff workbook
 
-In the desktop app, open **Measure → Export takeoff as XLSX** and choose a new workbook path.
+In the desktop app, click **Export takeoff…** in the takeoff bar, choose **Excel workbook (.xlsx)**,
+then click **Export** and choose a new workbook path. CSV is available in the same chooser.
 The desktop and automation exports use the same workbook format.
 
 Save the example below as `takeoff.json` and place a PDF with measurements at

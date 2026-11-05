@@ -145,6 +145,7 @@ impl PdfCraftApp {
         v["fill_text_color"] = serde_json::json!(self.fill_text_color);
         v["redact_prefs"] = self.redact_defaults.to_json();
         v["pinned_tools"] = serde_json::json!(self.pinned_tools);
+        v["quick_tools"] = serde_json::json!(self.quick_tools);
         // Set outside json! above, which is at serde_json's macro recursion limit.
         v["hide_empty_highlight_hover"] = serde_json::Value::Bool(self.comment_prefs.hide_empty_highlight_hover);
         v["show_page_edge_shadows"] = self.show_page_edge_shadows.into();
@@ -169,6 +170,12 @@ impl PdfCraftApp {
         }
         if let Some(workspace) = v.get("takeoff_workspace").and_then(|v| serde_json::from_value(v.clone()).ok()) {
             self.takeoff_workspace = workspace;
+        }
+        if let Some(tools) = v.get("quick_tools").and_then(serde_json::Value::as_array) {
+            self.quick_tools.clear();
+            for id in tools.iter().take(32).filter_map(serde_json::Value::as_str) {
+                crate::tool_access::pin_quick(self, id);
+            }
         }
         let panels = side_panels::restore(&v);
         self.side_panels = panels.panels;

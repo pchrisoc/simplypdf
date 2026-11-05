@@ -381,8 +381,7 @@ fn state_of(panels: &SidePanels, pane: Pane) -> PaneState {
 fn open_panes(app: &PdfCraftApp) -> Vec<Pane> {
     let mut open = Vec::new();
     // Read mode hides the tools, not the navigation panes.
-    if app.left_open && app.mode != Mode::Read
-        && !(app.takeoff_workspace.settings_floating && matches!(app.left, crate::LeftPanel::Tool("measure")))
+    if app.left_open && app.mode != Mode::Read && !(app.takeoff_workspace.settings_floating && matches!(app.left, crate::LeftPanel::Tool("measure")))
     {
         open.push(Pane::Tools);
     }

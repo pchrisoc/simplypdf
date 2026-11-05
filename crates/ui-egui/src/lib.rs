@@ -37,8 +37,9 @@ macro_rules! tl_ctx {
 }
 pub mod canvas;
 mod chrome;
-pub mod takeoff_workspace;
 mod image_engine;
+pub mod takeoff_workspace;
+pub mod tool_access;
 pub use combine_grid::ThumbState as CombineThumb;
 pub use combine_ui::{Columns as CombineColumns, CombineView, Lock as CombineLock, SortKey};
 mod commands;
@@ -404,6 +405,9 @@ pub struct PdfCraftApp {
     recent_check: persist::recent_check::RecentCheck,
     /// Tools pinned to Home, in user-defined order.
     pub pinned_tools: Vec<String>,
+    pub quick_tools: Vec<String>,
+    pub mode_bar_rect: Option<[f32; 4]>,
+    pub open_tools: Vec<String>,
     /// Search query for the Pin a tool selection dialog.
     pub pin_tool_search: String,
     pub toast: Option<(String, f64)>,

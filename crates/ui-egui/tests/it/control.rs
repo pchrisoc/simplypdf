@@ -1514,16 +1514,106 @@ fn control_default_workspace_and_session_override() {
 }
 
 #[test]
+fn takeoff_starts_hidden_and_tools_drag_to_quick_access() {
+    use pdfcraft_engine::{
+        Edit, Style,
+        measure::{Kind, NewMeasurement, Scale},
+    };
+    let (mut h, c) = harness_pages(1);
+    let doc = h.state().views[0].id;
+    h.state_mut().pin_tool("measure");
+    ok(&mut h, &c, "ui.command", json!({"id":"measure.scale"}));
+    h.run_steps(3);
+    assert!(ok(&mut h, &c, "ui.state", json!({}))["takeoff_workspace"]["table_rect"].is_null());
+    assert!(h.query_by_label("Export takeoff…").is_none());
+    assert_eq!(h.query_all_by(|n| n.role() == egui::accesskit::Role::Button && n.label().as_deref() == Some("Measure objects")).count(), 1);
+    let source = h.get_by_role_and_label(egui::accesskit::Role::Button, "Distance").rect().center();
+    let rect = h.state().mode_bar_rect.unwrap();
+    ok(&mut h, &c, "ui.drag", json!({"from":[source.x,source.y],"to":[rect[0]+rect[2]*0.55,rect[1]+rect[3]*0.5],"steps":16}));
+    h.run_steps(3);
+    assert_eq!(h.state().quick_tools, ["command:measure.distance"]);
+    let saved = h.state().persist();
+    let mut restored = PdfCraftApp::new();
+    restored.restore(&saved);
+    assert_eq!(restored.quick_tools, h.state().quick_tools);
+    h.get_by_label("Measure distance").click();
+    h.run_steps(2);
+    assert_eq!(format!("{:?}", h.state().quick_tool), "Measure(Distance)");
+    ok(&mut h, &c, "ui.command", json!({"id":"measure.pipe"}));
+    h.run_steps(2);
+    assert!(h.state().views[0].measure.hvac.is_some());
+    h.get_by_role_and_label(egui::accesskit::Role::Button, "Distance").click();
+    h.run_steps(2);
+    assert!(h.state().views[0].measure.hvac.is_none());
+    ok(&mut h, &c, "ui.set", json!({"key":"tool","value":"edit"}));
+    h.run_steps(3);
+    let source = h.get_by_role_and_label(egui::accesskit::Role::Button, "Text").rect().center();
+    ok(&mut h, &c, "ui.drag", json!({"from":[source.x,source.y],"to":[rect[0]+rect[2]*0.55,rect[1]+rect[3]*0.5],"steps":16}));
+    h.run_steps(3);
+    assert!(h.state().quick_tools.iter().any(|id| id == "command:edit.text"));
+    ok(&mut h, &c, "ui.set", json!({"key":"quick-tool","value":"remove:command:edit.text"}));
+    assert!(!h.state().quick_tools.iter().any(|id| id == "command:edit.text"));
+    assert!(call(&mut h, &c, "ui.set", json!({"key":"quick-tool","value":"unknown"})).is_err());
+    h.state_mut()
+        .session
+        .apply(
+            doc,
+            Edit::AddMeasurement(NewMeasurement {
+                page: 0,
+                kind: Kind::Distance,
+                points: vec![[20.0, 20.0], [60.0, 20.0]],
+                scale: Scale::new(1.0, "ft", 2).unwrap(),
+                style: Style::default(),
+                label: "Pipe".into(),
+                author: "Estimator".into(),
+                hvac: None,
+            }),
+        )
+        .unwrap();
+    h.run_steps(3);
+    assert!(!ok(&mut h, &c, "ui.state", json!({}))["takeoff_workspace"]["table_rect"].is_null());
+    let dir = std::env::temp_dir().join(format!("simplypdf-export-dialog-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    h.state_mut().export_dir_override = Some(dir.to_string_lossy().into());
+    h.get_by_label("Export takeoff…").click();
+    h.run_steps(2);
+    h.get_by_label("Comma-separated values (.csv)").click();
+    h.run_steps(2);
+    h.get_by_label("Export").click();
+    h.run_steps(3);
+    assert!(std::fs::read_to_string(dir.join("measurements.csv")).unwrap().contains("Pipe"));
+    ok(&mut h, &c, "ui.command", json!({"id":"edit.undo"}));
+    h.run_steps(3);
+    assert!(ok(&mut h, &c, "ui.state", json!({}))["takeoff_workspace"]["table_rect"].is_null());
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[test]
 fn takeoff_workspace_searches_sorts_resizes_and_docks() {
     let _gpu = crate::gpu();
-    use pdfcraft_engine::{Edit, Style, measure::{Kind, NewMeasurement, Scale, hvac}};
+    use pdfcraft_engine::{
+        Edit, Style,
+        measure::{Kind, NewMeasurement, Scale, hvac},
+    };
     let (mut h, c) = harness_pages(1);
     let doc = h.state().views[0].id;
     for (label, length, hvac) in [("Small pipe", 3.0, Some(hvac::Takeoff::pipe())), ("Large route", 20.0, None)] {
-        h.state_mut().session.apply(doc, Edit::AddMeasurement(NewMeasurement {
-            page: 0, kind: Kind::Perimeter, points: vec![[20.0, 20.0], [20.0 + length, 20.0]],
-            scale: Scale::new(1.0, "ft", 2).unwrap(), style: Style::default(), label: label.into(), author: "Estimator".into(), hvac,
-        })).unwrap();
+        h.state_mut()
+            .session
+            .apply(
+                doc,
+                Edit::AddMeasurement(NewMeasurement {
+                    page: 0,
+                    kind: Kind::Perimeter,
+                    points: vec![[20.0, 20.0], [20.0 + length, 20.0]],
+                    scale: Scale::new(1.0, "ft", 2).unwrap(),
+                    style: Style::default(),
+                    label: label.into(),
+                    author: "Estimator".into(),
+                    hvac,
+                }),
+            )
+            .unwrap();
     }
     h.run_steps(3);
     let workspace = |h: &mut Harness<'static, PdfCraftApp>| ok(h, &c, "ui.state", json!({}))["takeoff_workspace"].clone();
@@ -1575,6 +1665,19 @@ fn takeoff_workspace_searches_sorts_resizes_and_docks() {
         ok(&mut h, &c, "ui.set", json!({"key":"measurement-settings","value":"right"}));
         h.run_steps(4);
         h.render().unwrap().save(format!("{dir}/takeoff-workspace.png")).unwrap();
+        ok(&mut h, &c, "ui.command", json!({"id":"measure.pipe"}));
+        ok(&mut h, &c, "ui.set", json!({"key":"theme","value":"dark"}));
+        h.run_steps(3);
+        h.event(egui::Event::PointerMoved(egui::pos2(1220.0, 700.0)));
+        h.event(egui::Event::MouseWheel {
+            unit: egui::MouseWheelUnit::Point,
+            delta: egui::vec2(0.0, -550.0),
+            modifiers: egui::Modifiers::NONE,
+            phase: egui::TouchPhase::Move,
+            source: egui::MouseWheelSource::Unknown,
+        });
+        h.run_steps(8);
+        h.render().unwrap().save(format!("{dir}/takeoff-hvac-dark.png")).unwrap();
         ok(&mut h, &c, "ui.set", json!({"key":"takeoff-table","value":"floating"}));
         h.run_steps(3);
     }
@@ -1634,12 +1737,16 @@ fn measurement_tools_draw_live_calibrate_save_and_export() {
     ok(&mut h, &c, "ui.command", json!({"id":"measure.export"}));
     h.run_steps(2);
     assert!(std::fs::read_to_string(dir.join("measurements.csv")).unwrap().contains("m^2"));
-    h.get_by_label("Export takeoff as XLSX").click();
+    h.get_by_label("Export takeoff…").click();
+    h.run_steps(2);
+    h.get_by_label("Export").click();
     h.run_steps(2);
     let workbook = dir.join("takeoff.xlsx");
     assert!(std::fs::read(&workbook).unwrap().starts_with(b"PK\x03\x04"));
     std::fs::write(&workbook, b"existing estimate").unwrap();
-    h.get_by_label("Export takeoff as XLSX").click();
+    h.get_by_label("Export takeoff…").click();
+    h.run_steps(2);
+    h.get_by_label("Export").click();
     h.run_steps(2);
     assert_eq!(std::fs::read(&workbook).unwrap(), b"existing estimate");
     ok(&mut h, &c, "ui.key", json!({"key":"J","modifiers":["command","shift"]}));
@@ -1732,6 +1839,8 @@ fn a_plan_scale_picked_or_typed_applies_at_once() {
     h.get_by_label("1:200").click_accesskit();
     h.run_steps(3);
     assert_eq!(read(&h), ("12.00 m".to_string(), "1 mm = 0.2 m".to_string()));
+    h.get_by_label("Custom scale").click();
+    h.run_steps(2);
     // Typed, in the other notations; leaving the field applies.
     fn field<'a>(h: &'a Harness<'static, PdfCraftApp>) -> egui_kittest::Node<'a> {
         h.get_by_role_and_label(egui::accesskit::Role::TextInput, "Scale")

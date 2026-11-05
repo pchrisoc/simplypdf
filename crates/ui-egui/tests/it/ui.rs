@@ -35,7 +35,7 @@ fn harness(setup: impl FnOnce(&mut PdfCraftApp) + 'static) -> Harness<'static, P
 fn home_shows_welcome_and_tools() {
     let h = harness(|_| {});
     h.get_by_label_contains("Welcome to SimplyPDF");
-    assert!(h.query_all_by_label("Organize pages").count() >= 2, "tool list + home card");
+    assert!(h.query_all_by_label("Organize pages").count() >= 1, "home card");
     h.get_by_label("Open file");
 }
 
@@ -116,9 +116,9 @@ fn home_removes_one_recent_file_or_clears_them_all() {
 }
 
 #[test]
-fn every_catalog_tool_is_listed_after_view_more() {
+fn every_catalog_tool_is_listed_after_browsing() {
     let mut h = harness(|_| {});
-    h.get_by_label("View more").click();
+    h.get_by_label("Browse all tools").click();
     h.run_steps(3);
     for g in pdfcraft_engine::catalog::TOOL_GROUPS {
         assert!(h.query_all_by_label(g.label).count() >= 1, "tool {} missing from All tools", g.label);
@@ -161,7 +161,7 @@ fn collapse_and_escape_close_the_expanded_all_tools() {
     h.get_by_label("Collapse all tools").click();
     h.run_steps(3);
     assert!(!h.state().all_tools_full);
-    h.get_by_label("View more");
+    h.get_by_label("Browse all tools");
     h.get_by_label("Expand all tools").click();
     h.run_steps(3);
     h.key_press(egui::Key::Escape);
@@ -662,8 +662,8 @@ fn tabs_shrink_to_fit_then_arrows_step_through_them_and_open_stays_in_sight() {
         }
     });
     let open = h.get_by_label("Open").rect();
-    let discord = h.get_by_label("Discord").rect();
-    assert!(open.right() <= discord.left(), "Open {open:?} must not run under Discord {discord:?}");
+    let discord = h.get_by_label("Keyboard shortcuts").rect();
+    assert!(open.right() <= discord.left(), "Open {open:?} must not run under Keyboard shortcuts {discord:?}");
     let mut previous_right = f32::MIN;
     for i in 0..5 {
         let tab = h.get_by_label(&name(i)).rect();
@@ -687,15 +687,15 @@ fn tabs_shrink_to_fit_then_arrows_step_through_them_and_open_stays_in_sight() {
     assert_eq!(enabled(&h, "Scroll tabs right"), Some(true), "and then there is more to the right");
     let open = h.get_by_label("Open").rect();
     let right = h.get_by_label("Scroll tabs right").rect();
-    assert!(right.right() <= open.left() + 0.5 && open.right() <= h.get_by_label("Discord").rect().left());
-    // Twenty: Open stays in sight left of Discord.
+    assert!(right.right() <= open.left() + 0.5 && open.right() <= h.get_by_label("Keyboard shortcuts").rect().left());
+    // Twenty: Open stays in sight left of Keyboard shortcuts.
     for i in 0..13 {
         h.state_mut().open_bytes(&format!("more-{i:02}.pdf"), None, FIXTURE.to_vec()).unwrap();
     }
     h.run_steps(4);
     let open = h.get_by_label("Open").rect();
-    let discord = h.get_by_label("Discord").rect();
-    assert!(open.left() > 0.0 && open.right() <= discord.left(), "Open {open:?} stays in sight left of Discord {discord:?}");
+    let discord = h.get_by_label("Keyboard shortcuts").rect();
+    assert!(open.left() > 0.0 && open.right() <= discord.left(), "Open {open:?} stays in sight left of Keyboard shortcuts {discord:?}");
 }
 
 /// macOS (#789): with the integrated title bar, the strip is the 28 pt band AppKit centres the
@@ -708,7 +708,7 @@ fn the_integrated_title_bar_is_the_traffic_light_band() {
         app.open_bytes("band.pdf", None, FIXTURE.to_vec()).unwrap();
     });
     let band = 28.0;
-    for label in ["Home", "band.pdf", "Open", "Discord", "Keyboard shortcuts"] {
+    for label in ["Home", "band.pdf", "Open", "Keyboard shortcuts"] {
         let r = h.get_by_label(label).rect();
         assert!(r.top() >= 0.0 && r.bottom() <= band, "{label}: {r:?} inside the {band} pt title bar");
         assert!(r.height() >= 24.0, "{label}: {r:?} stays clickable");

@@ -173,7 +173,9 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                 });
                 ui.add_space(8.0);
                 if app.recent.is_empty() {
-                    ui.label(egui::RichText::new(tl!("Files you open in SimplyPDF appear here. Drop a PDF anywhere to open it.")).color(t.text_muted));
+                    ui.label(
+                        egui::RichText::new(tl!("Files you open in SimplyPDF appear here. Drop a PDF anywhere to open it.")).color(t.text_muted),
+                    );
                 }
             }
             let mut open = None;

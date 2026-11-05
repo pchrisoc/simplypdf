@@ -74,6 +74,11 @@ impl Host for crate::PdfCraftApp {
         json!({
             "side_panels": crate::side_panels::state(self),
             "takeoff_workspace": crate::takeoff_workspace::state(self),
+            "quick_tools": self.quick_tools,
+            "open_tools": self.open_tools,
+            "pinned_tools": self.pinned_tools,
+            "mode_bar_rect": self.mode_bar_rect,
+            "active_tool": match self.left { crate::LeftPanel::Tool(id) if self.left_open => Some(id), _ => None },
             "documents": docs,
             "pending_opens": pending_opens,
             "active": active.map(|v| json!({

@@ -113,7 +113,8 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
 /// none, its availability (a planned tool is greyed out with its milestone). A name or note cut
 /// short shows in full on hover.
 fn tile(ui: &mut egui::Ui, t: &Tokens, g: &ToolGroup, items: &[&'static str]) -> egui::Response {
-    let (rect, resp) = ui.allocate_exact_size(TILE, Sense::click());
+    let (rect, resp) = ui.allocate_exact_size(TILE, Sense::click_and_drag());
+    crate::tool_access::source(&resp, g.id.into());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(g.label)));
     let press = theme::Press::track(ui, &resp);
     crate::home::card_lift(ui, t, rect, press);

@@ -71,7 +71,7 @@ pub(super) fn edit_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g
         ui.add_space(2.0);
         // Organize pages is a workspace of its own: its panel replaces this one, with the grid.
         if let Some(i) = item("page.organize")
-            && edit_row(ui, t, i.icon, tl!(i.label), i.availability).clicked()
+            && edit_row(ui, t, i.icon, tl!(i.label), &format!("command:{}", i.command), i.availability).clicked()
         {
             // With no document there is no grid to open: the command asks for a file first.
             if app.active.is_some() {
@@ -88,7 +88,7 @@ pub(super) fn edit_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g
         let more = ui.data(|d| d.get_temp::<bool>(more_id)).unwrap_or(false);
         let shown = if more { content.len() } else { EDIT_CONTENT_SHOWN.min(content.len()) };
         for i in content.iter().take(shown) {
-            let resp = edit_row(ui, t, i.icon, tl!(i.label), i.availability);
+            let resp = edit_row(ui, t, i.icon, tl!(i.label), &format!("command:{}", i.command), i.availability);
             // Header and footer, Watermark and Background open their Add / Update / Remove menu.
             if i.actions.is_empty() {
                 if resp.clicked() {
@@ -115,7 +115,7 @@ pub(super) fn edit_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g
 
         widgets::section_title(ui, tl!("Other options"));
         for other in EDIT_OTHER_TOOLS.iter().filter_map(|id| catalog::group(id)) {
-            if edit_row(ui, t, other.icon, tl!(other.label), other.availability).clicked() {
+            if edit_row(ui, t, other.icon, tl!(other.label), other.id, other.availability).clicked() {
                 tool = Some(other.id);
             }
         }
@@ -162,13 +162,16 @@ pub(super) fn actions_menu(
 
 /// One row of the Edit panel: a monochrome icon and the label, as Acrobat draws them. A planned
 /// item is muted and says when it ships when hovered.
-fn edit_row(ui: &mut egui::Ui, t: &Tokens, icon: &str, label: &str, availability: Availability) -> egui::Response {
-    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click());
+fn edit_row(ui: &mut egui::Ui, t: &Tokens, icon: &str, label: &str, id: &str, availability: Availability) -> egui::Response {
+    let (rect, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 34.0), Sense::click_and_drag());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, label));
     let press = theme::Press::track(ui, &resp);
     press.wash(ui, rect, 6, false);
     let body = rect.translate(press.offset());
     let ready = availability == Availability::Ready;
+    if ready {
+        crate::tool_access::source(&resp, id.into());
+    }
     let fg = if ready { t.text } else { t.text_muted };
     icons::paint(ui, Rect::from_min_size(body.min + vec2(6.0, 8.0), vec2(18.0, 18.0)), icon, 17.0, if ready { t.text } else { t.text_faint });
     row_label(ui, label, theme::regular(13.5), fg, body.left_center() + vec2(34.0, 0.0), rect.width() - 42.0);

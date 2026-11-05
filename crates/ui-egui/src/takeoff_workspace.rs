@@ -1,7 +1,10 @@
 //! Dockable measurement settings and a searchable takeoff table.
 
 use egui_extras::{Column, TableBuilder};
-use pdfcraft_engine::{DocId, measure::{Listing, Measurement}};
+use pdfcraft_engine::{
+    DocId,
+    measure::{Listing, Measurement},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::{LeftPanel, PdfCraftApp, QuickTool, side_panels::ToolsSide};
@@ -35,6 +38,11 @@ pub struct State {
     pub settings_floating: bool,
     pub table_location: Location,
     pub expanded: bool,
+    #[serde(skip)]
+    pub export_doc: Option<DocId>,
+    #[serde(skip)]
+    export_csv: bool,
+
     table_height: f32,
     #[serde(skip)]
     table_rect: Option<[f32; 4]>,
@@ -50,7 +58,19 @@ pub struct State {
 
 impl Default for State {
     fn default() -> Self {
-        Self { settings_floating: false, table_location: Location::Bottom, expanded: true, table_height: 230.0, table_rect: None, query: String::new(), sort: 0, descending: false, cache: None }
+        Self {
+            settings_floating: false,
+            table_location: Location::Bottom,
+            expanded: true,
+            export_doc: None,
+            export_csv: false,
+            table_height: 230.0,
+            table_rect: None,
+            query: String::new(),
+            sort: 0,
+            descending: false,
+            cache: None,
+        }
     }
 }
 
@@ -99,7 +119,15 @@ impl State {
             };
             let cells = listing.measurements.iter().map(cells).collect();
             self.cache = Some(Cache {
-                doc: doc.id, generation: doc.edit_generation(), listing, cells, visible: Vec::new(), query: None, sort: 0, descending: false, totals: Vec::new(),
+                doc: doc.id,
+                generation: doc.edit_generation(),
+                listing,
+                cells,
+                visible: Vec::new(),
+                query: None,
+                sort: 0,
+                descending: false,
+                totals: Vec::new(),
             });
         }
         Ok(())
@@ -111,9 +139,13 @@ impl State {
             return;
         }
         let query = self.query.trim().to_lowercase();
-        cache.visible = cache.cells.iter().enumerate()
+        cache.visible = cache
+            .cells
+            .iter()
+            .enumerate()
             .filter(|(_, cells)| query.is_empty() || cells.iter().any(|cell| cell.to_lowercase().contains(&query)))
-            .map(|(index, _)| index).collect();
+            .map(|(index, _)| index)
+            .collect();
         cache.visible.sort_by(|a, b| {
             let left = cache.listing.measurements.get(*a);
             let right = cache.listing.measurements.get(*b);
@@ -121,8 +153,7 @@ impl State {
                 (Some(a), Some(b), 0) => a.page.cmp(&b.page),
                 (Some(a), Some(b), 1) => a.index.cmp(&b.index),
                 (Some(a), Some(b), 3) => a.reading.value.total_cmp(&b.reading.value),
-                _ => cache.cells.get(*a).and_then(|row| row.get(self.sort))
-                    .cmp(&cache.cells.get(*b).and_then(|row| row.get(self.sort))),
+                _ => cache.cells.get(*a).and_then(|row| row.get(self.sort)).cmp(&cache.cells.get(*b).and_then(|row| row.get(self.sort))),
             };
             let ordering = if self.descending { ordering.reverse() } else { ordering };
             ordering.then_with(|| a.cmp(b))
@@ -142,30 +173,40 @@ impl State {
 
 /// The same controls are available in the docked settings and floating window.
 pub fn settings_header(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
-    let current = if app.takeoff_workspace.settings_floating { Location::Floating }
-        else if app.side_panels.tools_side == ToolsSide::Left { Location::Left } else { Location::Right };
-    let mut location = current;
-    craft_ui::ComboBox::from_label(tl!("Settings placement"))
-        .selected_text(tl!(current.label()))
-        .width(110.0)
-        .show_ui(ui, |ui| {
-            for choice in [Location::Left, Location::Right, Location::Floating] {
-                ui.selectable_value(&mut location, choice, tl!(choice.label()));
+    let current = if app.takeoff_workspace.settings_floating {
+        Location::Floating
+    } else if app.side_panels.tools_side == ToolsSide::Left {
+        Location::Left
+    } else {
+        Location::Right
+    };
+    ui.horizontal(|ui| {
+        for (location, icon, label) in [
+            (Location::Left, "panel-left", "Dock settings left"),
+            (Location::Right, "panel-right", "Dock settings right"),
+            (Location::Floating, "external-link", "Float settings"),
+        ] {
+            if crate::icons::button(ui, icon, 26.0, current == location, tl!(label)).clicked() {
+                app.takeoff_workspace.settings_floating = location == Location::Floating;
+                if location != Location::Floating {
+                    app.side_panels.tools_side = if location == Location::Left { ToolsSide::Left } else { ToolsSide::Right };
+                }
             }
-        });
-    if location != current {
-        app.takeoff_workspace.settings_floating = location == Location::Floating;
-        if location != Location::Floating {
-            app.side_panels.tools_side = if location == Location::Left { ToolsSide::Left } else { ToolsSide::Right };
         }
-    }
+    });
+    ui.add_space(6.0);
 }
 
 pub fn settings_window(app: &mut PdfCraftApp, ctx: &egui::Context) {
     if app.takeoff_workspace.settings_floating && app.left_open && app.active.is_some() && matches!(app.left, LeftPanel::Tool("measure")) {
         let mut open = true;
-        egui::Window::new(tl!("Measurement settings")).id(egui::Id::unique("measurement-settings-window"))
-            .open(&mut open).default_width(330.0).default_height(620.0).resizable(true).show(ctx, |ui| {
+        egui::Window::new(tl!("Measurement settings"))
+            .id(egui::Id::unique("measurement-settings-window"))
+            .open(&mut open)
+            .default_width(330.0)
+            .default_height(620.0)
+            .resizable(true)
+            .show(ctx, |ui| {
                 crate::measure_ui::panel(app, ui, &crate::theme::Tokens::get(ctx));
             });
         if !open {
@@ -183,12 +224,21 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     };
     let Some(doc) = app.session.get(id) else { return };
     if let Err(error) = app.takeoff_workspace.refresh(doc) {
-        egui::Panel::bottom("takeoff-table-error").show(ui, |ui| { ui.label(error); });
+        egui::Panel::bottom("takeoff-table-error").show(ui, |ui| {
+            ui.label(error);
+        });
+        return;
+    }
+    if app.takeoff_workspace.cache.as_ref().is_none_or(|cache| cache.listing.measurements.is_empty()) {
+        app.takeoff_workspace.table_rect = None;
         return;
     }
     if app.takeoff_workspace.table_location == Location::Floating {
-        let response = egui::Window::new(tl!("Takeoff table")).id(egui::Id::unique("takeoff-table-window"))
-            .default_width(900.0).default_height(260.0).resizable(true)
+        let response = egui::Window::new(tl!("Takeoff table"))
+            .id(egui::Id::unique("takeoff-table-window"))
+            .default_width(900.0)
+            .default_height(260.0)
+            .resizable(true)
             .show(ui.ctx(), |ui| table(app, ui));
         app.takeoff_workspace.table_rect = response.map(|response| {
             let rect = response.response.rect;
@@ -217,19 +267,34 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
 fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     let active_view = app.active_ids().map(|(index, _)| index);
     let selected_markup = active_view.and_then(|index| app.views.get(index)).and_then(|view| view.comments.selected);
+    let export_doc = app.active_ids().map(|(_, id)| id);
+    let may_export = export_doc.and_then(|id| app.session.get(id)).is_some_and(|doc| doc.allows_copying());
     let state = &mut app.takeoff_workspace;
     crate::widgets::begin_dialog(ui);
     ui.horizontal_wrapped(|ui| {
-        ui.checkbox(&mut state.expanded, tl!("Takeoff table"));
-        craft_ui::ComboBox::from_label(tl!("Table placement")).selected_text(tl!(state.table_location.label())).show_ui(ui, |ui| {
+        let icon = if state.expanded { "chevron-down" } else { "chevron-up" };
+        if crate::icons::button(ui, icon, 26.0, false, tl!("Expand or collapse takeoffs")).clicked() {
+            state.expanded = !state.expanded;
+        }
+        ui.label(egui::RichText::new(tl!("Takeoffs")).strong());
+        let placement = crate::icons::button(ui, "settings", 26.0, false, tl!("Table placement"));
+        egui::Popup::menu(&placement).show(|ui| {
             for location in [Location::Bottom, Location::Left, Location::Right, Location::Floating] {
-                ui.selectable_value(&mut state.table_location, location, tl!(location.label()));
+                if ui.selectable_label(state.table_location == location, tl!(location.label())).clicked() {
+                    state.table_location = location;
+                    ui.close();
+                }
             }
         });
-        let search = ui.label(tl!("Search takeoffs"));
-        ui.add(crate::widgets::line(&mut state.query).hint_text(tl!("Search takeoffs")).desired_width(180.0).char_limit(256)).labelled_by(search.id);
-        if ui.button(tl!("Clear search")).clicked() {
+        let width = (ui.available_width() - 120.0).clamp(100.0, 360.0);
+        let search = ui.add(crate::widgets::line(&mut state.query).hint_text(tl!("Search takeoffs")).desired_width(width).char_limit(256));
+        search.widget_info(|| egui::WidgetInfo::labeled(egui::Role::TextInput, true, tl!("Search takeoffs")));
+        if !state.query.is_empty() && crate::icons::button(ui, "x", 26.0, false, tl!("Clear search")).clicked() {
             state.query.clear();
+        }
+        let export = ui.add_enabled_ui(may_export, |ui| crate::widgets::ghost_button(ui, "file-down", tl!("Export takeoff…"))).inner;
+        if export.clicked() {
+            state.export_doc = export_doc;
         }
     });
     state.filter_and_sort();
@@ -245,7 +310,10 @@ fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
         }
     });
     if !cache.listing.unsupported.is_empty() || cache.listing.truncated {
-        ui.colored_label(egui::Color32::YELLOW, format!("{}: {} · {}: {}", tl!("Unsupported"), cache.listing.unsupported.len(), tl!("Truncated"), cache.listing.truncated));
+        ui.colored_label(
+            egui::Color32::YELLOW,
+            format!("{}: {} · {}: {}", tl!("Unsupported"), cache.listing.unsupported.len(), tl!("Truncated"), cache.listing.truncated),
+        );
     }
     if !state.expanded {
         return;
@@ -253,13 +321,21 @@ fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     let mut sort = None;
     let mut selected = None;
     egui::ScrollArea::horizontal().auto_shrink([false, false]).id_salt("takeoff-table-horizontal").show(ui, |ui| {
-        TableBuilder::new(ui).id_salt("takeoff-rows").min_scrolled_height(24.0).auto_shrink([false, false]).striped(true).sense(egui::Sense::click())
+        TableBuilder::new(ui)
+            .id_salt("takeoff-rows")
+            .min_scrolled_height(24.0)
+            .auto_shrink([false, false])
+            .striped(true)
+            .sense(egui::Sense::click())
             .columns(Column::initial(100.0).at_least(55.0).resizable(true).clip(true), HEADERS.len())
-            .header(24.0, |mut header| {
+            .header(34.0, |mut header| {
                 for (index, name) in HEADERS.iter().enumerate() {
                     header.col(|ui| {
                         let suffix = if state.sort == index { if state.descending { " ▼" } else { " ▲" } } else { "" };
-                        if ui.button(format!("{}{suffix}", tl!(name))).clicked() {
+                        if ui
+                            .add(egui::Label::new(egui::RichText::new(format!("{}{suffix}", tl!(name))).strong()).sense(egui::Sense::click()))
+                            .clicked()
+                        {
                             sort = Some(index);
                         }
                     });
@@ -274,8 +350,11 @@ fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                         row.col(|ui| {
                             if cell.is_empty() {
                                 ui.label("");
-                            } else if ui.selectable_label(false, cell).on_hover_text(cell).clicked() {
-                                selected = Some(index);
+                            } else {
+                                let response = ui.add(egui::Label::new(cell).truncate().sense(egui::Sense::click())).on_hover_text(cell);
+                                if response.clicked() {
+                                    selected = Some(index);
+                                }
                             }
                         });
                     }
@@ -318,7 +397,10 @@ pub fn set_option(app: &mut PdfCraftApp, key: &str, value: &str) -> Result<(), S
         }
         "takeoff-table" => {
             app.takeoff_workspace.table_location = match value {
-                "bottom" => Location::Bottom, "left" => Location::Left, "right" => Location::Right, "floating" => Location::Floating,
+                "bottom" => Location::Bottom,
+                "left" => Location::Left,
+                "right" => Location::Right,
+                "floating" => Location::Floating,
                 _ => return Err("takeoff-table must be bottom, left, right or floating".into()),
             };
         }
@@ -347,9 +429,45 @@ pub fn state(app: &PdfCraftApp) -> serde_json::Value {
         "sort": HEADERS.get(workspace.sort),
         "descending": workspace.descending,
         "table_rect": workspace.table_rect,
+        "export_open": workspace.export_doc.is_some(),
         "visible_count": workspace.cache.as_ref().map(|cache| cache.visible.len()),
         "totals": workspace.cache.as_ref().map(|cache| cache.totals.iter().take(200).collect::<Vec<_>>()),
         "visible_rows": workspace.cache.as_ref().map(|cache| cache.visible.iter().take(200).collect::<Vec<_>>()),
         "rows": workspace.cache.as_ref().map(|cache| cache.visible.iter().take(200).filter_map(|index| cache.cells.get(*index)).collect::<Vec<_>>()),
     })
+}
+
+/// One format chooser for the table export action.
+pub fn export_dialog(app: &mut PdfCraftApp, ctx: &egui::Context) {
+    let Some(source) = app.takeoff_workspace.export_doc else { return };
+    let mut confirm = false;
+    let mut cancel = false;
+    let modal = crate::widgets::show_modal(ctx, "takeoff-export", |ui| {
+        ui.set_min_width(340.0);
+        ui.heading(tl!("Export takeoff"));
+        ui.add_space(12.0);
+        ui.label(tl!("Choose a file format"));
+        crate::widgets::radio_value(ui, &mut app.takeoff_workspace.export_csv, false, tl!("Excel workbook (.xlsx)"));
+        crate::widgets::radio_value(ui, &mut app.takeoff_workspace.export_csv, true, tl!("Comma-separated values (.csv)"));
+        ui.add_space(16.0);
+        ui.horizontal(|ui| {
+            cancel = ui.button(tl!("Cancel")).clicked();
+            confirm = ui.button(tl!("Export")).clicked();
+        });
+    });
+    if cancel || modal.should_close() || confirm {
+        app.takeoff_workspace.export_doc = None;
+    }
+    if confirm {
+        if app.active_ids().map(|(_, id)| id) != Some(source) {
+            app.notify(tl!("Select the source drawing again before exporting."));
+        } else if app.takeoff_workspace.export_csv {
+            crate::measure_ui::export_csv(app);
+        } else {
+            #[cfg(not(target_arch = "wasm32"))]
+            crate::measure_ui::export_workbook(app);
+            #[cfg(target_arch = "wasm32")]
+            app.notify(tl!("Use CSV export in the browser."));
+        }
+    }
 }

@@ -152,8 +152,8 @@ fn sidebar_pin_toggle_unpins_and_pins() {
     h.run_steps(2);
     assert!(h.state().is_tool_pinned("redact"));
 
-    // Since redact is pinned, the pin toggle is rendered in the sidebar with "Unpin from Home"
-    let unpin_btn = h.get_by_label("Unpin from Home");
+    // Since redact is pinned, the pin toggle is rendered in the sidebar with "Unpin tool"
+    let unpin_btn = h.query_all_by_label("Unpin tool").next().unwrap();
     unpin_btn.click();
     h.run_steps(3);
 

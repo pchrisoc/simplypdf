@@ -87,6 +87,15 @@ impl PdfCraftApp {
             }
             ("date-format", _) => self.session.set_date_format(value)?,
             ("date-language", _) => self.session.set_date_language(Some(value).filter(|v| *v != "auto"))?,
+            ("quick-tool", _) => {
+                if let Some(id) = value.strip_prefix("remove:") {
+                    self.quick_tools.retain(|tool| tool != id);
+                } else if crate::tool_access::valid(value) {
+                    crate::tool_access::pin_quick(self, value);
+                } else {
+                    return Err("unknown quick access tool".into());
+                }
+            }
             ("tool", _) => {
                 let g = pdfcraft_engine::catalog::group(value).ok_or_else(|| format!("unknown tool {value}"))?;
                 self.select_tool(g.id);

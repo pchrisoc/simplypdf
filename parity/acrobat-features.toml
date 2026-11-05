@@ -1706,7 +1706,7 @@ milestone = "M4"
 status = "shipped"
 commands = []
 tools = []
-evidence = ["crates/ui-egui/tests/it/ui.rs::every_catalog_tool_is_listed_after_view_more", "crates/engine/src/commands.rs::every_ready_catalogue_item_is_a_registered_command"]
+evidence = ["crates/ui-egui/tests/it/ui.rs::every_catalog_tool_is_listed_after_browsing", "crates/engine/src/commands.rs::every_ready_catalogue_item_is_a_registered_command"]
 notes = ""
 
 [[feature]]
@@ -1808,6 +1808,7 @@ evidence = [
   "crates/ui-egui/tests/it/pinned_tools.rs::home_shows_pinned_tools_section_and_placeholder",
   "crates/ui-egui/tests/it/pinned_tools.rs::pin_tool_dialog_workflow",
   "crates/ui-egui/tests/it/pinned_tools.rs::sidebar_pin_toggle_unpins_and_pins",
+  "crates/ui-egui/tests/it/control.rs::takeoff_starts_hidden_and_tools_drag_to_quick_access",
   "crates/ui-egui/tests/it/comments.rs::hotbar_picker_adds_and_runs_freehand_highlight",
   "crates/ui-egui/tests/it/comments.rs::hotbar_drag_moves_and_persists_position",
   "crates/ui-egui/tests/it/comments.rs::hotbar_vertical_size_and_docking",
@@ -1820,7 +1821,7 @@ evidence = [
   "crates/ui-egui/tests/it/comments.rs::hotbar_floating_picker_does_not_overlap_rendered_bar",
   "crates/ui-egui/tests/it/comments.rs::hotbar_settings_layout_and_side_controls_are_reachable_by_label",
 ]
-notes = "Pin and unpin tools on the Home page via tool card hover button, All Tools row toggle, or 'Pin a tool' search dialog. Pinned tool order persists across sessions. Customizable document hotbar searches the command registry, adds/removes tools, resizes buttons from 24 to 64 pixels, floats or docks on any side with an optional full-side chrome strip, and persists preferences (UI control: hotbar-tools, hotbar-size, hotbar-side, hotbar-full-side). Missing: hotbar shortcut reordering and full Acrobat customization-dialog parity."
+notes = "Pin and unpin tools on the Home page via tool card hover button, tool sidebar context menu, or 'Pin a tool' search dialog. Pinned tool order persists across sessions. Sidebar separates pinned tools from other session tools and marks the active tool with a dot. Tool rows, catalog tiles and measurement actions drag onto the mode bar as persistent shortcuts; ui.set quick-tool adds/removes them. Customizable document hotbar searches the command registry, adds/removes tools, resizes buttons from 24 to 64 pixels, floats or docks on any side with an optional full-side chrome strip, and persists preferences (UI control: hotbar-tools, hotbar-size, hotbar-side, hotbar-full-side). Missing: hotbar shortcut reordering and full Acrobat customization-dialog parity."
 
 [[feature]]
 id = "view.restriction-notice"
@@ -10355,4 +10356,4 @@ milestone = "M12"
 status = "partial"
 tools = ["measure_list"]
 evidence = ["crates/ui-egui/tests/it/control.rs::takeoff_workspace_searches_sorts_resizes_and_docks"]
-notes = "Default bottom takeoff table with resizable height, search across displayed fields, numeric quantity sorting, totals per unit and row selection linked to the drawing. Table attaches left/right/bottom or floats inside the workspace. Measurement settings attach left/right or float. Placement and bottom height persist. UI control keys expose placement, search and sort with bounded state snapshots. General comment rows, custom columns, drag-to-dock and separate operating-system windows are pending."
+notes = "Default bottom takeoff table opens after the first saved measurement, with a CSV/XLSX format chooser on its toolbar, readable headers, resizable height, search across displayed fields, numeric quantity sorting, totals per unit and row selection linked to the drawing. Table attaches left/right/bottom or floats inside the workspace. Measurement settings attach left/right or float. Placement and bottom height persist. UI control keys expose placement, search and sort with bounded state snapshots. General comment rows, custom columns, drag-to-dock and separate operating-system windows are pending."

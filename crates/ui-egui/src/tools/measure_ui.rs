@@ -75,8 +75,6 @@ pub struct MeasureView {
     /// Snapping geometry (or why it failed) per (page, edit generation): extraction is not
     /// repeated on every hover frame.
     paths: Option<(usize, u64, Result<measure::snap::Geometry, String>)>,
-    /// Saved measurements per edit generation, for the panel.
-    listing: Option<(u64, Result<measure::Listing, String>)>,
 }
 impl Default for MeasureView {
     fn default() -> Self {
@@ -108,7 +106,6 @@ impl Default for MeasureView {
             label: String::new(),
             seeded_page: None,
             paths: None,
-            listing: None,
         }
     }
 }
@@ -287,15 +284,14 @@ pub(crate) fn page_input(
         let (vx, vy) = xf.screen_to_view(pos);
         let [x, y] = info.view_to_user(vx, vy);
         let mut point = [f64::from(x), f64::from(y)];
-        let mut snapped = None;
-        if state.snap_enabled {
-            snapped = snap_to_content(state, doc, page, [vx, vy], xf.zoom().max(1e-6), point);
-        }
-        if let Some((snapped_point, kind)) = snapped {
+        if state.snap_enabled
+            && let Some((snapped_point, kind)) = snap_to_content(state, doc, page, [vx, vy], xf.zoom().max(1e-6), point)
+        {
             point = snapped_point;
             snap = Some(kind);
         }
-        if shift && state.page == Some(page)
+        if shift
+            && state.page == Some(page)
             && let Some(last) = state.points.last().copied()
         {
             let constrained = state.lock_vertex(last, point);
@@ -439,31 +435,27 @@ pub(crate) fn panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
     crate::takeoff_workspace::settings_header(app, ui);
     egui::ScrollArea::vertical().id_salt("measure-panel").show(ui, |ui| panel_body(app, ui, t));
 }
+fn measurement_row(ui: &mut egui::Ui, t: &Tokens, icon: &str, label: &str, active: bool, command: &str) -> egui::Response {
+    let (rect, response) = ui.allocate_exact_size(egui::vec2(ui.available_width(), 32.0), egui::Sense::click_and_drag());
+    response.widget_info(|| egui::WidgetInfo::selected(egui::Role::Button, true, active, label));
+    crate::theme::Press::track(ui, &response).wash(ui, rect, 6, active);
+    crate::icons::paint(ui, egui::Rect::from_center_size(rect.left_center() + egui::vec2(12.0, 0.0), egui::vec2(18.0, 18.0)), icon, 18.0, t.icon);
+    widgets::paint_left(ui, rect.left_center() + egui::vec2(30.0, 0.0), label, crate::theme::regular(13.0), t.text, (rect.width() - 36.0).max(1.0));
+    crate::tool_access::source(&response, format!("command:{command}"));
+    response.on_hover_cursor(egui::CursorIcon::PointingHand)
+}
+
 /// Draw the measurement panel: tool selection, scale calibration, snapping and the current reading.
-fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
-    crate::widgets::begin_dialog(ui);
+fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
     let Some((index, id)) = app.active_ids() else {
         ui.label(tl!("Open a PDF to measure it."));
         return;
     };
-    let mut tool = None;
-    ui.horizontal_wrapped(|ui| {
-        for (label, value) in [("Distance", Tool::Distance), ("Continuous length", Tool::Perimeter), ("Area", Tool::Area)] {
-            if ui.selectable_label(app.quick_tool == QuickTool::Measure(value), tl!(label)).clicked() {
-                tool = Some(value);
-            }
-        }
-    });
     let Some(doc) = app.session.get(id) else { return };
-    #[cfg(not(target_arch = "wasm32"))]
-    let export_xlsx = ui.add_enabled(doc.allows_copying(), egui::Button::new(tl!("Export takeoff as XLSX"))).clicked();
     let units = app.units;
     let page = app.views[index].current;
     let info = doc.info.pages.get(page).cloned();
     let state = &mut app.views[index].measure;
-    if state.listing.as_ref().is_none_or(|(g, _)| *g != doc.edit_generation()) {
-        state.listing = Some((doc.edit_generation(), doc.measurements()));
-    }
     if state.seeded_page != Some(page) {
         state.seeded_page = Some(page);
         state.vertical_multiplier = 1.0;
@@ -485,53 +477,41 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
         }
         sync_ratio_text(state, units);
     }
-    ui.label(tl!("Click vertices · Enter to finish · Hold Shift to lock 45°"))
-        .on_hover_text(tl!("Double-click also finishes. Click the first point to close an area. Backspace removes a vertex. Escape cancels."));
-    ui.separator();
-    ui.label(tl!("Measurement information"));
-    if let Some(reading) = &state.reading {
-        ui.label(egui::RichText::new(&reading.label).strong());
-        ui.label(format!("X: {:.3}   Y: {:.3}", reading.delta_x, reading.delta_y));
-        ui.label(format!("{}: {:.2}°", tl!("Angle"), reading.angle));
-        if let Some(scale) = &state.scale {
-            ui.label(&scale.ratio);
+
+    let mut tool = None;
+    widgets::section_title(ui, tl!("Takeoff"));
+    for (label, icon, value) in
+        [("Distance", "ruler", Tool::Distance), ("Continuous length", "spline", Tool::Perimeter), ("Area", "square", Tool::Area)]
+    {
+        if measurement_row(
+            ui,
+            t,
+            icon,
+            tl!(label),
+            app.quick_tool == QuickTool::Measure(value) && state.hvac.is_none(),
+            &format!("measure.{}", value.name()),
+        )
+        .clicked()
+        {
+            state.hvac = None;
+            tool = Some(value);
         }
-    } else {
-        ui.label(tl!("Click the first point to begin."));
     }
-    ui.horizontal(|ui| {
-        let label = ui.label(tl!("Label"));
-        ui.add(crate::widgets::line(&mut state.label).desired_width(130.0).char_limit(128)).labelled_by(label.id);
-    });
-    ui.separator();
-    ui.add(widgets::checkbox(&mut state.snap_enabled, tl!("Snap to drawing")));
-    if state.snap_enabled {
-        ui.horizontal(|ui| {
-            ui.add(widgets::checkbox(&mut state.snaps.endpoints, tl!("Endpoints")));
-            ui.add(widgets::checkbox(&mut state.snaps.midpoints, tl!("Midpoints")));
-        });
-        ui.horizontal(|ui| {
-            ui.add(widgets::checkbox(&mut state.snaps.intersections, tl!("Intersections")));
-            ui.add(widgets::checkbox(&mut state.snaps.paths, tl!("Paths")));
-        });
-        ui.add(egui::Slider::new(&mut state.sensitivity, 1.0..=20.0).text(tl!("Sensitivity")));
+    if measurement_row(ui, t, "wrench", tl!("Pipe takeoff"), state.hvac.as_ref().is_some_and(|h| h.profile == "pipe"), "measure.pipe").clicked() {
+        state.hvac = Some(measure::hvac::Takeoff::pipe());
+        tool = Some(Tool::Perimeter);
     }
-    ui.separator();
-    // "1:N" fills the fields below and applies at once, as does picking a common scale.
+    if measurement_row(ui, t, "columns-2", tl!("Sheet-metal takeoff"), state.hvac.as_ref().is_some_and(|h| h.profile != "pipe"), "measure.duct")
+        .clicked()
+    {
+        state.hvac = Some(measure::hvac::Takeoff::duct());
+        tool = Some(Tool::Perimeter);
+    }
+
+    widgets::section_title(ui, tl!("Drawing scale"));
     let mut chosen = None;
     let mut preset = None;
-    let fields = scale_fields(state);
-    ui.horizontal_wrapped(|ui| {
-        ui.label(tl!("Drawing scale")).on_hover_text(tl!("Applying a scale switches units to m / mm."));
-        let typed = ui.add(crate::widgets::line(&mut state.ratio_text).hint_text("1:100").desired_width(56.0).char_limit(16));
-        typed.widget_info(|| egui::WidgetInfo::labeled(egui::Role::TextInput, true, tl!("Scale")));
-        state.ratio_dirty |= typed.changed();
-        if typed.lost_focus() && std::mem::take(&mut state.ratio_dirty) {
-            match parse_ratio(&state.ratio_text) {
-                Some(n) => chosen = Some(n),
-                None => state.error = Some(tl!("Enter a scale such as 1:50.").into()),
-            }
-        }
+    ui.horizontal(|ui| {
         let groups = [
             (tl!("Metric"), measure::presets::METRIC),
             (tl!("Architectural"), measure::presets::ARCHITECTURAL),
@@ -565,125 +545,138 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
                 },
             );
     });
-    ui.horizontal(|ui| {
-        ui.add(egui::DragValue::new(&mut state.drawing_points).range(0.000001..=1e9));
-        let page_unit = page_unit_of(state.page_unit, &state.unit, units);
-        craft_ui::ComboBox::from_id_salt("measure-page-unit").selected_text(page_unit.label()).width(44.0).show_ui(ui, |ui| {
-            for u in PageUnit::ALL {
-                if ui.selectable_label(u == page_unit, u.label()).clicked() {
-                    state.page_unit = Some(u);
-                }
+    if let Some(scale) = &state.scale {
+        ui.label(egui::RichText::new(&scale.ratio).color(t.text_muted));
+    } else {
+        let paper = page_unit_of(state.page_unit, &state.unit, units);
+        ui.label(
+            egui::RichText::new(format!("{} {} = {} {}", state.drawing_points, paper.label(), state.real_distance, state.unit)).color(t.text_muted),
+        );
+    }
+    if measurement_row(ui, t, "ruler", tl!("Calibrate from two points"), false, "measure.calibrate").clicked() {
+        tool = Some(Tool::Calibrate);
+    }
+    let fields = scale_fields(state);
+    egui::CollapsingHeader::new(tl!("Custom scale")).show(ui, |ui| {
+        widgets::begin_dialog(ui);
+        ui.label(tl!("Scale ratio"));
+        let typed = ui.add(widgets::line(&mut state.ratio_text).hint_text("1:100").desired_width(ui.available_width()).char_limit(16));
+        typed.widget_info(|| egui::WidgetInfo::labeled(egui::Role::TextInput, true, tl!("Scale")));
+        state.ratio_dirty |= typed.changed();
+        if typed.lost_focus() && std::mem::take(&mut state.ratio_dirty) {
+            match parse_ratio(&state.ratio_text) {
+                Some(n) => chosen = Some(n),
+                None => state.error = Some(tl!("Enter a scale such as 1:50.").into()),
             }
+        }
+        ui.label(tl!("On drawing"));
+        ui.horizontal_wrapped(|ui| {
+            ui.add(egui::DragValue::new(&mut state.drawing_points).range(0.000001..=1e9));
+            let paper = page_unit_of(state.page_unit, &state.unit, units);
+            craft_ui::ComboBox::from_label(tl!("Paper unit")).selected_text(paper.label()).width(55.0).show_ui(ui, |ui| {
+                for unit in PageUnit::ALL {
+                    if ui.selectable_label(unit == paper, unit.label()).clicked() {
+                        state.page_unit = Some(unit);
+                    }
+                }
+            });
         });
-        ui.label("=");
-        ui.add(egui::DragValue::new(&mut state.real_distance).range(0.000001..=1e12));
+        ui.label(tl!("Real distance"));
+        ui.horizontal_wrapped(|ui| {
+            ui.add(egui::DragValue::new(&mut state.real_distance).range(0.000001..=1e12));
+            let label = ui.label(tl!("Unit"));
+            ui.add(widgets::line(&mut state.unit).desired_width(60.0).char_limit(12)).labelled_by(label.id);
+        });
+        ui.label(tl!("Decimals"));
+        ui.add(egui::DragValue::new(&mut state.precision).range(0..=6));
+        ui.label(tl!("Vertical scale multiplier"));
+        ui.add(egui::DragValue::new(&mut state.vertical_multiplier).speed(0.001));
+        ui.add(widgets::checkbox(&mut state.whole_page, tl!("Entire page")));
+        if !state.whole_page {
+            for (value, name) in state.rect.iter_mut().zip(["X", "Y", "Width", "Height"]) {
+                ui.label(tl!(name));
+                ui.add(egui::DragValue::new(value).range(0.0..=1e9));
+            }
+        }
+        let label = ui.label(tl!("Viewport"));
+        ui.add(widgets::line(&mut state.name).desired_width(ui.available_width()).char_limit(128)).labelled_by(label.id);
     });
-    ui.horizontal(|ui| {
-        let unit = ui.label(tl!("Unit"));
-        ui.add(crate::widgets::line(&mut state.unit).desired_width(64.0).char_limit(12)).labelled_by(unit.id);
-        ui.add(egui::DragValue::new(&mut state.precision).range(0..=6).prefix(format!("{} ", tl!("Decimals"))));
-    });
-    ui.horizontal(|ui| {
-        let label = ui.label(tl!("Vertical scale multiplier"));
-        ui.add(egui::DragValue::new(&mut state.vertical_multiplier).speed(0.001)).labelled_by(label.id);
-    });
-    // A hand edit of the fields leaves the 1:N field showing the old ratio: say the new one.
     if scale_fields(state) != fields {
         sync_ratio_text(state, units);
     }
-    if ui.button(tl!("Calibrate from two points")).clicked() {
-        tool = Some(Tool::Calibrate);
-    }
-    ui.add(widgets::checkbox(&mut state.whole_page, tl!("Entire page")));
-    if !state.whole_page {
-        ui.label(tl!("Viewport rectangle in page points (x, y, width, height)"));
-        for (i, name) in ["X", "Y", "Width", "Height"].iter().enumerate() {
-            if let Some(v) = state.rect.get_mut(i) {
-                ui.add(egui::DragValue::new(v).range(0.0..=1e9).prefix(format!("{}: ", tl!(name))));
-            }
-        }
-    }
-    ui.horizontal(|ui| {
-        let viewport = ui.label(tl!("Viewport"));
-        ui.add(crate::widgets::line(&mut state.name).desired_width(130.0).char_limit(128)).labelled_by(viewport.id);
+    let apply = measurement_row(ui, t, "check", tl!("Apply scale"), false, "measure.scale").clicked() && doc.allows_annotation();
+
+    widgets::section_title(ui, tl!("Snapping"));
+    ui.add(widgets::checkbox(&mut state.snap_enabled, tl!("Snap to drawing")));
+    egui::CollapsingHeader::new(tl!("Snap options")).show(ui, |ui| {
+        ui.add(widgets::checkbox(&mut state.snaps.endpoints, tl!("Endpoints")));
+        ui.add(widgets::checkbox(&mut state.snaps.midpoints, tl!("Midpoints")));
+        ui.add(widgets::checkbox(&mut state.snaps.intersections, tl!("Intersections")));
+        ui.add(widgets::checkbox(&mut state.snaps.paths, tl!("Paths")));
+        ui.add(egui::Slider::new(&mut state.sensitivity, 1.0..=20.0).text(tl!("Sensitivity")));
     });
-    let apply = ui.add_enabled(doc.allows_annotation(), egui::Button::new(tl!("Apply scale"))).clicked();
-    egui::CollapsingHeader::new(tl!("HVAC takeoff specifications")).open(state.hvac.as_ref().map(|_| true)).show(ui, |ui| {
-        if ui.button(tl!("Pipe preset")).clicked() {
-            state.hvac = Some(measure::hvac::Takeoff::pipe());
-            tool = Some(Tool::Perimeter);
-        }
-        if ui.button(tl!("Sheet-metal preset")).clicked() {
-            state.hvac = Some(measure::hvac::Takeoff::duct());
-            tool = Some(Tool::Perimeter);
-        }
-        let mut clear = false;
-        if let Some(hvac) = &mut state.hvac {
-            let previous_profile = hvac.profile.clone();
-            for (name, value, options) in [
-                (tl!("Profile"), &mut hvac.profile, &["pipe", "round duct", "rectangular duct"][..]),
-                (tl!("Material"), &mut hvac.material, &["Copper", "Carbon steel", "Stainless steel", "PVC", "CPVC", "PEX", "Galvanized steel", "Aluminum"][..]),
-                (tl!("System"), &mut hvac.service, &["Supply", "Return", "Exhaust", "Outside air", "Hydronic supply", "Hydronic return", "Refrigerant", "Condensate"][..]),
-            ] {
-                craft_ui::ComboBox::from_id_salt(("hvac", name)).selected_text(value.as_str()).show_ui(ui, |ui| {
-                    for option in options {
-                        ui.selectable_value(value, (*option).into(), *option);
-                    }
-                });
-            }
-            if hvac.profile != previous_profile {
-                hvac.size = match hvac.profile.as_str() {
-                    "pipe" => "1 in",
-                    "round duct" => "12 in",
-                    _ => "12 x 12 in",
-                }.into();
-            }
-            let size = ui.label(tl!("Nominal size with units (diameter or width x height)"));
-            let sizes = match hvac.profile.as_str() {
-                "pipe" => measure::hvac::PIPE_SIZES,
-                "round duct" => measure::hvac::ROUND_DUCT_SIZES,
-                _ => measure::hvac::RECTANGULAR_DUCT_SIZES,
-            };
-            craft_ui::ComboBox::from_id_salt("hvac-nominal-size").selected_text(tl!("Common sizes")).show_ui(ui, |ui| {
-                for option in sizes {
-                    ui.selectable_value(&mut hvac.size, (*option).into(), *option);
+
+    if let Some(hvac) = &mut state.hvac {
+        widgets::section_title(ui, tl!("HVAC specifications"));
+        let previous = hvac.profile.clone();
+        for (name, value, choices) in [
+            ("Profile", &mut hvac.profile, &["pipe", "round duct", "rectangular duct"][..]),
+            (
+                "Material",
+                &mut hvac.material,
+                &["Copper", "Carbon steel", "Stainless steel", "PVC", "CPVC", "PEX", "Galvanized steel", "Aluminum"][..],
+            ),
+            (
+                "System",
+                &mut hvac.service,
+                &["Supply", "Return", "Exhaust", "Outside air", "Hydronic supply", "Hydronic return", "Refrigerant", "Condensate"][..],
+            ),
+        ] {
+            ui.label(egui::RichText::new(tl!(name)).small().color(t.text_muted));
+            craft_ui::ComboBox::from_id_salt(("hvac", name)).selected_text(value.as_str()).width(ui.available_width()).show_ui(ui, |ui| {
+                for choice in choices {
+                    ui.selectable_value(value, (*choice).into(), *choice);
                 }
             });
-            ui.add(widgets::line(&mut hvac.size).char_limit(64)).labelled_by(size.id);
-            clear = ui.button(tl!("Clear HVAC specifications")).clicked();
+            ui.add_space(5.0);
         }
-        if clear {
-            state.hvac = None;
+        if previous != hvac.profile {
+            hvac.size = match hvac.profile.as_str() {
+                "pipe" => "1 in",
+                "round duct" => "12 in",
+                _ => "12 x 12 in",
+            }
+            .into();
         }
-    });
+        ui.label(egui::RichText::new(tl!("Nominal size")).small().color(t.text_muted));
+        let sizes = match hvac.profile.as_str() {
+            "pipe" => measure::hvac::PIPE_SIZES,
+            "round duct" => measure::hvac::ROUND_DUCT_SIZES,
+            _ => measure::hvac::RECTANGULAR_DUCT_SIZES,
+        };
+        craft_ui::ComboBox::from_id_salt("hvac-nominal-size").selected_text(&hvac.size).width(ui.available_width()).show_ui(ui, |ui| {
+            for size in sizes {
+                ui.selectable_value(&mut hvac.size, (*size).into(), *size);
+            }
+        });
+        egui::CollapsingHeader::new(tl!("Custom size")).show(ui, |ui| {
+            widgets::begin_dialog(ui);
+            ui.label(tl!("Diameter or width × height, with units"));
+            ui.add(widgets::line(&mut hvac.size).desired_width(ui.available_width()).char_limit(64));
+        });
+    }
+    widgets::section_title(ui, tl!("Markup"));
+    let label = ui.label(tl!("Label"));
+    widgets::begin_dialog(ui);
+    ui.add(widgets::line(&mut state.label).hint_text(tl!("Optional label")).desired_width(ui.available_width()).char_limit(128))
+        .labelled_by(label.id);
+    if let Some(reading) = &state.reading {
+        ui.label(egui::RichText::new(&reading.label).strong());
+    }
     if let Some(error) = &state.error {
         ui.colored_label(Color32::from_rgb(190, 50, 50), error);
     }
-    ui.separator();
-    let mut select = None;
-    match state.listing.as_ref().map(|(_, l)| l) {
-        None => {}
-        Some(Ok(listing)) => {
-            ui.label(format!("{}: {}", tl!("Saved measurements"), listing.measurements.len()));
-            if !listing.unsupported.is_empty() {
-                let reasons: Vec<String> =
-                    listing.unsupported.iter().map(|u| format!("{} {}: {}", tl!("Page"), u.page.saturating_add(1), u.reason)).collect();
-                ui.colored_label(Color32::from_rgb(190, 120, 30), format!("{}: {}", tl!("Unsupported measurements"), listing.unsupported.len()))
-                    .on_hover_text(reasons.join("\n"));
-            }
-            egui::ScrollArea::vertical().id_salt("measurement-list").max_height(140.0).show(ui, |ui| {
-                for m in &listing.measurements {
-                    if ui.button(format!("{} {}: {} {}", tl!("Page"), m.page.saturating_add(1), m.reading.label, m.label)).clicked() {
-                        select = Some((m.page, m.index, m.reading.clone(), m.scale.clone()));
-                    }
-                }
-            });
-        }
-        Some(Err(e)) => {
-            ui.colored_label(Color32::from_rgb(190, 50, 50), e);
-        }
-    }
-    let export = ui.button(tl!("Export measurements as CSV")).clicked();
+
     if let Some(n) = chosen
         && set_ratio(state, n)
     {
@@ -725,28 +718,14 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, _t: &Tokens) {
             Err(e) => state.error = Some(e.to_string()),
         }
     }
-    if let Some((page, annotation, reading, scale)) = select {
-        app.views[index].current = page;
-        app.views[index].comments.selected = Some((page, annotation));
-        app.views[index].measure.reading = Some(reading);
-        app.views[index].measure.scale = Some(scale);
-        app.quick_tool = QuickTool::Select;
-    }
     if let Some(tool) = tool {
         app.views[index].measure.cancel();
         app.quick_tool = QuickTool::Measure(tool);
     }
-    if export {
-        export_csv(app);
-    }
-    #[cfg(not(target_arch = "wasm32"))]
-    if export_xlsx {
-        export_workbook(app);
-    }
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn export_workbook(app: &mut PdfCraftApp) {
+pub(crate) fn export_workbook(app: &mut PdfCraftApp) {
     let Some((_, id)) = app.active_ids() else { return };
     let Some(doc) = app.session.get(id) else { return };
     if !doc.allows_copying() {
@@ -786,6 +765,9 @@ pub(crate) fn command(app: &mut PdfCraftApp, id: &str) {
         && let Some(tool) = id.strip_prefix("measure.").and_then(Tool::from_name)
     {
         app.views[index].measure.cancel();
+        if matches!(tool, Tool::Distance | Tool::Perimeter | Tool::Area) {
+            app.views[index].measure.hvac = None;
+        }
         app.quick_tool = QuickTool::Measure(tool);
     }
     if let Some((index, _)) = app.active_ids()
@@ -799,7 +781,7 @@ pub(crate) fn command(app: &mut PdfCraftApp, id: &str) {
         export_csv(app);
     }
 }
-fn export_csv(app: &mut PdfCraftApp) {
+pub(crate) fn export_csv(app: &mut PdfCraftApp) {
     let Some((_, id)) = app.active_ids() else { return };
     let result = app.session.get(id).ok_or_else(|| "no such document".to_string()).and_then(|d| d.measurements());
     match result {

@@ -150,6 +150,9 @@ impl PdfCraftApp {
             pinned: Default::default(),
             recent_check: Default::default(),
             pinned_tools: Vec::new(),
+            quick_tools: Vec::new(),
+            mode_bar_rect: None,
+            open_tools: Vec::new(),
             pin_tool_search: String::new(),
             toast: None,
             toast_script: None,
@@ -329,6 +332,9 @@ impl PdfCraftApp {
     /// A dialog or prompt is open over the window: the keyboard is its own, and nothing may act
     /// on the document underneath it.
     pub(crate) fn modal_open(&self) -> bool {
+        if self.takeoff_workspace.export_doc.is_some() {
+            return true;
+        }
         self.dialog.is_some()
             || self.close_request.is_some()
             || self.password_prompt.is_some()
@@ -693,6 +699,7 @@ impl eframe::App for PdfCraftApp {
             }
         });
         crate::takeoff_workspace::settings_window(self, &ctx);
+        crate::takeoff_workspace::export_dialog(self, &ctx);
         self.process_pending_edits();
         palette::show(self, &ctx);
         dialogs::show(self, &ctx);
