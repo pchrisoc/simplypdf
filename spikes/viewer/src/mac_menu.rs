@@ -53,7 +53,7 @@ impl NativeMenu {
         let target: Retained<MenuTarget> = unsafe { msg_send![super(target), init] };
         let mut result = Self { target, items: Vec::new() };
 
-        for &(label, items) in MENUS {
+        for (index, &(label, items)) in MENUS.iter().enumerate() {
             let title = NSString::from_str(label);
             let parent = NSMenu::initWithTitle(NSMenu::alloc(mtm), &title);
             let submenu = if label == "View" {
@@ -94,7 +94,7 @@ impl NativeMenu {
                 submenu.addItem(&menu_item);
                 result.items.push((item.command, menu_item));
             }
-            let position = if label == "File" { bar.numberOfItems().min(1) } else { bar.numberOfItems().min(2) };
+            let position = bar.numberOfItems().min(index as isize + 1);
             bar.insertItem_atIndex(&entry, position);
         }
         Some(result)

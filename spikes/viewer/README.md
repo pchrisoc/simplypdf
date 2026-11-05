@@ -12,7 +12,7 @@ cargo test --locked --manifest-path spikes/viewer/Cargo.toml
 
 Choose **File → Open…** from the macOS system menu bar, press **⌘O**, or drop a PDF into the window. The viewer only replaces the current document once the replacement's first page renders. Page Up and Page Down change sheets. **⌘+** and **⌘−** zoom, and **⌘0** fits the page.
 
-The document toolbar sits at the top of the window and groups sheet navigation, zoom, Fit Page, and Pan. File and View use native AppKit menus on macOS. **View → Zoom** includes Zoom Previous and Zoom Next for discrete zoom changes on the current sheet. The shared egui presentation puts those menus inside the window above the toolbar for Windows-style placement. The viewer currently launches on macOS. Windows integration and verification are pending.
+The document toolbar sits at the top of the window and groups sheet navigation, zoom, Fit Page, and Pan. File, Edit, View, Insert, Page, and Tools use native AppKit menus on macOS. **View → Zoom** includes Zoom Previous and Zoom Next for discrete zoom changes on the current sheet. The shared egui presentation puts those menus inside the window above the toolbar for Windows-style placement. The viewer currently launches on macOS. Windows integration and verification are pending.
 
 The first build downloads dependencies from crates.io. This spike has a separate Cargo lockfile, so the headless workspace continues to build offline without GUI dependencies.
 
@@ -26,6 +26,10 @@ open build/macos/SimplyPDF.app
 The packaging script creates a release build for the host architecture, bundles the synthetic PDF and Draw license notices, and ad-hoc signs it for local development. The app looks for the bundled PDF at startup and can be opened from Finder. Distribution signing, notarization, and installers remain pending.
 
 The Zoom tool uses the translated Draw crate for outline geometry, click-versus-drag decisions, rectangle fit, and history. SimplyPDF adapts the result to its centered PDF viewport and preserves its existing zoom limits.
+
+## Drawing toolbar
+
+The Drawing toolbar sits directly above the sheet list and canvas, below the navigation controls. Choose **Rectangle** there or under **Insert → Rectangle**, then drag on the PDF. **Edit → Undo** and **Edit → Redo** also appear in the toolbar. Rectangles are kept in canonical page coordinates during zoom and page changes. They are session markups and disappear when a new document opens or the app exits.
 
 ## Replacing the renderer
 

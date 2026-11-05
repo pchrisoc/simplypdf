@@ -30,6 +30,7 @@ The upstream `sd` tree contains 867 files under `source/`, 82 under `inc/`, 256 
 - [ ] Port Draw's edge auto-scroll and remaining native zoom-tool behavior.
 - [x] Preserve the complete classic menu bar and 48 toolbar definitions as pinned, licensed port references.
 - [x] Connect zoom history to the viewer's View commands and verify a page switch starts fresh history.
+- [x] Add working Edit, Insert, Page, and Tools menus and a visible Drawing toolbar to the combined viewer. Rectangle markups are SimplyPDF session objects.
 - [ ] Map the classic menu and toolbar command IDs to upstream handlers, Rust handlers, and parity tests. Port standard File/Edit actions, view and navigation, drawing and formatting, then context-sensitive toolbars. Review Notebookbar, context menus, icons, and localization separately.
 - [ ] Inventory Draw-owned and shared code using `sd` build targets, command slots, and test targets. Record ownership and dependencies by source unit.
 - [ ] Port document and page models, drawing objects, layers, styles, undo, and selection. Map `svx`, `basegfx`, `docmodel`, and `drawinglayer` dependencies to explicit Rust interfaces.

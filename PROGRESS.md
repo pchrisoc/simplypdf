@@ -122,3 +122,9 @@ Next Draw slice is the standalone event path for zoom and pan, including cursor,
 - Integrated Draw-derived zoom selection, viewport fit, and zoom history into the SimplyPDF canvas. Added a Zoom toolbar mode and Z shortcut. Click zoom, box zoom, and Command-click zoom-out share the Draw crate and preserve canonical PDF selections.
 - Added a local macOS app packaging script. Built and ad-hoc signed the 5.4 MiB arm64 bundle at `build/macos/SimplyPDF.app`. Verified its signature and bundled fixture and launched it in the macOS desktop environment. The app opened the sample PDF and displayed its native menus.
 - All 22 workspace tests and 10 viewer and metadata tests passed on macOS arm64. The combined app covers the translated zoom features. Full Draw parity, edge auto-scroll, Windows and Linux packaging, and macOS distribution signing remain pending.
+
+## 2026-11-04 · Drawing toolbar and native commands
+
+- Added native Edit, Insert, Page, and Tools menus and a visible Drawing toolbar. The commands cover rectangle creation, undo, redo, page navigation, and viewer tool selection.
+- Rectangle markups use canonical PDF page coordinates and are scoped to the active document session. They survive zoom and page changes. Persistence and PDF export remain open.
+- Rebuilt and signed the macOS arm64 app. Verified all six native menus, the Drawing toolbar, and rendered rectangles in a test copy of the same build. All 22 workspace tests and 11 viewer and metadata tests passed on macOS arm64.

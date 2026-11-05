@@ -17,6 +17,7 @@ enum Tool {
     Inspect,
     Pan,
     Zoom,
+    Rectangle,
 }
 
 pub struct Viewer {
@@ -29,6 +30,9 @@ pub struct Viewer {
     zoom_history: ZoomHistory<Navigation>,
     tool: Tool,
     zoom_start: Option<Pos2>,
+    rectangle_start: Option<Point>,
+    rectangles: Vec<(usize, [Point; 2])>,
+    undone_rectangles: Vec<(usize, [Point; 2])>,
     primary_pan: bool,
     error: Option<String>,
 }
@@ -45,6 +49,9 @@ impl Viewer {
             zoom_history: ZoomHistory::default(),
             tool: Tool::Inspect,
             zoom_start: None,
+            rectangle_start: None,
+            rectangles: Vec::new(),
+            undone_rectangles: Vec::new(),
             primary_pan: false,
             error: None,
         };
@@ -62,6 +69,8 @@ impl Viewer {
             Ok((document, first_page)) => {
                 context.send_viewport_cmd(egui::ViewportCommand::Title(format!("{title} — SimplyPDF")));
                 self.document = Some(document);
+                self.rectangles.clear();
+                self.undone_rectangles.clear();
                 self.display_page(context, 0, first_page);
             }
             Err(error) => self.error = Some(format!("Could not open {title}. {error}")),
@@ -86,6 +95,7 @@ impl Viewer {
         self.selected = None;
         self.primary_pan = false;
         self.zoom_start = None;
+        self.rectangle_start = None;
         self.navigation = Navigation::default();
         self.zoom_history = ZoomHistory::default();
         self.zoom_history.insert(self.navigation);
@@ -99,6 +109,11 @@ impl Viewer {
     fn command_enabled(&self, command: Command) -> bool {
         match command {
             Command::Open => true,
+            Command::Undo => !self.rectangles.is_empty(),
+            Command::Redo => !self.undone_rectangles.is_empty(),
+            Command::FirstPage | Command::PreviousPage => self.page_index > 0,
+            Command::NextPage | Command::LastPage => self.document.as_ref()
+                .is_some_and(|document| self.page_index + 1 < document.page_count()),
             Command::ZoomPrevious => self.zoom_history.can_step_back(),
             Command::ZoomNext => self.zoom_history.can_step_forward(),
             _ => self.image.is_some(),
@@ -108,7 +123,6 @@ impl Viewer {
     fn apply_navigation(&mut self, command: Command) {
         let before = self.navigation;
         match command {
-            Command::Open => return,
             Command::ZoomPrevious => {
                 if let Some(view) = self.zoom_history.step_back() {
                     self.navigation = *view;
@@ -124,6 +138,7 @@ impl Viewer {
             Command::ZoomIn => self.navigation.zoom_at(1.25, Vec2::ZERO),
             Command::ZoomOut => self.navigation.zoom_at(1.0 / 1.25, Vec2::ZERO),
             Command::FitPage => self.navigation = Navigation::default(),
+            _ => return,
         }
         self.record_navigation(before);
     }
@@ -137,6 +152,42 @@ impl Viewer {
         }
     }
 
+    fn execute(&mut self, context: &egui::Context, command: Command) {
+        if !self.command_enabled(command) {
+            return;
+        }
+        match command {
+            Command::Open => match crate::file_picker::open_document() {
+                Ok(Some(path)) => self.open(context, &path),
+                Ok(None) => {}
+                Err(error) => self.error = Some(error.into()),
+            },
+            Command::Undo => {
+                if let Some(rectangle) = self.rectangles.pop() {
+                    self.undone_rectangles.push(rectangle);
+                }
+            }
+            Command::Redo => {
+                if let Some(rectangle) = self.undone_rectangles.pop() {
+                    self.rectangles.push(rectangle);
+                }
+            }
+            Command::FirstPage => self.show_page(context, 0),
+            Command::PreviousPage => self.show_page(context, self.page_index - 1),
+            Command::NextPage => self.show_page(context, self.page_index + 1),
+            Command::LastPage => {
+                if let Some(document) = &self.document {
+                    self.show_page(context, document.page_count() - 1);
+                }
+            }
+            Command::InspectTool => self.tool = Tool::Inspect,
+            Command::PanTool => self.tool = Tool::Pan,
+            Command::ZoomTool => self.tool = Tool::Zoom,
+            Command::Rectangle => self.tool = Tool::Rectangle,
+            command => self.apply_navigation(command),
+        }
+    }
+
     fn draw(&mut self, context: &egui::Context) {
         let dropped = context.input(|input| input.raw.dropped_files.first().and_then(|file| file.path.clone()));
         if let Some(path) = dropped {
@@ -147,6 +198,13 @@ impl Viewer {
         } else {
             let mut commands: Vec<_> = menu::window_menu(context, |command| self.command_enabled(command)).into_iter().collect();
             context.input_mut(|input| {
+                let mut redo = Modifiers::COMMAND;
+                redo.shift = true;
+                if input.consume_key(redo, Key::Z) {
+                    commands.push(Command::Redo);
+                } else if input.consume_key(Modifiers::COMMAND, Key::Z) {
+                    commands.push(Command::Undo);
+                }
                 for (key, command) in [
                     (Key::O, Command::Open),
                     (Key::Equals, Command::ZoomIn),
@@ -162,17 +220,7 @@ impl Viewer {
             commands
         };
         for command in commands {
-            if !self.command_enabled(command) {
-                continue;
-            }
-            match command {
-                Command::Open => match crate::file_picker::open_document() {
-                    Ok(Some(path)) => self.open(context, &path),
-                    Ok(None) => {}
-                    Err(error) => self.error = Some(error.into()),
-                },
-                command => self.apply_navigation(command),
-            }
+            self.execute(context, command);
         }
 
         let count = self.document.as_ref().map_or(0, Document::page_count);
@@ -237,6 +285,25 @@ impl Viewer {
                 });
             });
         });
+        egui::TopBottomPanel::top("drawing_toolbar").show(context, |ui| {
+            ui.horizontal(|ui| {
+                ui.add_space(4.0);
+                ui.strong("Drawing");
+                ui.separator();
+                if ui.add_enabled(self.image.is_some(), egui::Button::new("▭ Rectangle")
+                    .selected(self.tool == Tool::Rectangle)).clicked()
+                {
+                    self.execute(context, Command::Rectangle);
+                }
+                ui.separator();
+                for (command, label) in [(Command::Undo, "Undo"), (Command::Redo, "Redo")] {
+                    if ui.add_enabled(self.command_enabled(command), egui::Button::new(label)).clicked() {
+                        self.execute(context, command);
+                    }
+                }
+                ui.label("Session markups");
+            });
+        });
         egui::SidePanel::left("sheets").default_width(144.0).show(context, |ui| {
             ui.heading("Sheets");
             ui.separator();
@@ -273,6 +340,7 @@ impl Viewer {
                 } else {
                     ui.label(match self.tool {
                         Tool::Pan => "Drag to pan",
+                        Tool::Rectangle => "Drag on the page to add a session rectangle",
                         Tool::Zoom => "Click or drag to zoom · ⌘-click to zoom out",
                         Tool::Inspect => "Click to inspect · Scroll to zoom · Hold Space to pan",
                     });
@@ -394,6 +462,41 @@ impl Viewer {
                 }
             }
 
+            let markup_painter = painter.with_clip_rect(rect.intersect(canvas));
+            let stroke = egui::Stroke::new(2.0_f32, Color32::from_rgb(227, 68, 49));
+            for &(page, points) in &self.rectangles {
+                if page == self.page_index {
+                    paint_rectangle(&markup_painter, view, points, stroke);
+                }
+            }
+            if self.tool == Tool::Rectangle && !self.primary_pan {
+                if let Some(pointer) = ui.input(|input| input.pointer.latest_pos()) {
+                    let end = Pos2::new(
+                        pointer.x.clamp(rect.min.x, rect.max.x),
+                        pointer.y.clamp(rect.min.y, rect.max.y),
+                    );
+                    if let Ok(end) = view.canvas_to_page([end.x.into(), end.y.into()]) {
+                        if primary_pressed && canvas_pressed && !pan_mode && rect.contains(pointer) {
+                            self.rectangle_start = Some(end);
+                            self.selected = None;
+                        }
+                        if let Some(start) = self.rectangle_start {
+                            if primary_down {
+                                paint_rectangle(&markup_painter, view, [start, end], stroke);
+                            } else if response.drag_stopped_by(PointerButton::Primary)
+                                && start[0] != end[0] && start[1] != end[1]
+                            {
+                                self.rectangles.push((self.page_index, [start, end]));
+                                self.undone_rectangles.clear();
+                            }
+                        }
+                    }
+                }
+            }
+            if !primary_down || self.tool != Tool::Rectangle {
+                self.rectangle_start = None;
+            }
+
             if self.tool == Tool::Inspect && !pan_mode && !self.primary_pan
                 && response.clicked_by(PointerButton::Primary)
             {
@@ -419,6 +522,18 @@ impl Viewer {
 impl eframe::App for Viewer {
     fn update(&mut self, context: &egui::Context, _: &mut eframe::Frame) {
         self.draw(context);
+    }
+}
+
+fn paint_rectangle(
+    painter: &egui::Painter,
+    view: simplypdf_core::geometry::Viewport,
+    [start, end]: [Point; 2],
+    stroke: egui::Stroke,
+) {
+    if let (Ok([x0, y0]), Ok([x1, y1])) = (view.page_to_canvas(start), view.page_to_canvas(end)) {
+        let rect = Rect::from_two_pos(Pos2::new(x0 as f32, y0 as f32), Pos2::new(x1 as f32, y1 as f32));
+        painter.rect_stroke(rect, 0.0, stroke, egui::StrokeKind::Inside);
     }
 }
 
@@ -603,6 +718,39 @@ mod tests {
             send(&mut viewer, vec![button(end, pressed, Modifiers::COMMAND)], Modifiers::COMMAND);
         }
         assert!((viewer.navigation.zoom - after_drag / 2.0).abs() < 0.02);
+    }
+
+    #[test]
+    fn rectangle_tool_tracks_page_coordinates_and_supports_undo_and_redo() {
+        let context = egui::Context::default();
+        let mut viewer = Viewer::new(&context, fixture());
+        viewer.execute(&context, Command::Rectangle);
+        frame(&mut viewer, &context, egui::RawInput::default());
+        let start = Pos2::new(450.0, 280.0);
+        let end = Pos2::new(550.0, 370.0);
+        for events in [
+            vec![egui::Event::PointerMoved(start), pointer_button(start, PointerButton::Primary, true)],
+            vec![egui::Event::PointerMoved(end)],
+            vec![pointer_button(end, PointerButton::Primary, false)],
+        ] {
+            frame(&mut viewer, &context, egui::RawInput { events, ..Default::default() });
+        }
+        assert_eq!(viewer.rectangles.len(), 1);
+        let rectangle = viewer.rectangles[0];
+        assert_eq!(rectangle.0, 0);
+        assert!(rectangle.1[0][0] < rectangle.1[1][0]);
+        assert!(rectangle.1[0][1] > rectangle.1[1][1]);
+
+        viewer.execute(&context, Command::NextPage);
+        assert_eq!(viewer.page_index, 1);
+        assert_eq!(viewer.rectangles, vec![rectangle]);
+        viewer.execute(&context, Command::Undo);
+        assert!(viewer.rectangles.is_empty());
+        viewer.execute(&context, Command::Redo);
+        assert_eq!(viewer.rectangles, vec![rectangle]);
+        viewer.open(&context, &fixture());
+        assert!(!viewer.command_enabled(Command::Undo));
+        assert!(!viewer.command_enabled(Command::Redo));
     }
 
     #[test]
