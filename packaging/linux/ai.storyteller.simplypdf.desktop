@@ -1,0 +1,14 @@
+[Desktop Entry]
+Type=Application
+Name=SimplyPDF
+GenericName=PDF Editor
+Comment=Read, organize, combine, split and secure PDFs
+Exec=simplypdf %U
+TryExec=simplypdf
+Icon=ai.storyteller.simplypdf
+Terminal=false
+StartupNotify=true
+StartupWMClass=ai.storyteller.simplypdf
+Categories=Office;Viewer;
+Keywords=pdf;viewer;editor;annotate;sign;forms;merge;split;
+MimeType=application/pdf;

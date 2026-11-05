@@ -9,9 +9,9 @@ pub mod snap;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod xlsx;
 
-use pdfcraft_annot::{Meta, NewAnnotation, Shape, Style};
-use pdfcraft_cos::{Dict, Document, ObjRef, Object, PdfString};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use simplypdf_annot::{Meta, NewAnnotation, Shape, Style};
+use simplypdf_cos::{Dict, Document, ObjRef, Object, PdfString};
 
 pub type Point = [f64; 2];
 pub const MAX_POINTS: usize = 2048;
@@ -22,7 +22,7 @@ pub enum MeasureError {
     #[error("{0}")]
     Invalid(String),
     #[error(transparent)]
-    Annotation(#[from] pdfcraft_annot::AnnotError),
+    Annotation(#[from] simplypdf_annot::AnnotError),
 }
 type Result<T> = std::result::Result<T, MeasureError>;
 fn invalid(s: &str) -> MeasureError {
@@ -385,8 +385,8 @@ fn text(d: &Dict, k: &[u8]) -> String {
 fn nums(v: impl IntoIterator<Item = f64>) -> Object {
     Object::Array(v.into_iter().map(Object::Real).collect())
 }
-fn page(doc: &Document, index: usize) -> Result<pdfcraft_model::Page> {
-    pdfcraft_model::pages(doc).get(index).cloned().ok_or_else(|| invalid("measurement page does not exist"))
+fn page(doc: &Document, index: usize) -> Result<simplypdf_model::Page> {
+    simplypdf_model::pages(doc).get(index).cloned().ok_or_else(|| invalid("measurement page does not exist"))
 }
 fn annot(doc: &Document, page_index: usize, index: usize) -> Result<(ObjRef, Dict)> {
     let p = page(doc, page_index)?;
@@ -415,17 +415,23 @@ pub fn add(doc: &mut Document, new: &NewMeasurement, meta: &Meta) -> Result<usiz
         Kind::Distance => Shape::Line {
             from: new.points.first().copied().ok_or_else(|| invalid("missing start"))?,
             to: new.points.last().copied().ok_or_else(|| invalid("missing end"))?,
-            start: pdfcraft_annot::LineEnding::None,
-            end: pdfcraft_annot::LineEnding::OpenArrow,
+            start: simplypdf_annot::LineEnding::None,
+            end: simplypdf_annot::LineEnding::OpenArrow,
         },
         Kind::Perimeter => {
-            Shape::PolyLine { vertices: new.points.clone(), start: pdfcraft_annot::LineEnding::None, end: pdfcraft_annot::LineEnding::None }
+            Shape::PolyLine { vertices: new.points.clone(), start: simplypdf_annot::LineEnding::None, end: simplypdf_annot::LineEnding::None }
         }
         Kind::Area => Shape::Polygon { vertices: new.points.clone(), cloud: false },
     };
-    let index = pdfcraft_annot::add_annotation(
+    let index = simplypdf_annot::add_annotation(
         doc,
-        &NewAnnotation { page: new.page, shape, style: new.style.clone(), contents: info.label.clone(), author: new.author.clone() },
+        &NewAnnotation {
+            page: new.page,
+            shape,
+            style: Style { color: new.hvac.as_ref().map_or(new.style.color, hvac::Takeoff::color), ..new.style.clone() },
+            contents: info.label.clone(),
+            author: new.author.clone(),
+        },
         meta,
     )?;
     let (r, mut d) = annot(doc, new.page, index)?;
@@ -434,7 +440,12 @@ pub fn add(doc: &mut Document, new: &NewMeasurement, meta: &Meta) -> Result<usiz
     d.set(b"Subj".to_vec(), PdfString::text(new.kind.name()));
     if let Some(hvac) = &new.hvac {
         let mut props = Dict::new();
-        for (key, value) in [(b"Profile".as_slice(), &hvac.profile), (b"Material".as_slice(), &hvac.material), (b"Size".as_slice(), &hvac.size), (b"Service".as_slice(), &hvac.service)] {
+        for (key, value) in [
+            (b"Profile".as_slice(), &hvac.profile),
+            (b"Material".as_slice(), &hvac.material),
+            (b"Size".as_slice(), &hvac.size),
+            (b"Service".as_slice(), &hvac.service),
+        ] {
             props.set(key.to_vec(), PdfString::text(value));
         }
         d.set(b"SimplyPDFHVAC".to_vec(), Object::Dict(props));
@@ -456,11 +467,90 @@ pub fn add(doc: &mut Document, new: &NewMeasurement, meta: &Meta) -> Result<usiz
         }
     }
     doc.update_dict(r, |target| *target = d).map_err(|e| invalid(&e.to_string()))?;
-    pdfcraft_annot::set_appearance(doc, r)?;
+    simplypdf_annot::set_appearance(doc, r)?;
     Ok(index)
 }
+/// Changes to an existing takeoff, without moving its measured geometry.
+#[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct MeasurementPatch {
+    pub value: Option<f64>,
+    pub unit: Option<String>,
+    pub label: Option<String>,
+    pub author: Option<String>,
+    pub hvac: Option<hvac::Takeoff>,
+    pub visible: Option<bool>,
+}
+
+pub fn update(doc: &mut Document, page: usize, index: usize, patch: &MeasurementPatch) -> Result<()> {
+    let (r, mut d) = annot(doc, page, index)?;
+    let kind = match d.get(b"IT").and_then(Object::as_name) {
+        Some(b"LineDimension") => Kind::Distance,
+        Some(b"PolyLineDimension") => Kind::Perimeter,
+        Some(b"PolygonDimension") => Kind::Area,
+        _ => return Err(invalid("annotation is not a supported measurement")),
+    };
+    let mut m = read_measurement(doc, &d, kind, page, index)?;
+    if let Some(value) = patch.value {
+        if !value.is_finite() || value <= 0.0 || m.reading.value <= 0.0 {
+            return Err(invalid("quantity must be finite and positive"));
+        }
+        let factor = value / m.reading.value;
+        if kind == Kind::Area {
+            m.scale.area_factor *= factor;
+        } else {
+            m.scale.distance_factor *= factor;
+        }
+        m.scale.ratio = format!("{} (takeoff quantity adjusted)", m.scale.ratio.split(" (takeoff quantity adjusted)").next().unwrap_or(""));
+    }
+    if let Some(unit) = &patch.unit {
+        if kind == Kind::Area {
+            m.scale.area_unit = unit.clone();
+        } else {
+            m.scale.unit = unit.clone();
+        }
+    }
+    let reading = reading(kind, &m.points, &m.scale)?;
+    d.set(b"Measure".to_vec(), Object::Dict(m.scale.dictionary()?));
+    d.set(b"Contents".to_vec(), PdfString::text(&reading.label));
+    d.set(b"PCMeasureValue".to_vec(), PdfString::text(&reading.label));
+    for (key, value) in [(b"PCMeasureLabel".as_slice(), &patch.label), (b"T".as_slice(), &patch.author)] {
+        if let Some(value) = value {
+            if value.len() > 512 || value.chars().any(char::is_control) {
+                return Err(invalid("takeoff text must be at most 512 printable bytes"));
+            }
+            d.set(key.to_vec(), PdfString::text(value));
+        }
+    }
+    if let Some(hvac) = &patch.hvac {
+        hvac.validate()?;
+        if kind != Kind::Perimeter {
+            return Err(invalid("HVAC takeoffs require continuous length"));
+        }
+        let mut props = Dict::new();
+        for (key, value) in [
+            (b"Profile".as_slice(), &hvac.profile),
+            (b"Material".as_slice(), &hvac.material),
+            (b"Size".as_slice(), &hvac.size),
+            (b"Service".as_slice(), &hvac.service),
+        ] {
+            props.set(key.to_vec(), PdfString::text(value));
+        }
+        d.set(b"SimplyPDFHVAC".to_vec(), Object::Dict(props));
+        d.set(b"C".to_vec(), nums(hvac.color()));
+    }
+    if let Some(visible) = patch.visible {
+        let flags = d.get(b"F").and_then(Object::as_int).unwrap_or(0);
+        d.set(b"F".to_vec(), Object::Int(if visible { flags & !34 } else { flags | 2 }));
+    }
+    doc.update_dict(r, |target| *target = d).map_err(|e| invalid(&e.to_string()))?;
+    simplypdf_annot::set_appearance(doc, r)?;
+    Ok(())
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize)]
 pub struct Measurement {
+    pub visible: bool,
     pub page: usize,
     pub index: usize,
     pub id: String,
@@ -511,10 +601,24 @@ fn read_measurement(doc: &Document, d: &Dict, kind: Kind, page: usize, index: us
     let points: Vec<Point> = v.as_chunks::<2>().0.to_vec();
     validate_geometry(kind, &points)?;
     let reading = reading(kind, &points, &scale)?;
-    let hvac = d.get(b"SimplyPDFHVAC").and_then(Object::as_dict).map(|props| hvac::Takeoff {
-        profile: text(props, b"Profile"), material: text(props, b"Material"), size: text(props, b"Size"), service: text(props, b"Service"),
+    let hvac = d.get(b"SimplyPDFHVAC").or_else(|| d.get(b"PdfCraftHVAC")).and_then(Object::as_dict).map(|props| hvac::Takeoff {
+        profile: text(props, b"Profile"),
+        material: text(props, b"Material"),
+        size: text(props, b"Size"),
+        service: text(props, b"Service"),
     });
-    Ok(Measurement { hvac, page, index, id: text(d, b"NM"), author: text(d, b"T"), label: text(d, b"PCMeasureLabel"), points, scale, reading })
+    Ok(Measurement {
+        visible: d.get(b"F").and_then(Object::as_int).unwrap_or(0) & 34 == 0,
+        hvac,
+        page,
+        index,
+        id: text(d, b"NM"),
+        author: text(d, b"T"),
+        label: text(d, b"PCMeasureLabel"),
+        points,
+        scale,
+        reading,
+    })
 }
 /// Every measurement annotation. One that can't be read is reported in `unsupported`
 /// rather than failing the whole list.
@@ -523,7 +627,7 @@ pub fn list(doc: &Document) -> Listing {
     let mut count = 0usize;
     let mut kept = 0usize;
     let mut seen = std::collections::HashSet::new();
-    for (page, p) in pdfcraft_model::pages(doc).iter().enumerate() {
+    for (page, p) in simplypdf_model::pages(doc).iter().enumerate() {
         let Some(o) = p.dict.get(b"Annots") else { continue };
         let o = doc.resolve(o);
         let Some(arr) = o.as_array() else { continue };
@@ -667,7 +771,7 @@ pub fn view_to_user(doc: &Document, page_index: usize, at: Point) -> Result<Poin
     check_points(&[at])?;
     let page = page(doc, page_index)?;
     let (_, height) = page.display_size(doc);
-    let m = pdfcraft_content::Matrix(page.view_matrix(doc));
+    let m = simplypdf_content::Matrix(page.view_matrix(doc));
     let (x, y) = m.apply(at[0], height - at[1]);
     check_points(&[[x, y]])?;
     Ok([x, y])
@@ -676,7 +780,7 @@ pub fn user_to_view(doc: &Document, page_index: usize, at: Point) -> Result<Poin
     check_points(&[at])?;
     let page = page(doc, page_index)?;
     let (_, height) = page.display_size(doc);
-    let m = pdfcraft_content::Matrix(page.view_matrix(doc)).invert().ok_or_else(|| invalid("invalid page transform"))?;
+    let m = simplypdf_content::Matrix(page.view_matrix(doc)).invert().ok_or_else(|| invalid("invalid page transform"))?;
     let (x, y) = m.apply(at[0], at[1]);
     Ok([x, height - y])
 }

@@ -213,7 +213,7 @@ pub enum LinkTarget {
     },
     /// A local-file remote Go-To action. The caller resolves `file` relative to the source path.
     /// `launch` marks a Launch action that names a PDF file (see `launch_pdf`), opened the same
-    /// way: as a document in PdfCraft, never by the operating system.
+    /// way: as a document in SimplyPDF, never by the operating system.
     RemoteGoTo {
         launch: bool,
         file: String,
@@ -332,7 +332,7 @@ pub struct Annotation {
     /// `/IT`, the intent: `FreeTextCallout`, `PolygonCloud`, `FreeTextTypeWriter`…
     pub intent: Option<String>,
     /// A Fill & Sign mark: typed text, a check, cross, dot or line, or a typed, drawn or picture
-    /// signature or initials (the rules of `pdfcraft_annot::is_fill_sign`).
+    /// signature or initials (the rules of `simplypdf_annot::is_fill_sign`).
     pub fill_sign: bool,
     /// The NoRotate flag (`/F` bit 5), set on sticky notes and attachments: on a turned page the
     /// appearance stays upright, turned about the upper-left corner of `rect`
@@ -426,7 +426,7 @@ fn rect_from_upright(shown: [f64; 4], rotation: u16) -> [f64; 4] {
 /// after an edit) run this.
 ///
 /// Only comments can be parents: both readers leave links, form widgets, pop-ups and other
-/// non-markup annotations out of `annotations` (`pdfcraft_annot::is_comment_subtype`), so an
+/// non-markup annotations out of `annotations` (`simplypdf_annot::is_comment_subtype`), so an
 /// `/IRT` to one of those finds no parent here. Pop-ups are skipped again in case a caller's list
 /// has them.
 pub fn link_replies(annotations: &mut [Annotation]) {

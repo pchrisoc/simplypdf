@@ -1,27 +1,27 @@
-//! The menus: one definition ([`PdfCraftApp::menu_bar`]) for the native macOS menu bar and the
+//! The menus: one definition ([`SimplyPDFApp::menu_bar`]) for the native macOS menu bar and the
 //! in-window bar on Windows, Linux and the web, laid out for each platform by craft-menu.
 //!
-//! Items run registry commands (`pdfcraft_engine::commands`) by id, with the registry's label and
+//! Items run registry commands (`simplypdf_engine::commands`) by id, with the registry's label and
 //! shortcut, so a menu click and its shortcut run the same command. A few items have menu-only
 //! ids: the zoom keys the document view handles itself, the side panel choices, the clipboard
-//! keys, the recent files and the open documents. [`PdfCraftApp::run_menu_command`] runs every
+//! keys, the recent files and the open documents. [`SimplyPDFApp::run_menu_command`] runs every
 //! one of them, once per click, whichever bar it came from.
 
 use craft_keymap::{Key, Mods};
 use craft_menu::{
     Builtin, Chord, CommandRef, Document, Gate, Item, ItemRole, ItemState, Labeled, LayoutOptions, Menu, MenuBar, MenuRole, Node, Target,
 };
-use pdfcraft_engine::catalog::{Availability, TOOL_GROUPS};
-use pdfcraft_engine::commands::{self, Shortcut};
+use simplypdf_engine::catalog::{Availability, TOOL_GROUPS};
+use simplypdf_engine::commands::{self, Shortcut};
 
 use crate::canvas::{Fit, PageLayout};
 use crate::theme::ThemePreference;
-use crate::{PdfCraftApp, RightPanel};
+use crate::{RightPanel, SimplyPDFApp};
 
 pub(super) mod tab_context;
 
 /// The app's name in the menus the layouts write (About, Hide, Quit).
-pub(crate) const APP_NAME: &str = pdfcraft_engine::build_info::APP_NAME;
+pub(crate) const APP_NAME: &str = simplypdf_engine::build_info::APP_NAME;
 
 /// The top bar's width after the menus: the mode tabs, the search box and the buttons.
 const ROW_AFTER_MENUS: f32 = 720.0;
@@ -272,10 +272,10 @@ pub(crate) fn layout_options() -> LayoutOptions<'static> {
     LayoutOptions { label: &translate, ..LayoutOptions::new(APP_NAME) }
 }
 
-impl PdfCraftApp {
+impl SimplyPDFApp {
     /// The app's menus for this frame, before the platform layout: every item's label, shortcut,
     /// enabled and checked state as the app is now. A modal dialog doesn't grey anything here;
-    /// that is the [`Gate`]'s job ([`PdfCraftApp::menu_gate`]).
+    /// that is the [`Gate`]'s job ([`SimplyPDFApp::menu_gate`]).
     pub fn menu_bar(&self, ctx: &egui::Context) -> MenuBar {
         let mut used: Vec<&str> = Vec::new();
         let list = |ids: &[&'static str], used: &mut Vec<&'static str>| -> Vec<Node> {
@@ -380,7 +380,7 @@ impl PdfCraftApp {
 
     /// One item: a registry command with its live label (Undo names the edit) and shortcut, or a
     /// menu-only one. Radio and check items get their kind here, their state from
-    /// [`PdfCraftApp::menu_state`].
+    /// [`SimplyPDFApp::menu_state`].
     fn menu_item(&self, id: &'static str, label: Option<&str>) -> Node {
         let (english, shortcut) = match commands::command(id) {
             Some(spec) => {
@@ -511,7 +511,7 @@ impl PdfCraftApp {
     }
 
     /// Run a command chosen in either menu bar. Registry commands go through
-    /// [`PdfCraftApp::dispatch_command`], as their shortcuts do; the clipboard items act as
+    /// [`SimplyPDFApp::dispatch_command`], as their shortcuts do; the clipboard items act as
     /// their keys would (⌘C is a Copy event, Delete a key press), so every place that handles the
     /// key handles the click. A command that can't run now (a dialog opened since the menu was
     /// drawn) does nothing.
@@ -582,7 +582,7 @@ impl PdfCraftApp {
             .gate(gate)
             .label(&translate)
             .english(&english)
-            .id(egui::Id::unique("pdfcraft-menu-bar"))
+            .id(egui::Id::unique("simplypdf-menu-bar"))
             .shrink_to_fit(fit)
             .show(ui);
         for command in chosen {
@@ -649,8 +649,8 @@ mod tests {
 
     const PDF: &[u8] = include_bytes!("../tests/data/form.pdf");
 
-    fn app(docs: &[&str]) -> (PdfCraftApp, egui::Context) {
-        let mut app = PdfCraftApp::new();
+    fn app(docs: &[&str]) -> (SimplyPDFApp, egui::Context) {
+        let mut app = SimplyPDFApp::new();
         app.set_option("language", "en").unwrap();
         for name in docs {
             app.open_bytes(name, None, PDF.to_vec()).unwrap();
@@ -658,7 +658,7 @@ mod tests {
         (app, egui::Context::default())
     }
 
-    fn linux(app: &PdfCraftApp, ctx: &egui::Context) -> MenuBar {
+    fn linux(app: &SimplyPDFApp, ctx: &egui::Context) -> MenuBar {
         craft_menu::layout(&app.menu_bar(ctx), Target::Linux, &layout_options()).bar
     }
 
@@ -713,7 +713,7 @@ mod tests {
     #[test]
     fn check_and_radio_items_follow_the_app() {
         let (mut app, ctx) = app(&["a.pdf"]);
-        let kind = |app: &PdfCraftApp, id: &str| item(&linux(app, &ctx), &CommandRef::new(id)).kind;
+        let kind = |app: &SimplyPDFApp, id: &str| item(&linux(app, &ctx), &CommandRef::new(id)).kind;
         assert_eq!(kind(&app, "view.layout.single"), ItemKind::Radio(true));
         assert_eq!(kind(&app, "view.layout.two_up"), ItemKind::Radio(false));
         let continuous = app.views[0].continuous();

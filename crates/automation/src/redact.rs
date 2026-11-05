@@ -1,11 +1,11 @@
 //! Redaction tools: mark areas, text, patterns or whole pages for redaction, apply the marks
 //! (removing what they cover for good) or clear them.
 
-use pdfcraft_engine::{
+use serde_json::{Value, json};
+use simplypdf_engine::{
     Edit, Hidden, NewAnnotation, REDACT_MAX_WORDS, REDACTION_CODE_SETS, RedactPattern, RedactionCodeSet, Shape, Style, find_pattern, rect_quad,
     redact_word_list,
 };
-use serde_json::{Value, json};
 
 use crate::comments::{DEFAULT_AUTHOR, parse_color};
 use crate::{Args, Automation, Result, ToolError, failed};

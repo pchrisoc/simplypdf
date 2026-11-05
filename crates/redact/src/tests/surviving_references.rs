@@ -16,9 +16,9 @@ pub(super) fn full_save_holds(doc: &Document, secret: &[u8]) -> bool {
 #[test]
 fn a_redacted_field_listed_in_the_calculation_order_leaves_the_saved_file() {
     let mut doc = one_page(b"", "", vec![]);
-    pdfcraft_forms::add_field(&mut doc, 0, [10.0, 50.0, 100.0, 70.0], &pdfcraft_forms::NewField::Text { multiline: false }, Some("ssn")).unwrap();
-    pdfcraft_forms::set_value(&mut doc, "ssn", &pdfcraft_forms::FieldValue::Text("SSN-078-05-1120".into())).unwrap();
-    let field = pdfcraft_forms::fields(&doc).swap_remove(0).obj;
+    simplypdf_forms::add_field(&mut doc, 0, [10.0, 50.0, 100.0, 70.0], &simplypdf_forms::NewField::Text { multiline: false }, Some("ssn")).unwrap();
+    simplypdf_forms::set_value(&mut doc, "ssn", &simplypdf_forms::FieldValue::Text("SSN-078-05-1120".into())).unwrap();
+    let field = simplypdf_forms::fields(&doc).swap_remove(0).obj;
     let root = doc.root().unwrap();
     let af = doc.get(root).as_dict().unwrap().reference(b"AcroForm").unwrap();
     doc.update_dict(af, |d| d.set(b"CO".to_vec(), Object::Array(vec![Object::Ref(field)]))).unwrap();
@@ -147,7 +147,7 @@ fn redacted_type3_glyph_and_exclusive_resources_do_not_survive_full_save() {
     // Reopen and inspect the Type 3 font dictionary
     let bytes = write_full(&doc, &SaveOptions::default()).unwrap();
     let saved = Document::open(Arc::new(bytes)).unwrap();
-    let page = pdfcraft_model::pages(&saved).swap_remove(0);
+    let page = simplypdf_model::pages(&saved).swap_remove(0);
     let res = saved.resolve(page.dict.get(b"Resources").unwrap()).as_dict().unwrap().clone();
     let fonts = saved.resolve(res.get(b"Font").unwrap()).as_dict().unwrap().clone();
     let t3 = saved.resolve(fonts.get(b"T3").unwrap()).as_dict().unwrap().clone();
@@ -185,7 +185,7 @@ fn all_redacted_type3_glyphs_cause_font_removal_from_resources() {
 
     let bytes = write_full(&doc, &SaveOptions::default()).unwrap();
     let saved = Document::open(Arc::new(bytes)).unwrap();
-    let page = pdfcraft_model::pages(&saved).swap_remove(0);
+    let page = simplypdf_model::pages(&saved).swap_remove(0);
     if let Some(res_val) = page.dict.get(b"Resources")
         && let Some(res) = saved.resolve(res_val).as_dict()
         && let Some(fonts_val) = res.get(b"Font")
@@ -229,7 +229,7 @@ fn shared_type3_font_preserves_glyphs_used_by_another_page() {
 
     let bytes = write_full(&doc, &SaveOptions::default()).unwrap();
     let saved = Document::open(Arc::new(bytes)).unwrap();
-    let pages = pdfcraft_model::pages(&saved);
+    let pages = simplypdf_model::pages(&saved);
     let p2_res = saved.resolve(pages[1].dict.get(b"Resources").unwrap()).as_dict().unwrap().clone();
     let fonts = saved.resolve(p2_res.get(b"Font").unwrap()).as_dict().unwrap().clone();
     let t3 = saved.resolve(fonts.get(b"T3").unwrap()).as_dict().unwrap().clone();

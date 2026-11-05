@@ -15,12 +15,12 @@ enum ClipboardPaste {
     Image(std::sync::Arc<egui::ColorImage>),
 }
 
-impl PdfCraftApp {
+impl SimplyPDFApp {
     /// Whether text and images may be copied out of document `id`; says why not when they may
     /// not. Reading aloud and accessibility tools don't ask (assistive technology may read
     /// anything, §7.6.4.2).
     pub(crate) fn may_copy(&mut self, id: DocId) -> bool {
-        if self.session.get(id).is_none_or(pdfcraft_engine::Document::allows_copying) {
+        if self.session.get(id).is_none_or(simplypdf_engine::Document::allows_copying) {
             return true;
         }
         self.notify(copy_refused().to_string());
@@ -165,15 +165,15 @@ mod review_tests {
         egui::Event::Key { key: egui::Key::V, physical_key: None, pressed, repeat: false, modifiers }
     }
 
-    fn image_app() -> PdfCraftApp {
-        let mut app = PdfCraftApp::new();
+    fn image_app() -> SimplyPDFApp {
+        let mut app = SimplyPDFApp::new();
         app.system_clipboard = false;
         app.create_blank();
         app.clipboard_override = Some(crate::create_ui::Clip::Image { width: 1, height: 1, rgba: vec![255, 0, 0, 255] });
         app
     }
 
-    fn frame(app: &mut PdfCraftApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) -> usize {
+    fn frame(app: &mut SimplyPDFApp, ctx: &egui::Context, time: f64, events: Vec<egui::Event>) -> usize {
         ctx.run_ui(egui::RawInput { time: Some(time), events, ..Default::default() }, |ui| app.clipboard_keys(0, ui.ctx()))
             .drop_without_applying_deltas();
         app.session.get(app.views[0].id).unwrap().page_images(0).len()
@@ -287,12 +287,12 @@ mod review_tests {
         app.views[0].organize = true;
         assert_eq!(frame(&mut app, &ctx, 2.0, vec![delivered()]), 0);
         app.views[0].organize = false;
-        app.apply_edit(pdfcraft_engine::Edit::Protect(pdfcraft_engine::Protection {
+        app.apply_edit(simplypdf_engine::Edit::Protect(simplypdf_engine::Protection {
             permissions_password: Some("owner".into()),
             ..Default::default()
         }));
         let bytes = app.session.save_bytes(app.views[0].id).unwrap();
-        let mut restricted = PdfCraftApp::new();
+        let mut restricted = SimplyPDFApp::new();
         restricted.open_bytes("restricted.pdf", None, bytes.as_ref().clone()).unwrap();
         assert!(!restricted.session.get(restricted.views[0].id).unwrap().allows_modification());
         assert_eq!(frame(&mut restricted, &ctx, 3.0, vec![delivered()]), 0);
@@ -300,7 +300,7 @@ mod review_tests {
 
     #[test]
     fn review_an_image_less_release_is_silent_but_explicit_paste_explains() {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.system_clipboard = false;
         app.create_blank();
         app.toast = None;
@@ -326,7 +326,7 @@ mod review_tests {
 
     #[test]
     fn review_text_paste_release_is_silent_and_later_image_paste_still_works() {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.system_clipboard = false;
         app.create_blank();
         app.last_copied_image = Some((1, 1, vec![255, 0, 0, 255]));
@@ -362,7 +362,7 @@ mod review_tests {
 
     #[test]
     fn review_failed_keyboard_cut_keeps_the_image_selection() {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.system_clipboard = false;
         app.create_blank();
         app.views[0].image_selection = Some(crate::edit_text_ui::ImageSelection::at(0, 0));

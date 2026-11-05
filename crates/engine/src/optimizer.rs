@@ -7,7 +7,7 @@
 
 use std::sync::Arc;
 
-use pdfcraft_cos::{SaveOptions, write_full};
+use simplypdf_cos::{SaveOptions, write_full};
 
 use crate::{DocId, EditError, Hidden, OptimizeReport, Session, guard, optimize};
 
@@ -49,7 +49,7 @@ pub type Optimized = (Arc<Vec<u8>>, OptimizeReport);
 
 /// What an optimization needs, independent of the session.
 pub struct OptimizeJob {
-    cos: pdfcraft_cos::Document,
+    cos: simplypdf_cos::Document,
     settings: optimize::Settings,
     discard: Vec<Hidden>,
     opts: SaveOptions,
@@ -69,7 +69,7 @@ impl Session {
             settings: settings.clone(),
             discard: discard.to_vec(),
             opts: SaveOptions {
-                mod_date: self.now().map(pdfcraft_cos::pdf_date),
+                mod_date: self.now().map(simplypdf_cos::pdf_date),
                 object_streams: settings.effective_object_streams(),
                 ..SaveOptions::default()
             },
@@ -88,8 +88,8 @@ impl OptimizeJob {
     fn work(self, progress: &mut dyn FnMut(OptimizeStage) -> bool) -> Result<Optimized, EditError> {
         let OptimizeJob { mut cos, settings, discard, opts } = self;
         // Like every file written, without the values of Password-flag fields (#3926, #3944).
-        pdfcraft_forms::clear_password_values(&mut cos).map_err(|e| EditError::Write(e.to_string()))?;
-        pdfcraft_xfa::clear_password_values(&mut cos).map_err(|e| EditError::Write(e.to_string()))?;
+        simplypdf_forms::clear_password_values(&mut cos).map_err(|e| EditError::Write(e.to_string()))?;
+        simplypdf_xfa::clear_password_values(&mut cos).map_err(|e| EditError::Write(e.to_string()))?;
         let mut step = |stage| if progress(stage) { Ok(()) } else { Err(EditError::Cancelled) };
         step(OptimizeStage::Discarding)?;
         let discarded = if discard.is_empty() {
@@ -102,8 +102,8 @@ impl OptimizeJob {
             // the copy by then (an empty outline root goes with bookmarks), so the copy from before
             // is kept instead: nothing is discarded.
             let before = cos.clone();
-            match pdfcraft_redact::sanitize::remove_hidden(&mut cos, &discard) {
-                Err(pdfcraft_redact::RedactError::NothingToApply) => {
+            match simplypdf_redact::sanitize::remove_hidden(&mut cos, &discard) {
+                Err(simplypdf_redact::RedactError::NothingToApply) => {
                     cos = before;
                     Vec::new()
                 }
@@ -123,8 +123,8 @@ impl OptimizeJob {
             e => EditError::Optimize(e.to_string()),
         })?;
         step(OptimizeStage::Merging)?;
-        let all: Vec<pdfcraft_cos::ObjRef> = cos.object_numbers().into_iter().map(|n| pdfcraft_cos::ObjRef::new(n, cos.generation(n))).collect();
-        let merged = pdfcraft_organize::dedupe_resources(&mut cos, &all, false);
+        let all: Vec<simplypdf_cos::ObjRef> = cos.object_numbers().into_iter().map(|n| simplypdf_cos::ObjRef::new(n, cos.generation(n))).collect();
+        let merged = simplypdf_organize::dedupe_resources(&mut cos, &all, false);
         step(OptimizeStage::Writing)?;
         let bytes = write_full(&cos, &opts).map_err(|e| EditError::Write(e.to_string()))?;
         Ok((Arc::new(bytes), OptimizeReport { optimize: report, merged, discarded }))

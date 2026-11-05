@@ -19,7 +19,7 @@ impl Session {
             return Ok(editor.saved.clone());
         }
         // What the user removed again before saving (a cleared redaction mark) stays out of the file.
-        let opts = SaveOptions { mod_date: self.now().map(pdfcraft_cos::pdf_date), drop_unlinked: true, ..SaveOptions::default() };
+        let opts = SaveOptions { mod_date: self.now().map(simplypdf_cos::pdf_date), drop_unlinked: true, ..SaveOptions::default() };
         // A restored snapshot can be based on an earlier revision. Append to the last saved
         // file so that revision stays in the chain. A full rewrite (redaction, new encryption,
         // a reconstructed file) still writes the current graph on its own.
@@ -29,7 +29,7 @@ impl Session {
             if on_saved || rewrite {
                 write_incremental(&cos, &opts)
             } else {
-                let mut base = pdfcraft_cos::Document::open_with_password(editor.saved.clone(), editor.saved_keys.reopen.as_deref())?;
+                let mut base = simplypdf_cos::Document::open_with_password(editor.saved.clone(), editor.saved_keys.reopen.as_deref())?;
                 base.overlay_changes_from(&cos)?;
                 write_incremental(&base, &opts)
             }
@@ -46,7 +46,7 @@ impl Session {
             return Err(EditError::Signed);
         }
         let editor = doc.editor.as_ref().ok_or_else(|| EditError::ReadOnly(doc.read_only_reason.clone().unwrap_or_default()))?;
-        let opts = SaveOptions { mod_date: self.now().map(pdfcraft_cos::pdf_date), ..SaveOptions::default() };
+        let opts = SaveOptions { mod_date: self.now().map(simplypdf_cos::pdf_date), ..SaveOptions::default() };
         let cos = writable(&editor.cos)?;
         guard(|| write_full(&cos, &opts)).map_err(EditError::Write)?.map(Arc::new).map_err(|e| EditError::Write(e.to_string()))
     }
@@ -57,8 +57,8 @@ impl Session {
     pub fn check_save(&self, id: DocId, bytes: &Arc<Vec<u8>>) -> Result<(), EditError> {
         let doc = self.get(id).ok_or(EditError::NoDocument)?;
         let Some(editor) = doc.editor.as_ref() else { return Ok(()) };
-        pdfcraft_cos::Document::open_with_password(bytes.clone(), editor.keys.reopen.as_deref()).map_err(|e| EditError::Reopen(e.to_string()))?;
-        pdfcraft_render::check_pages(bytes.clone(), doc.password.as_deref(), doc.info.pages.len()).map_err(|e| EditError::Reopen(e.to_string()))
+        simplypdf_cos::Document::open_with_password(bytes.clone(), editor.keys.reopen.as_deref()).map_err(|e| EditError::Reopen(e.to_string()))?;
+        simplypdf_render::check_pages(bytes.clone(), doc.password.as_deref(), doc.info.pages.len()).map_err(|e| EditError::Reopen(e.to_string()))
     }
 
     /// Record a successful save of `bytes` (to `path`, if any): rebase editing on the saved file
@@ -70,10 +70,10 @@ impl Session {
             // password when known, so saving never downgrades this session's rights).
             let keys = editor.keys.clone();
             // The saved file carries no Password-field values (#3943, #3944); the open document keeps them.
-            let typed = pdfcraft_forms::password_values(&editor.cos);
+            let typed = simplypdf_forms::password_values(&editor.cos);
             editor.cos =
-                pdfcraft_cos::Document::open_with_password(bytes.clone(), keys.reopen.as_deref()).map_err(|e| EditError::Reopen(e.to_string()))?;
-            pdfcraft_forms::restore_password_values(&mut editor.cos, &typed).map_err(|e| EditError::Reopen(e.to_string()))?;
+                simplypdf_cos::Document::open_with_password(bytes.clone(), keys.reopen.as_deref()).map_err(|e| EditError::Reopen(e.to_string()))?;
+            simplypdf_forms::restore_password_values(&mut editor.cos, &typed).map_err(|e| EditError::Reopen(e.to_string()))?;
             if !typed.is_empty() && doc.info.xfa.is_some() {
                 let mut datasets = None;
                 let _ = xfa_sync_datasets(&mut editor.cos, doc.xfa_template.as_deref(), &mut datasets);
@@ -103,12 +103,12 @@ impl Session {
             return Ok(());
         }
         editor.cos.unlock(password).map_err(|e| match e {
-            pdfcraft_cos::CosError::WrongPassword => EditError::WrongPassword,
+            simplypdf_cos::CosError::WrongPassword => EditError::WrongPassword,
             other => EditError::Protection(other.to_string()),
         })?;
         // Saving a state that keeps the security it was opened with reopens it with the same
         // passwords, so it reopens as owner.
-        let reopen_as_owner = |cos: &pdfcraft_cos::Document, keys: &mut Keys| {
+        let reopen_as_owner = |cos: &simplypdf_cos::Document, keys: &mut Keys| {
             if !cos.encryption_changed() {
                 keys.reopen = Some(password.to_owned());
             }
@@ -137,7 +137,7 @@ impl Session {
         candidates.push(Keys::default());
         let (cos, keys) = candidates
             .into_iter()
-            .find_map(|k| pdfcraft_cos::Document::open_with_password(base.clone(), k.reopen.as_deref()).ok().map(|c| (c, k)))
+            .find_map(|k| simplypdf_cos::Document::open_with_password(base.clone(), k.reopen.as_deref()).ok().map(|c| (c, k)))
             .ok_or_else(|| EditError::Reopen("the saved file can't be opened".into()))?;
         editor.cos = cos;
         editor.keys = keys;
@@ -195,7 +195,7 @@ impl Session {
                 // The working bytes hold typed Password-field values (#3926, #3944): a recovery file
                 // is written from a copy without them, and none is written if that copy fails.
                 let bytes =
-                    match d.editor.as_ref().filter(|e| pdfcraft_forms::has_password_values(&e.cos) || pdfcraft_xfa::has_password_values(&e.cos)) {
+                    match d.editor.as_ref().filter(|e| simplypdf_forms::has_password_values(&e.cos) || simplypdf_xfa::has_password_values(&e.cos)) {
                         Some(e) => match writable(&e.cos)
                             .and_then(|c| write_incremental(&c, &SaveOptions::default()).map_err(|e| EditError::Write(e.to_string())))
                         {
@@ -232,14 +232,14 @@ impl Session {
     }
 
     /// The certificates trusted for signing.
-    pub fn trusted_certificates(&self) -> &[pdfcraft_sign::Certificate] {
+    pub fn trusted_certificates(&self) -> &[simplypdf_sign::Certificate] {
         &self.trust.certs
     }
 
     /// Replace the trusted certificates, revalidate every open document's signatures,
     /// and rebuild its display copy and renderer to match (working file untouched,
     /// generation/dirty unchanged: trust alone is not an edit).
-    pub fn set_trusted_certificates(&mut self, certs: Vec<pdfcraft_sign::Certificate>) {
+    pub fn set_trusted_certificates(&mut self, certs: Vec<simplypdf_sign::Certificate>) {
         self.trust = Arc::new(TrustStore { certs });
         for doc in &mut self.docs {
             doc.trust = self.trust.clone();
@@ -256,7 +256,7 @@ impl Session {
     /// The signing time as a PDF date in local time with its offset (`D:…+02'00'`).
     pub fn signing_date(&self) -> String {
         let offset = self.local_offset();
-        let local = pdfcraft_cos::pdf_date(self.now().unwrap_or(0) + offset);
+        let local = simplypdf_cos::pdf_date(self.now().unwrap_or(0) + offset);
         let stamp = local.trim_end_matches('Z');
         if offset == 0 {
             return format!("{stamp}Z");
@@ -268,7 +268,7 @@ impl Session {
     /// Sign the document's current state with `id` (Use a certificate ▸ Digitally sign). Returns
     /// the signed file; the caller saves it and then calls [`Session::mark_signed`]. An empty
     /// `opts.date` takes the session clock.
-    pub fn sign(&self, doc: DocId, id: &pdfcraft_sign::DigitalId, mut opts: SignOptions) -> Result<Arc<Vec<u8>>, EditError> {
+    pub fn sign(&self, doc: DocId, id: &simplypdf_sign::DigitalId, mut opts: SignOptions) -> Result<Arc<Vec<u8>>, EditError> {
         let d = self.get(doc).ok_or(EditError::NoDocument)?;
         // Encrypted documents are signed under their permissions (the signer checks them).
         let editor = d.editor.as_ref().ok_or_else(|| EditError::ReadOnly(d.read_only_reason.clone().unwrap_or_default()))?;
@@ -277,7 +277,7 @@ impl Session {
         }
         // A typed Password-field value is not signed into the file (#3926), as it isn't saved.
         let cos = writable(&editor.cos)?;
-        Ok(Arc::new(pdfcraft_sign::sign(&cos, id, &opts)?))
+        Ok(Arc::new(simplypdf_sign::sign(&cos, id, &opts)?))
     }
 
     /// [`Session::sign`], embedding an RFC 3161 signature timestamp (PAdES B-T) produced by
@@ -285,9 +285,9 @@ impl Session {
     pub fn sign_with_timestamp(
         &self,
         doc: DocId,
-        id: &pdfcraft_sign::DigitalId,
+        id: &simplypdf_sign::DigitalId,
         mut opts: SignOptions,
-        tsa: &dyn pdfcraft_sign::TimestampAuthority,
+        tsa: &dyn simplypdf_sign::TimestampAuthority,
     ) -> Result<Arc<Vec<u8>>, EditError> {
         let d = self.get(doc).ok_or(EditError::NoDocument)?;
         let editor = d.editor.as_ref().ok_or_else(|| EditError::ReadOnly(d.read_only_reason.clone().unwrap_or_default()))?;
@@ -295,7 +295,7 @@ impl Session {
             opts.date = self.signing_date();
         }
         let cos = writable(&editor.cos)?;
-        let signed = Arc::new(pdfcraft_sign::sign_with_timestamp(&cos, id, &opts, tsa)?);
+        let signed = Arc::new(simplypdf_sign::sign_with_timestamp(&cos, id, &opts, tsa)?);
         // Checked like a save before anyone writes it (#2166).
         self.check_save(doc, &signed)?;
         Ok(signed)
@@ -303,23 +303,23 @@ impl Session {
 
     /// Append a standalone document timestamp (RFC 3161, `/ETSI.RFC3161`) covering the file's
     /// current state. An empty `date` takes the session clock; the transport is the caller's.
-    pub fn timestamp_document(&self, doc: DocId, tsa: &dyn pdfcraft_sign::TimestampAuthority, date: String) -> Result<Arc<Vec<u8>>, EditError> {
+    pub fn timestamp_document(&self, doc: DocId, tsa: &dyn simplypdf_sign::TimestampAuthority, date: String) -> Result<Arc<Vec<u8>>, EditError> {
         let d = self.get(doc).ok_or(EditError::NoDocument)?;
         let editor = d.editor.as_ref().ok_or_else(|| EditError::ReadOnly(d.read_only_reason.clone().unwrap_or_default()))?;
         let date = if date.is_empty() { self.signing_date() } else { date };
         let cos = writable(&editor.cos)?;
-        let stamped = Arc::new(pdfcraft_sign::timestamp_document(&cos, tsa, &date)?);
+        let stamped = Arc::new(simplypdf_sign::timestamp_document(&cos, tsa, &date)?);
         self.check_save(doc, &stamped)?;
         Ok(stamped)
     }
 
     /// Embed revocation evidence into the catalog's `/DSS` with `/VRI` entries per signature
     /// (PAdES B-LT): an incremental update that never rewrites signed bytes.
-    pub fn embed_ltv(&self, doc: DocId, evidence: &pdfcraft_sign::dss::Evidence) -> Result<Arc<Vec<u8>>, EditError> {
+    pub fn embed_ltv(&self, doc: DocId, evidence: &simplypdf_sign::dss::Evidence) -> Result<Arc<Vec<u8>>, EditError> {
         let d = self.get(doc).ok_or(EditError::NoDocument)?;
         let editor = d.editor.as_ref().ok_or_else(|| EditError::ReadOnly(d.read_only_reason.clone().unwrap_or_default()))?;
         let cos = writable(&editor.cos)?;
-        let embedded = Arc::new(pdfcraft_sign::dss::embed(&cos, evidence)?);
+        let embedded = Arc::new(simplypdf_sign::dss::embed(&cos, evidence)?);
         self.check_save(doc, &embedded)?;
         Ok(embedded)
     }

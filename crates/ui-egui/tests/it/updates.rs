@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use pdfcraft_ui_egui::PdfCraftApp;
-use pdfcraft_ui_egui::updates::UpdateSource;
+use simplypdf_ui_egui::SimplyPDFApp;
+use simplypdf_ui_egui::updates::UpdateSource;
 
 fn release(tag: &str) -> craft_update::Release {
     craft_update::Release {
@@ -22,9 +22,9 @@ fn source(answer: Result<Option<&str>, &str>) -> UpdateSource {
     Arc::new(move || answer.clone())
 }
 
-fn harness(answer: Result<Option<&str>, &str>) -> Harness<'static, PdfCraftApp> {
+fn harness(answer: Result<Option<&str>, &str>) -> Harness<'static, SimplyPDFApp> {
     Harness::builder().with_size(egui::vec2(1200.0, 800.0)).build_eframe(move |_cc| {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.set_option("language", "en").unwrap();
         app.set_update_source(source(answer));
         app
@@ -34,7 +34,7 @@ fn harness(answer: Result<Option<&str>, &str>) -> Harness<'static, PdfCraftApp> 
 /// Run frames until the background check has reported. By what the dialog shows, with the
 /// same 30-second deadline as `support::wait_until`, not for a fixed second: under load the
 /// check's thread can take longer (#1277).
-fn settle(h: &mut Harness<'static, PdfCraftApp>) {
+fn settle(h: &mut Harness<'static, SimplyPDFApp>) {
     let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
     loop {
         h.run_steps(2);
@@ -80,7 +80,7 @@ fn nothing_is_asked_until_the_user_checks() {
     let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
     let counted = calls.clone();
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).build_eframe(move |_cc| {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.set_option("language", "en").unwrap();
         // Settings from a build that had the startup option are ignored.
         app.restore(r#"{"check_updates_at_start": true}"#);
@@ -103,7 +103,7 @@ fn nothing_is_asked_until_the_user_checks() {
 #[test]
 fn the_check_at_start_offers_the_prompt_and_later_dismisses_it() {
     let mut h = Harness::builder().with_size(egui::vec2(1200.0, 800.0)).build_eframe(|_cc| {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.set_option("language", "en").unwrap();
         app.set_update_source(source(Ok(Some("v99.0.0"))));
         app.set_startup_update_check(true);

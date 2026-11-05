@@ -1,10 +1,10 @@
 //! A movable, persistent set of shortcuts to the shared command registry and core document tools.
 use egui::{Color32, CornerRadius, Rect, Sense, Stroke, vec2};
-use pdfcraft_engine::Edit;
-use pdfcraft_engine::commands::{COMMANDS, command};
 use serde::{Deserialize, Serialize};
+use simplypdf_engine::Edit;
+use simplypdf_engine::commands::{COMMANDS, command};
 
-use crate::{PdfCraftApp, QuickTool, comments, icons, theme, theme::Tokens};
+use crate::{QuickTool, SimplyPDFApp, comments, icons, theme, theme::Tokens};
 
 /// Persistent state and UI state for the customizable document hotbar.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -141,13 +141,13 @@ fn popup_align_for(dock: Option<&str>, vertical: bool) -> egui::RectAlign {
 
 /// Whether `spec` matches the hotbar picker search query across the translated label, canonical
 /// English label, or command identifier (case-insensitively).
-fn matches_search(spec: &pdfcraft_engine::commands::CommandSpec, query: &str) -> bool {
+fn matches_search(spec: &simplypdf_engine::commands::CommandSpec, query: &str) -> bool {
     let search = query.to_lowercase();
     tl!(spec.label).to_lowercase().contains(&search) || spec.label.to_lowercase().contains(&search) || spec.id.to_lowercase().contains(&search)
 }
 
 /// Render the configured custom tool shortcut buttons and their removal context menus.
-fn tool_buttons(ui: &mut egui::Ui, app: &PdfCraftApp, tools: &[String], cell: f32, run: &mut Option<&'static str>, remove: &mut Option<usize>) {
+fn tool_buttons(ui: &mut egui::Ui, app: &SimplyPDFApp, tools: &[String], cell: f32, run: &mut Option<&'static str>, remove: &mut Option<usize>) {
     for (index, id) in tools.iter().enumerate() {
         let Some(spec) = command(id) else { continue };
         let active = crate::comments::CommentTool::from_command(id).is_some_and(|tool| app.quick_tool == crate::QuickTool::Comment(tool));
@@ -165,7 +165,7 @@ fn tool_buttons(ui: &mut egui::Ui, app: &PdfCraftApp, tools: &[String], cell: f3
 }
 
 /// Render core quick tools: Select, Hand, Comment groups, Edit text, and Fill & Sign.
-fn core_tool_buttons(ui: &mut egui::Ui, app: &mut PdfCraftApp, cell: f32, popup_align: egui::RectAlign, t: &Tokens) {
+fn core_tool_buttons(ui: &mut egui::Ui, app: &mut SimplyPDFApp, cell: f32, popup_align: egui::RectAlign, t: &Tokens) {
     if icons::button(ui, "mouse-pointer-2", cell, app.quick_tool == QuickTool::Select, tl!("Select (V)")).clicked() {
         app.quick_tool = QuickTool::Select;
     }
@@ -300,7 +300,7 @@ fn core_tool_buttons(ui: &mut egui::Ui, app: &mut PdfCraftApp, cell: f32, popup_
 }
 
 /// Extra controls rendered below/beside the buttons when a comment or fill tool is active.
-fn active_tool_controls(ui: &mut egui::Ui, app: &mut PdfCraftApp, t: &Tokens, vertical: bool) {
+fn active_tool_controls(ui: &mut egui::Ui, app: &mut SimplyPDFApp, t: &Tokens, vertical: bool) {
     let current_fill = match app.quick_tool {
         QuickTool::Fill(f) => Some(f),
         _ => None,
@@ -409,7 +409,7 @@ fn segmented_dock_picker(ui: &mut egui::Ui, bar: &mut Hotbar, t: &Tokens) {
 }
 
 /// Draw the unified floating or side-docked toolbar, combining quick actions, core tools, and custom shortcuts.
-pub(crate) fn show(app: &mut PdfCraftApp, area: Rect, page_left: Option<f32>, ui: &mut egui::Ui) {
+pub(crate) fn show(app: &mut SimplyPDFApp, area: Rect, page_left: Option<f32>, ui: &mut egui::Ui) {
     let ctx = ui.ctx().clone();
     let mut bar = std::mem::take(&mut app.hotbar);
     bar.normalize();
@@ -767,13 +767,13 @@ mod tests {
 
     #[test]
     fn hotbar_preferences_round_trip() {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.set_option("hotbar-tools", "comment.freehand_highlight,comment.ink").unwrap();
         app.set_option("hotbar-side", "left").unwrap();
         app.set_option("hotbar-size", "48").unwrap();
         app.set_option("hotbar-full-side", "true").unwrap();
         assert!(app.set_option("hotbar-size", "NaN").is_err());
-        let mut restored = PdfCraftApp::new();
+        let mut restored = SimplyPDFApp::new();
         restored.restore(&app.persist());
         assert_eq!(restored.hotbar.tools, app.hotbar.tools);
         assert_eq!(restored.hotbar.position, [0.0, 0.5]);
@@ -785,7 +785,7 @@ mod tests {
 
     #[test]
     fn hotbar_restore_filters_unknown_tools_and_offscreen_positions() {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.restore(r#"{"hotbar":{"tools":["invalid","comment.ink","comment.ink"],"position":[-10,999]}}"#);
         assert_eq!(app.hotbar.tools, ["comment.ink"]);
         assert_eq!(app.hotbar.position, [0.0, 1.0]);
@@ -793,7 +793,7 @@ mod tests {
 
     #[test]
     fn hotbar_restore_moves_legacy_default_into_margin_and_keeps_chosen_spots() {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.restore(r#"{"hotbar":{"tools":["comment.ink"],"position":[0.5,0.0],"vertical":false,"button_size":40.0,"dock":null}}"#);
         assert_eq!(app.hotbar.position, [0.0, 0.0]);
         assert!(app.hotbar.vertical);

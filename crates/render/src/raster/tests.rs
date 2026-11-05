@@ -1142,8 +1142,8 @@ fn a_reference_to_a_reference_is_what_it_names() {
 
     let chain = "6 0 obj 1 endobj 7 0 obj 6 0 R endobj 8 0 obj 7 0 R endobj";
     assert_eq!(draw(file("[8 0 R 0]", chain)), grey, "stored on their own");
-    let doc = pdfcraft_cos::Document::open(Arc::new(file("[8 0 R 0]", chain))).unwrap();
-    let packed = pdfcraft_cos::write_full(&doc, &pdfcraft_cos::SaveOptions::default()).unwrap();
+    let doc = simplypdf_cos::Document::open(Arc::new(file("[8 0 R 0]", chain))).unwrap();
+    let packed = simplypdf_cos::write_full(&doc, &simplypdf_cos::SaveOptions::default()).unwrap();
     assert!(packed.windows(7).any(|w| w == b"/ObjStm"), "the save packs them");
     assert_eq!(draw(packed), grey, "stored in an object stream");
     assert_eq!(draw(file("9 0 R", "9 0 obj 10 0 R endobj 10 0 obj [1 0] endobj")), grey, "not only numbers");
@@ -2384,7 +2384,7 @@ fn no_rotate_notes_stay_upright_at_their_corner_on_rotated_pages() {
             "<< /Type /Catalog /Pages 2 0 R >>".to_string(),
             "<< /Type /Pages /Kids [3 0 R] /Count 1 >>".to_string(),
             format!("<< /Type /Page /Parent 2 0 R /MediaBox [0 0 200 140] /Rotate {rotation} /Annots [4 0 R 5 0 R] >>"),
-            // NoRotate (and Print), as PdfCraft and Acrobat save notes.
+            // NoRotate (and Print), as SimplyPDF and Acrobat save notes.
             "<< /Type /Annot /Subtype /Text /F 20 /Rect [40 50 70 70] /AP << /N 6 0 R >> >>".to_string(),
             // The same appearance without the flag.
             "<< /Type /Annot /Subtype /Text /F 4 /Rect [120 50 150 70] /AP << /N 6 0 R >> >>".to_string(),
@@ -2517,7 +2517,7 @@ trailer << /Root 1 0 R >>
 
 /// A Highlight annotation without an appearance stream (common in older and generated files)
 /// was not drawn at all. Vendored hayro-interpret patch: its /QuadPoints are filled with /C at
-/// /CA, blended with Multiply, as PdfCraft draws its own highlights (pdfcraft-annot); MuPDF,
+/// /CA, blended with Multiply, as SimplyPDF draws its own highlights (simplypdf-annot); MuPDF,
 /// Poppler and PDFium draw these fixtures the same way. An /AP still wins, malformed
 /// /QuadPoints or no /C draw nothing, and Hidden, NoView and "Hide all comments" still apply.
 #[test]
@@ -4447,7 +4447,7 @@ fn jbig2_white_region(width: u32, height: u32) -> Vec<u8> {
     let mut region = jbig2_region_info(width, height);
     region.push(0x08); // arithmetic coding, template 0, typical prediction
     region.extend_from_slice(&[3, 0xff, 0xfd, 0xff, 2, 0xfe, 0xfe, 0xfe]); // AT pixels
-    // Every row typical, the first white: pdfcraft-filters' coding of a white 16,384 square.
+    // Every row typical, the first white: simplypdf-filters' coding of a white 16,384 square.
     region.extend_from_slice(&[0xb6, 0xc2, 0x1f, 0xff, 0x7f, 0xff, 0xac]);
     region
 }
@@ -5217,7 +5217,7 @@ fn jbig2_placements_at_the_end_of_an_i32_draw_nothing() {
     assert_eq!(ink(hex(LOWER_LINE), 16, 12), 0, "a lower range line past an i32");
 }
 
-/// Item 1 of storytold/pdfcraft#623: a page's content used to be cut at `MAX_DECODED_STREAM`,
+/// Item 1 of storytold/simplypdf#623: a page's content used to be cut at `MAX_DECODED_STREAM`,
 /// so everything after the cut was lost (the text and the title block of the A1 sample). Content
 /// that expands by a few times over is read to its end, however large it is.
 #[test]
@@ -8154,7 +8154,7 @@ trailer << /Root 1 0 R >>
         let p = r.render(RenderRequest { page: 0, kind: RequestKind::Pixels, tile: None, scale: 1.0, tag: 0, ..Default::default() });
         assert!(p.error.is_none(), "{base_font}: {:?}", p.error);
         let inked = p.rgba.as_chunks::<4>().0.iter().filter(|c| c[0] < 128).count();
-        if pdfcraft_fonts::document_japanese_font().is_none() {
+        if simplypdf_fonts::document_japanese_font().is_none() {
             eprintln!("built without craft-fonts (CRAFT_FONTS_DIR unset): no Japanese face to check");
             continue;
         }
@@ -8187,7 +8187,7 @@ trailer << /Root 1 0 R >>
 
 #[test]
 fn japanese_substitute_missing_spaces_draw_no_ink() {
-    if pdfcraft_fonts::document_japanese_font().is_none() {
+    if simplypdf_fonts::document_japanese_font().is_none() {
         eprintln!("built without craft-fonts (CRAFT_FONTS_DIR unset): no Japanese face to check");
         return;
     }
@@ -8197,7 +8197,7 @@ fn japanese_substitute_missing_spaces_draw_no_ink() {
 
 #[test]
 fn japanese_substitute_spaces_keep_pdf_widths_and_unicode() {
-    if pdfcraft_fonts::document_japanese_font().is_none() {
+    if simplypdf_fonts::document_japanese_font().is_none() {
         eprintln!("built without craft-fonts (CRAFT_FONTS_DIR unset): no Japanese face to check");
         return;
     }
@@ -8302,7 +8302,7 @@ fn mincho_substitute_covers_half_width_katakana() {
 /// the substitutes have, still draws.
 #[test]
 fn cids_a_substitute_lacks_are_not_drawn_as_other_glyphs() {
-    if pdfcraft_fonts::document_japanese_font().is_none() {
+    if simplypdf_fonts::document_japanese_font().is_none() {
         eprintln!("built without craft-fonts (CRAFT_FONTS_DIR unset): no Japanese face to check");
         return;
     }
@@ -8366,7 +8366,7 @@ fn japanese_font_names_pick_mincho_or_gothic() {
 /// draws the substitute's glyph for that form now, and its 噂 for a form it doesn't have.
 #[test]
 fn variation_sequences_draw_their_kanji_in_a_substitute() {
-    if pdfcraft_fonts::document_japanese_font().is_none() {
+    if simplypdf_fonts::document_japanese_font().is_none() {
         eprintln!("built without craft-fonts (CRAFT_FONTS_DIR unset): no Japanese face to check");
         return;
     }
@@ -8923,7 +8923,7 @@ fn non_embedded_chinese_and_korean_cid_fonts_draw_with_an_installed_face() {
             ..FallbackFontQuery::default()
         });
         if super::system_fallback(&query).is_none() {
-            eprintln!("no installed face for {base_font} (or PDFCRAFT_SYSTEM_FONTS=0): skipped");
+            eprintln!("no installed face for {base_font} (or SIMPLYPDF_SYSTEM_FONTS=0): skipped");
             continue;
         }
         let content = format!("BT /F1 40 Tf 5 15 Td <{code}> Tj ET");
@@ -8981,7 +8981,7 @@ fn print_preview_excludes_installed_fonts_without_poisoning_viewer_cache() {
         ..Default::default()
     });
     if super::system_fallback(&query).is_none() {
-        eprintln!("no installed GB1 face (or PDFCRAFT_SYSTEM_FONTS=0): skipped");
+        eprintln!("no installed GB1 face (or SIMPLYPDF_SYSTEM_FONTS=0): skipped");
         return;
     }
     let content = "BT /F1 40 Tf 5 15 Td <D6D0CEC4> Tj ET";
@@ -9172,7 +9172,7 @@ fn a_long_chain_of_crypt_filters_takes_no_time() {
 #[test]
 fn a_filters_parameters_are_read_in_either_form() {
     use super::*;
-    use pdfcraft_cos::{Algorithm, Dict, Document, NewEncryption, Object, SaveOptions, Stream, write_full, write_incremental};
+    use simplypdf_cos::{Algorithm, Dict, Document, NewEncryption, Object, SaveOptions, Stream, write_full, write_incremental};
     let content = b"1 0 0 rg 0 0 200 200 re f";
     let centre = |bytes: Vec<u8>| -> [u8; 4] {
         let page = PageRenderer::new(Arc::new(bytes), RenderConfig::default()).render(RenderRequest {
@@ -9255,7 +9255,7 @@ fn a_filters_parameters_are_read_in_either_form() {
 #[test]
 fn a_stream_with_a_crypt_filter_of_its_own_is_drawn() {
     use super::*;
-    use pdfcraft_cos::{Algorithm, Dict, Document, NewEncryption, Object, SaveOptions, Stream, write_full, write_incremental};
+    use simplypdf_cos::{Algorithm, Dict, Document, NewEncryption, Object, SaveOptions, Stream, write_full, write_incremental};
     let content = "1 0 0 rg 0 0 200 200 re f";
     let page = format!(
         "%PDF-1.7\n1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n\

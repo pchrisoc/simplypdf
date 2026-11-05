@@ -555,7 +555,7 @@ impl DocView {
         }
     }
 
-    pub(super) fn receive_result(&mut self, ctx: &egui::Context, r: pdfcraft_render::RenderedPage) -> usize {
+    pub(super) fn receive_result(&mut self, ctx: &egui::Context, r: simplypdf_render::RenderedPage) -> usize {
         if !self.last_queue.contains(&r.request) {
             return 0;
         }
@@ -774,7 +774,7 @@ const SLOW_MILLIS: u32 = 500;
 
 /// A rendered raster as texture data. Its words are premultiplied RGBA bytes, exactly
 /// `Color32`s, so the renderer's buffer becomes the image without a copy on the UI thread.
-pub(crate) fn texture_image(size: [usize; 2], pixels: pdfcraft_render::Pixels) -> egui::ColorImage {
+pub(crate) fn texture_image(size: [usize; 2], pixels: simplypdf_render::Pixels) -> egui::ColorImage {
     match bytemuck::allocation::try_cast_vec::<u32, Color32>(pixels.into_words()) {
         Ok(px) if px.len() == size[0].saturating_mul(size[1]) => egui::ColorImage::new(size, px),
         Ok(px) => egui::ColorImage::from_rgba_premultiplied(size, bytemuck::cast_slice(&px)),

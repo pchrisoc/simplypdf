@@ -1,16 +1,16 @@
-use super::{LayerOp, PdfCraftApp, Pos2, Rect};
+use super::{LayerOp, Pos2, Rect, SimplyPDFApp};
 
 /// A validation badge drawn over a signature widget: the widget rectangle (user space), the verdict it shows, and its hover text.
 pub(crate) struct SignatureBadge {
     pub rect: [f64; 4],
-    pub status: pdfcraft_engine::SignatureStatus,
+    pub status: simplypdf_engine::SignatureStatus,
     pub summary: &'static str,
 }
 
 /// The validation badges drawn over one page's signature widgets: signed, visible widgets
 /// on this page with coordinates that survive the cast to screen space. Hostile files can
 /// carry NaN, infinite or gigantic rectangles, which must never reach the painter.
-pub(crate) fn signature_badges(signatures: &[pdfcraft_engine::SignatureInfo], page: usize) -> Vec<SignatureBadge> {
+pub(crate) fn signature_badges(signatures: &[simplypdf_engine::SignatureInfo], page: usize) -> Vec<SignatureBadge> {
     signatures
         .iter()
         .filter(|s| s.signed && s.visible && s.page == Some(page))
@@ -43,8 +43,8 @@ pub(super) fn page_scroll<R>(
 }
 
 /// Run a push button's action (the ones that need no JavaScript engine).
-pub(super) fn run_button(app: &mut PdfCraftApp, index: usize, name: &str, action: pdfcraft_engine::form_scripts::ButtonAction) {
-    use pdfcraft_engine::form_scripts::ButtonAction as B;
+pub(super) fn run_button(app: &mut SimplyPDFApp, index: usize, name: &str, action: simplypdf_engine::form_scripts::ButtonAction) {
+    use simplypdf_engine::form_scripts::ButtonAction as B;
     let pages = app.session.get(app.views[index].id).map_or(0, |d| d.info.pages.len());
     match action {
         B::Reset { fields, exclude } => {
@@ -56,11 +56,11 @@ pub(super) fn run_button(app: &mut PdfCraftApp, index: usize, name: &str, action
                 (false, true) => Some(all.iter().filter(|n| !listed(n)).cloned().collect()),
             };
             app.views[index].forms.focus = None;
-            app.views[index].pending_edit = Some(pdfcraft_engine::Edit::ResetForm { names });
+            app.views[index].pending_edit = Some(simplypdf_engine::Edit::ResetForm { names });
         }
         B::Named(n) => match n.as_str() {
             "Print" => app.open_print(),
-            // What PdfCraft's XFA buttons use, and what a script's `execMenuItem("Save")`
+            // What SimplyPDF's XFA buttons use, and what a script's `execMenuItem("Save")`
             // does too: the Save As dialog, so a click never overwrites the file unasked.
             "SaveAs" => app.run_command("file.save_as"),
             "NextPage" => app.views[index].step_page(true),
@@ -74,13 +74,13 @@ pub(super) fn run_button(app: &mut PdfCraftApp, index: usize, name: &str, action
         B::ShowHide { fields, hide } => {
             let listed = |n: &String| fields.iter().any(|f| n == f || n.starts_with(&format!("{f}.")));
             // `display.hidden` 1, `display.visible` 0, as a script setting `field.display` would.
-            let changes: Vec<pdfcraft_engine::FieldChange> = app
+            let changes: Vec<simplypdf_engine::FieldChange> = app
                 .session
                 .get(app.views[index].id)
                 .map(|d| d.form.iter().filter(|f| listed(&f.name)).map(|f| f.name.clone()).collect::<Vec<_>>())
                 .unwrap_or_default()
                 .into_iter()
-                .map(|name| pdfcraft_engine::FieldChange {
+                .map(|name| simplypdf_engine::FieldChange {
                     name,
                     value: None,
                     read_only: None,
@@ -91,11 +91,11 @@ pub(super) fn run_button(app: &mut PdfCraftApp, index: usize, name: &str, action
             if !changes.is_empty() {
                 let label = if hide { "Hide a field" } else { "Show a field" };
                 app.views[index].pending_edit =
-                    Some(pdfcraft_engine::Edit::Batch { label: label.into(), edits: vec![pdfcraft_engine::Edit::ApplyScriptChanges { changes }] });
+                    Some(simplypdf_engine::Edit::Batch { label: label.into(), edits: vec![simplypdf_engine::Edit::ApplyScriptChanges { changes }] });
             }
         }
         B::SetLayers { changes, preserve_rb } => {
-            use pdfcraft_engine::form_scripts::LayerOp as Op;
+            use simplypdf_engine::form_scripts::LayerOp as Op;
             let changes: Vec<(LayerOp, (u32, u16))> = changes
                 .into_iter()
                 .map(|(op, ocg)| {
@@ -111,7 +111,7 @@ pub(super) fn run_button(app: &mut PdfCraftApp, index: usize, name: &str, action
         }
         B::Alert(m) => app.notify(m),
         B::Submit(url) => app.notify_fmt(
-            "{name} submits the form to {url}; PdfCraft doesn't send form data. Save the document to keep your entries.",
+            "{name} submits the form to {url}; SimplyPDF doesn't send form data. Save the document to keep your entries.",
             &[("name", name), ("url", &url)],
         ),
         B::ImportIcon => app.choose_field_image(name),
@@ -124,7 +124,7 @@ pub(super) fn run_button(app: &mut PdfCraftApp, index: usize, name: &str, action
 
 /// Run a set-layer-visibility action from a button or link. It changes what is shown, as the
 /// Layers panel does (which follows), not the document.
-pub(super) fn set_layers(app: &mut PdfCraftApp, index: usize, changes: &[(LayerOp, (u32, u16))], preserve_rb: bool) {
+pub(super) fn set_layers(app: &mut SimplyPDFApp, index: usize, changes: &[(LayerOp, (u32, u16))], preserve_rb: bool) {
     let id = app.views[index].id;
     if app.session.set_layer_state(id, changes, preserve_rb) {
         app.views[index].invalidate_content();

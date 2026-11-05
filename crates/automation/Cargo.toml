@@ -1,6 +1,6 @@
 [package]
-name = "pdfcraft-automation"
-description = "Agent control for PdfCraft: a headless tool set over the engine and an MCP server"
+name = "simplypdf-automation"
+description = "Agent control for SimplyPDF: a headless tool set over the engine and an MCP server"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,13 +9,13 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-pdfcraft-engine = { workspace = true }
-pdfcraft-cos = { workspace = true }
-pdfcraft-render = { workspace = true }
-pdfcraft-organize = { workspace = true }
-pdfcraft-platform = { workspace = true }
-pdfcraft-prc = { workspace = true }
-pdfcraft-prc-render = { workspace = true }
+simplypdf-engine = { workspace = true }
+simplypdf-cos = { workspace = true }
+simplypdf-render = { workspace = true }
+simplypdf-organize = { workspace = true }
+simplypdf-platform = { workspace = true }
+simplypdf-prc = { workspace = true }
+simplypdf-prc-render = { workspace = true }
 serde_json = { workspace = true }
 sha2 = "0.11"
 tempfile = "3.27"
@@ -28,12 +28,12 @@ default = ["mcp"]
 mcp = ["dep:base64"]
 
 [dev-dependencies]
-pdfcraft-fonts = { workspace = true }
+simplypdf-fonts = { workspace = true }
 png = "0.18"
 flate2.workspace = true
 zip = { version = "9.1.3", default-features = false, features = ["deflate"] }
-pdfcraft-model = { workspace = true }
-pdfcraft-xfa = { workspace = true }
+simplypdf-model = { workspace = true }
+simplypdf-xfa = { workspace = true }
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
 
 [target.'cfg(target_os = "macos")'.dev-dependencies]

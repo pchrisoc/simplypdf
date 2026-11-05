@@ -524,7 +524,7 @@ impl Gestures<'_> {
         true
     }
 
-    fn caret(&self, view: &mut DocView, caret_text: Option<&pdfcraft_render::PageText>) -> bool {
+    fn caret(&self, view: &mut DocView, caret_text: Option<&simplypdf_render::PageText>) -> bool {
         let Self { cx, pointer, over_page, .. } = *self;
         let cv = &mut view.comments;
         if !cx.allowed {

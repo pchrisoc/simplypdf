@@ -1,5 +1,5 @@
 //! Portable mode (#157): a marker file beside the executable ([`MARKERS`]) keeps the settings,
-//! log files, crash-recovery autosaves and new digital IDs in `<exe dir>/PdfCraftData`, so a
+//! log files, crash-recovery autosaves and new digital IDs in `<exe dir>/SimplyPDFData`, so a
 //! portable copy (on a USB stick, say) writes nothing to `%APPDATA%` or `%LOCALAPPDATA%`. The
 //! Windows portable zip ships with `portable.txt`; the MSI doesn't. PhotoCraft uses the same
 //! scheme (`photocraft/apps/photocraft/src/app_dirs.rs`).
@@ -11,14 +11,14 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 /// Files beside the executable that switch on portable mode (either one; contents are ignored).
-pub const MARKERS: [&str; 2] = ["portable.txt", "PdfCraft.portable"];
+pub const MARKERS: [&str; 2] = ["portable.txt", "SimplyPDF.portable"];
 /// The data folder created beside the executable in portable mode.
-pub const DATA_DIR: &str = "PdfCraftData";
+pub const DATA_DIR: &str = "SimplyPDFData";
 
 /// The outcome of looking for a portable marker.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct Portable {
-    /// `<exe dir>/PdfCraftData` when portable mode is on, `None` otherwise.
+    /// `<exe dir>/SimplyPDFData` when portable mode is on, `None` otherwise.
     pub dir: Option<PathBuf>,
     /// Set when a marker was found but its data folder can't be written.
     pub unwritable: Option<Unwritable>,
@@ -71,7 +71,15 @@ pub fn resolve(exe_dir: Option<&Path>) -> Portable {
     let Some((exe_dir, marker)) = exe_dir.and_then(|d| find_marker(d).map(|m| (d, m))) else {
         return Portable::default();
     };
-    let folder = exe_dir.join(DATA_DIR);
+    let mut folder = exe_dir.join(DATA_DIR);
+    let legacy = exe_dir.join("PdfCraftData");
+    if !folder.exists()
+        && legacy.is_dir()
+        && let Err(error) = std::fs::rename(&legacy, &folder)
+    {
+        log::warn!("could not migrate portable data: {error}; using the existing folder");
+        folder = legacy;
+    }
     match ensure_writable(&folder) {
         Ok(()) => Portable { dir: Some(folder), unwritable: None },
         Err(e) => Portable { dir: None, unwritable: Some(Unwritable { marker, folder, error: e.to_string() }) },
@@ -80,7 +88,7 @@ pub fn resolve(exe_dir: Option<&Path>) -> Portable {
 
 /// The first marker file in `exe_dir`, if any. A folder with a marker's name is not a marker.
 pub fn find_marker(exe_dir: &Path) -> Option<PathBuf> {
-    MARKERS.iter().map(|m| exe_dir.join(m)).find(|p| p.is_file())
+    MARKERS.iter().copied().chain(std::iter::once("PdfCraft.portable")).map(|m| exe_dir.join(m)).find(|p| p.is_file())
 }
 
 /// Create `dir` and prove a file can be written in it (a folder can exist yet be read-only).
@@ -100,7 +108,7 @@ mod tests {
 
     fn temp(tag: &str) -> PathBuf {
         static N: AtomicUsize = AtomicUsize::new(0);
-        let d = std::env::temp_dir().join(format!("pdfcraft-portable-{tag}-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
+        let d = std::env::temp_dir().join(format!("simplypdf-portable-{tag}-{}-{}", std::process::id(), N.fetch_add(1, Ordering::Relaxed)));
         let _ = std::fs::remove_dir_all(&d);
         std::fs::create_dir_all(&d).unwrap();
         d
@@ -132,7 +140,7 @@ mod tests {
     #[test]
     fn an_existing_data_folder_is_reused() {
         let exe = temp("reuse");
-        std::fs::write(exe.join("portable.txt"), b"PdfCraft portable mode").unwrap();
+        std::fs::write(exe.join("portable.txt"), b"SimplyPDF portable mode").unwrap();
         std::fs::create_dir_all(exe.join(DATA_DIR)).unwrap();
         std::fs::write(exe.join(DATA_DIR).join("app.ron"), b"()").unwrap();
         assert_eq!(resolve(Some(&exe)).dir, Some(exe.join(DATA_DIR)));

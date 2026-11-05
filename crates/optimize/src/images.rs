@@ -3,8 +3,8 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use pdfcraft_content::{Matrix, Pieces};
-use pdfcraft_cos::{DecodeBudget, Dict, Document, ImageBudget, ObjRef, Object, Stream};
+use simplypdf_content::{Matrix, Pieces};
+use simplypdf_cos::{DecodeBudget, Dict, Document, ImageBudget, ObjRef, Object, Stream};
 
 use crate::{Compression, ImageSettings, MonoCompression, MonoSettings, OptimizeError, Report, Settings, Stage};
 
@@ -112,7 +112,7 @@ impl Walk<'_> {
             }
         }
         let mut stack = vec![ctm];
-        for op in pdfcraft_content::parse(data).ops {
+        for op in simplypdf_content::parse(data).ops {
             let top = stack.last().copied().unwrap_or(ctm);
             match op.op.as_slice() {
                 b"q" => stack.push(top),
@@ -270,7 +270,7 @@ fn walk_pages(doc: &Document, pages: &[ObjRef]) -> (HashMap<ObjRef, f64>, HashSe
     };
     for p in pages {
         let Some(dict) = doc.get(*p).as_dict().cloned() else { continue };
-        let page = pdfcraft_model::Page { obj: *p, dict };
+        let page = simplypdf_model::Page { obj: *p, dict };
         walk.resources_above(*p);
         let Some(contents) = page.dict.get(b"Contents") else { continue };
         let (res, holder) = held_page_resources(doc, *p).unwrap_or_else(|| (Dict::default(), *p));
@@ -294,8 +294,10 @@ fn walk_pages(doc: &Document, pages: &[ObjRef]) -> (HashMap<ObjRef, f64>, HashSe
 fn device_rgb(doc: &Document, r: ObjRef) -> bool {
     let Object::Stream(s) = &*doc.get(r) else { return false };
     let cs = s.dict.get(b"ColorSpace").map(|cs| doc.resolve(cs));
-    let codec =
-        s.filters().iter().any(|(f, _)| matches!(f, pdfcraft_filters::Filter::Dct | pdfcraft_filters::Filter::Jpx | pdfcraft_filters::Filter::Jbig2));
+    let codec = s
+        .filters()
+        .iter()
+        .any(|(f, _)| matches!(f, simplypdf_filters::Filter::Dct | simplypdf_filters::Filter::Jpx | simplypdf_filters::Filter::Jbig2));
     s.dict.int(b"BitsPerComponent") == Some(8)
         && !codec
         && cs.as_deref().and_then(Object::as_name).is_some_and(|n| matches!(n, b"DeviceRGB" | b"RGB"))
@@ -393,7 +395,7 @@ fn used_elsewhere(doc: &Document, images: &HashSet<u32>, read: &Read) -> HashSet
     images.iter().copied().filter(|i| !covered.contains(i)).collect()
 }
 
-/// Colour components of a colour space PdfCraft resamples: gray (1) or RGB (3).
+/// Colour components of a colour space SimplyPDF resamples: gray (1) or RGB (3).
 pub(crate) fn components(doc: &Document, cs: &Object) -> Option<usize> {
     let cs = doc.resolve(cs);
     match &*cs {
@@ -515,7 +517,7 @@ fn allowance(bytes: usize, rows: u32) -> Option<usize> {
 /// /ColorTransform; without a marker /ColorTransform does, 1 (YCbCr) by default.
 ///
 /// `None`, so the image is left as it is, when readers may disagree: the marker and
-/// /ColorTransform contradict each other (PdfCraft's renderer lets /ColorTransform 0 win where
+/// /ColorTransform contradict each other (SimplyPDF's renderer lets /ColorTransform 0 win where
 /// the standard lets the marker win), either holds a value other than 0 or 1, or the parameters
 /// or the JPEG's segments can't be read.
 fn ycc_encoded(doc: &Document, s: &Stream) -> Option<bool> {
@@ -849,7 +851,7 @@ fn one_bit(doc: &Document, s: &Stream, pack: bool, defaults: bool, budget: &mut 
         // produce it) takes at most about a byte a pixel and each row's end, as redaction allows.
         let len = stride.checked_mul(hu)?;
         let max = match s.filters().last() {
-            Some((pdfcraft_filters::Filter::CcittFax, _)) => wu.checked_mul(hu)?.checked_add(hu.checked_mul(4)?)?.checked_add(4096)?,
+            Some((simplypdf_filters::Filter::CcittFax, _)) => wu.checked_mul(hu)?.checked_add(hu.checked_mul(4)?)?.checked_add(4096)?,
             // A JBIG2 page, which has to be the image's size, is `len` bytes as rows of a bit.
             _ => allowance(len, h)?,
         };
@@ -1140,7 +1142,7 @@ fn mono(
     let fax = doc.fax_params(s);
     // Its kind of compression, which Retain keeps, behind any other filters.
     let ccitt = fax.is_some();
-    let jbig2 = matches!(s.filters().last(), Some((pdfcraft_filters::Filter::Jbig2, _)));
+    let jbig2 = matches!(s.filters().last(), Some((simplypdf_filters::Filter::Jbig2, _)));
     // Group 4 alone is only worth decoding to resample it, and so is JBIG2 alone when Group 4 is what
     // it would be stored as: that output is rarely smaller, and decoding an ordinary scan costs a
     // quarter of a second a page. Group 3, Group 4 behind ASCII85Decode, say, and JBIG2 stored as
@@ -1149,7 +1151,7 @@ fn mono(
     let only_to_resample = retain || (alone_to_g4 && (jbig2 || fax.is_some_and(|p| p.k < 0)));
     // What can't be averaged, whatever it holds, comes to the same `None` below, after a decode that
     // would spend the run's allowance on it.
-    let too_wide = d.int(b"Width").is_some_and(|w| w > i64::from(pdfcraft_filters::MAX_CCITT_COLUMNS));
+    let too_wide = d.int(b"Width").is_some_and(|w| w > i64::from(simplypdf_filters::MAX_CCITT_COLUMNS));
     if only_to_resample && (!downsample || defaults || too_wide || settings.target_ppi >= ppi || (jbig2 && dark_is_one(doc, d).is_none())) {
         return None;
     }
@@ -1158,7 +1160,7 @@ fn mono(
     let k = settings.target_ppi / ppi;
     // `downsample_bits` keeps a counter for each column: no more columns than a fax row may have,
     // so a hostile strip of 80 million can't make it 640 MB.
-    let narrow = w <= pdfcraft_filters::MAX_CCITT_COLUMNS;
+    let narrow = w <= simplypdf_filters::MAX_CCITT_COLUMNS;
     // At most `w` × `h`, as k < 1: no overflow.
     let (nw, nh) = if downsample && narrow && k < 1.0 {
         (((f64::from(w) * k).round() as u32).max(1), ((f64::from(h) * k).round() as u32).max(1))
@@ -1192,7 +1194,7 @@ fn mono(
     dict.set(b"Width".to_vec(), Object::Int(i64::from(nw)));
     dict.set(b"Height".to_vec(), Object::Int(i64::from(nh)));
     let g4 = if settings.compression == MonoCompression::CcittG4 || (retain && ccitt) {
-        pdfcraft_filters::encode_g4(&data, nw, nh).ok().map(|coded| {
+        simplypdf_filters::encode_g4(&data, nw, nh).ok().map(|coded| {
             let mut dict = dict.clone();
             let mut parms = Dict::new();
             parms.set(b"K".to_vec(), Object::Int(-1));
@@ -1206,7 +1208,7 @@ fn mono(
         None
     };
     let jbig = if settings.compression == MonoCompression::Jbig2 || (retain && jbig2) {
-        pdfcraft_filters::encode_jbig2(&data, nw, nh).ok().map(|coded| {
+        simplypdf_filters::encode_jbig2(&data, nw, nh).ok().map(|coded| {
             let mut dict = dict.clone();
             dict.set(b"Filter".to_vec(), Object::name("JBIG2Decode"));
             Stream::from_raw(dict, coded)
@@ -1250,7 +1252,7 @@ fn hold_in(group: &mut Vec<Held>, image: Held, cap: usize, mut share: impl FnMut
 
 /// The most pixels an image sharing a dictionary has: redaction's own limit on the images it
 /// stores again (see [`shares`]).
-const SHARED_PIXELS: u64 = pdfcraft_cos::MAX_REDACTED_IMAGE_PIXELS;
+const SHARED_PIXELS: u64 = simplypdf_cos::MAX_REDACTED_IMAGE_PIXELS;
 
 /// Whether an image stored as JBIG2 (its dictionary `d`) may share a dictionary: only one that
 /// redaction can store again without it, an image mask or a DeviceGray image, named directly, of
@@ -1273,7 +1275,7 @@ struct Held {
 }
 
 /// Stores the images of `group`, each JBIG2 already, again sharing one symbol dictionary in a
-/// `/JBIG2Globals` stream ([`pdfcraft_filters::encode_jbig2_shared`]): those that come out smaller
+/// `/JBIG2Globals` stream ([`simplypdf_filters::encode_jbig2_shared`]): those that come out smaller
 /// that way, if together they save more than the globals take. The others stay as they are, and
 /// so do all of them when that saves nothing. `report` counts the bytes as they end up, the globals
 /// included.
@@ -1283,7 +1285,7 @@ fn share(doc: &mut Document, group: &mut Vec<Held>, report: &mut Report) {
         return;
     }
     let images: Vec<(&[u8], u32, u32)> = held.iter().map(|h| (&h.bits[..], h.width, h.height)).collect();
-    let Ok(Some(shared)) = pdfcraft_filters::encode_jbig2_shared(&images) else { return };
+    let Ok(Some(shared)) = simplypdf_filters::encode_jbig2_shared(&images) else { return };
     let with_globals = |s: &Stream, coded: Vec<u8>, globals: ObjRef| {
         let mut dict = s.dict.clone();
         let mut parms = Dict::new();
@@ -1538,7 +1540,7 @@ mod dimension_tests {
     /// another filter it can still be stored again, as Group 4 can.
     #[test]
     fn a_jbig2_image_alone_is_not_decoded_for_group_4_unless_it_is_resampled() {
-        let coded = pdfcraft_filters::encode_jbig2_generic(&[0xFF; 4], 16, 2).unwrap();
+        let coded = simplypdf_filters::encode_jbig2_generic(&[0xFF; 4], 16, 2).unwrap();
         let hex: Vec<u8> = coded.iter().flat_map(|b| format!("{b:02x}").into_bytes()).chain(*b">").collect();
         let image = |filter: Object, data: Vec<u8>| {
             let mut dict = Dict::new();
@@ -1567,7 +1569,7 @@ mod dimension_tests {
     /// report says how many: a file of thousands of them can't hold a run for hours.
     #[test]
     fn jbig2_images_past_the_runs_allowance_stay_as_they_are() {
-        let coded = pdfcraft_filters::encode_jbig2_generic(&[0xF0; 4], 16, 2).unwrap();
+        let coded = simplypdf_filters::encode_jbig2_generic(&[0xF0; 4], 16, 2).unwrap();
         let mut dict = Dict::new();
         dict.set(b"Type".to_vec(), Object::name("XObject"));
         dict.set(b"Subtype".to_vec(), Object::name("Image"));
@@ -1816,7 +1818,7 @@ mod dimension_tests {
             dict.set(b"ColorSpace".to_vec(), Object::name("DeviceGray"));
             dict.set(b"Filter".to_vec(), Object::name("JBIG2Decode"));
             edit(&mut dict);
-            Stream::from_raw(dict, pdfcraft_filters::encode_jbig2_generic(&[0xF0; 4], 16, 2).unwrap())
+            Stream::from_raw(dict, simplypdf_filters::encode_jbig2_generic(&[0xF0; 4], 16, 2).unwrap())
         };
         let spent_at = |target_ppi: f64, s: &Stream, defaults: bool| {
             let settings = MonoSettings { compression: MonoCompression::Retain, above_ppi: 100.0, target_ppi, ..MonoSettings::REDUCE };
@@ -1831,7 +1833,7 @@ mod dimension_tests {
         assert!(spent(&plain, false) > 0, "one that can be averaged is decoded");
         assert_eq!(spent(&plain, true), 0, "drawn where a device colour space is remapped");
         let width = |w: i64| image(&move |d| d.set(b"Width".to_vec(), Object::Int(w)));
-        let widest = i64::from(pdfcraft_filters::MAX_CCITT_COLUMNS);
+        let widest = i64::from(simplypdf_filters::MAX_CCITT_COLUMNS);
         assert!(spent(&width(widest), false) > 0, "the widest that can be averaged is decoded");
         assert_eq!(spent(&width(widest + 1), false), 0, "too wide to average");
         let tinted = image(&|d| d.set(b"ColorSpace".to_vec(), Object::Array(vec![Object::name("CalGray"), Object::Dict(Dict::new())])));
@@ -1918,7 +1920,7 @@ mod dimension_tests {
 
 #[cfg(test)]
 mod tests {
-    use pdfcraft_cos::{DecodeBudget, Dict, Document, MAX_PAGE_DECODED, Object, Stream};
+    use simplypdf_cos::{DecodeBudget, Dict, Document, MAX_PAGE_DECODED, Object, Stream};
 
     #[test]
     fn repeated_content_references_share_one_decode_budget() {
@@ -1933,7 +1935,7 @@ mod tests {
 #[cfg(test)]
 mod downsample_tests {
     use super::{dark_is_one, downsample_bits};
-    use pdfcraft_cos::{Dict, Document, Object};
+    use simplypdf_cos::{Dict, Document, Object};
 
     /// [`downsample_bits`] the slow way: each new pixel's area against every source pixel's.
     fn naive(data: &[u8], w: u32, h: u32, nw: u32, nh: u32, dark_one: bool) -> Vec<u8> {
@@ -2020,9 +2022,9 @@ mod downsample_tests {
     #[test]
     fn an_indexed_images_palette_says_which_sample_is_dark() {
         let mut doc = Document::new_empty();
-        let string = |bytes: &[u8]| Object::String(pdfcraft_cos::PdfString::literal(bytes.to_vec()));
+        let string = |bytes: &[u8]| Object::String(simplypdf_cos::PdfString::literal(bytes.to_vec()));
         let referenced = doc.add(string(&[255, 0]));
-        let stream = doc.add(Object::Stream(pdfcraft_cos::Stream::flate(Dict::new(), &[0, 0, 0, 255, 255, 255])));
+        let stream = doc.add(Object::Stream(simplypdf_cos::Stream::flate(Dict::new(), &[0, 0, 0, 255, 255, 255])));
         let cal = |name: &str| Object::Array(vec![Object::name(name), Object::Dict(Dict::new())]);
         let indexed = |base: Object, hival: i64, table: Object| {
             let mut d = Dict::new();

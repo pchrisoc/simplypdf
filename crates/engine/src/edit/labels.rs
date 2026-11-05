@@ -177,7 +177,7 @@ impl Edit {
             Edit::SetPageBox { pages, which: PageBox::Crop, .. } => plural("Crop page", "Crop pages", pages.len()),
             Edit::SetPageBox { .. } => Label::of("Set page boxes"),
             Edit::SetTransition { .. } => Label::of("Set page transitions"),
-            // The four `/Info` keys PdfCraft itself offers get a wording of their own, so each can
+            // The four `/Info` keys SimplyPDF itself offers get a wording of their own, so each can
             // be said in another language; any other key is the document's and goes in as it stands.
             Edit::SetInfo { key, .. } => match key.as_str() {
                 "Title" => Label::of("Change Title"),
@@ -201,10 +201,11 @@ impl Edit {
             Edit::NumberPages { .. } => Label::of("Number pages"),
             // What was measured is part of the wording too, for the same reason.
             Edit::AddMeasurement(m) => Label::of(match m.kind {
-                pdfcraft_measure::Kind::Distance => "Measure distance",
-                pdfcraft_measure::Kind::Perimeter => "Measure perimeter",
-                pdfcraft_measure::Kind::Area => "Measure area",
+                simplypdf_measure::Kind::Distance => "Measure distance",
+                simplypdf_measure::Kind::Perimeter => "Measure perimeter",
+                simplypdf_measure::Kind::Area => "Measure area",
             }),
+            Edit::UpdateMeasurement { .. } => Label::of("Edit takeoff"),
             Edit::SetMeasurementScale { .. } => Label::of("Set measurement scale"),
             Edit::AddAnnotation(a) => Label::of(add_annotation(&a.shape)),
             Edit::AddCustomStamp { .. } => Label::of("Add stamp"),
@@ -272,10 +273,10 @@ impl Edit {
                 ImageEdit::Replace { .. } => "Replace image",
                 ImageEdit::Delete => "Delete image",
                 ImageEdit::Arrange(ord) => match ord {
-                    pdfcraft_edit::ArrangeOrder::BringToFront => "Bring to front",
-                    pdfcraft_edit::ArrangeOrder::BringForward => "Bring forward",
-                    pdfcraft_edit::ArrangeOrder::SendBackward => "Send backward",
-                    pdfcraft_edit::ArrangeOrder::SendToBack => "Send to back",
+                    simplypdf_edit::ArrangeOrder::BringToFront => "Bring to front",
+                    simplypdf_edit::ArrangeOrder::BringForward => "Bring forward",
+                    simplypdf_edit::ArrangeOrder::SendBackward => "Send backward",
+                    simplypdf_edit::ArrangeOrder::SendToBack => "Send to back",
                 },
                 ImageEdit::RemoveCrop => "Remove crop",
             }),

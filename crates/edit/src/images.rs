@@ -4,8 +4,8 @@
 //! or delete. Only the stream that draws it is rewritten, as a new object.
 
 use kurbo::{BezPath, Point, Shape};
-use pdfcraft_content::{Matrix, Op, Pieces, parse, serialize_ops};
-use pdfcraft_cos::{Dict, Document, ObjRef, Object};
+use simplypdf_content::{Matrix, Op, Pieces, parse, serialize_ops};
+use simplypdf_cos::{Dict, Document, ObjRef, Object};
 use std::sync::Arc;
 
 use crate::EditError;
@@ -56,7 +56,7 @@ pub struct PageImage {
 }
 
 impl PageImage {
-    /// Whether an active clip was written by PdfCraft's image crop tool.
+    /// Whether an active clip was written by SimplyPDF's image crop tool.
     pub fn has_editor_crop(&self) -> bool {
         self.clips.iter().any(|clip| clip.app_crop)
     }
@@ -108,8 +108,8 @@ fn joined(streams: &[(Object, Vec<u8>)]) -> Pieces {
     Pieces::join(&streams.iter().map(|(_, data)| data.as_slice()).collect::<Vec<_>>())
 }
 
-fn page_of(doc: &Document, page: usize) -> Result<pdfcraft_model::Page, EditError> {
-    pdfcraft_model::pages(doc).into_iter().nth(page).ok_or(EditError::NoSuchPage(page))
+fn page_of(doc: &Document, page: usize) -> Result<simplypdf_model::Page, EditError> {
+    simplypdf_model::pages(doc).into_iter().nth(page).ok_or(EditError::NoSuchPage(page))
 }
 
 fn xobjects(doc: &Document, page: &Dict) -> Dict {
@@ -258,7 +258,7 @@ impl ImageState {
                     self.path.close_path();
                 }
             }
-            b"MP" if op.name(0) == Some(b"PdfCraftImageCrop") => self.app_crop = true,
+            b"MP" if op.name(0) == Some(b"SimplyPDFImageCrop") => self.app_crop = true,
             b"W" => self.pending_clip = Some(false),
             b"W*" => self.pending_clip = Some(true),
             b"n" | b"S" | b"s" | b"f" | b"F" | b"f*" | b"B" | b"B*" | b"b" | b"b*" => {
@@ -438,7 +438,7 @@ pub fn reading_images(doc: &Document, page: usize) -> Result<Vec<PageImage>, Edi
     let res = p.dict.get(b"Resources").map(|r| doc.resolve(r)).and_then(|r| r.as_dict().cloned()).unwrap_or_default();
     let mut out = Vec::new();
     let mut st = ImageState::new(Matrix::IDENTITY, p.crop(doc), Vec::new());
-    let mut decode = pdfcraft_cos::DecodeBudget::page();
+    let mut decode = simplypdf_cos::DecodeBudget::page();
     let pieces = joined(&crate::text::content_streams_within(doc, &p.dict, &mut decode)?);
     let mut forms = Forms { path: Vec::new(), budget: crate::text::FormBudget::new(decode) };
     walk(doc, &pieces.parse().ops, &res, &mut st, &|op| pieces.piece_of(op.span.start), &mut forms, &mut out)?;
@@ -828,7 +828,7 @@ impl DrawingStateTracker {
 
 /// Initial line style, rendering intent and text-state parameters.
 fn initial_param(name: &str) -> Option<Op> {
-    use pdfcraft_content::num;
+    use simplypdf_content::num;
     let operands = match name {
         "w" => vec![num(1.0)],
         "J" | "j" => vec![num(0.0)],
@@ -854,7 +854,7 @@ fn compute_inherited_drawing_ops(source: &DrawingState, dest: &DrawingState, ext
         match (own, source, dest) {
             (true, _, _) | (false, None, None) => {}
             (false, Some(color), _) => ops.extend(color.iter().map(|op| (**op).clone())),
-            (false, None, Some(_)) => ops.push(Op::new(black, vec![pdfcraft_content::num(0.0)])),
+            (false, None, Some(_)) => ops.push(Op::new(black, vec![simplypdf_content::num(0.0)])),
         }
     }
     let mut text_ops = Vec::new();
@@ -890,7 +890,7 @@ fn clip_path_to_ops(clip: &ClipPath) -> Option<Vec<Op>> {
             kurbo::PathEl::ClosePath => ("h", Vec::new()),
             kurbo::PathEl::QuadTo(..) => return None,
         };
-        ops.push(Op::new(name, points.iter().flat_map(|p| [pdfcraft_content::num(p.x), pdfcraft_content::num(p.y)]).collect()));
+        ops.push(Op::new(name, points.iter().flat_map(|p| [simplypdf_content::num(p.x), simplypdf_content::num(p.y)]).collect()));
     }
     if !ops.is_empty() {
         ops.push(Op::new(if clip.even_odd { "W*" } else { "W" }, vec![]));
@@ -1151,7 +1151,7 @@ fn build_relocated_unit_ops(
                 return Err(EditError::Invalid("unsupported graphics state: invalid transform coordinates".into()));
             }
             if delta != Matrix::IDENTITY {
-                unit_ops.push(Op::new("cm", delta.0.map(pdfcraft_content::num).to_vec()));
+                unit_ops.push(Op::new("cm", delta.0.map(simplypdf_content::num).to_vec()));
                 current_ctm = *target_ctm;
             }
         }
@@ -1166,11 +1166,11 @@ fn build_relocated_unit_ops(
     if !extracted.clip_ops.is_empty() {
         if current_ctm != Matrix::IDENTITY {
             let current_inv = current_ctm.invert().ok_or_else(|| EditError::Invalid("unsupported graphics state: non-invertible CTM".into()))?;
-            unit_ops.push(Op::new("cm", current_inv.0.map(pdfcraft_content::num).to_vec()));
+            unit_ops.push(Op::new("cm", current_inv.0.map(simplypdf_content::num).to_vec()));
         }
         unit_ops.extend(extracted.clip_ops);
         if Matrix(draw_matrix) != Matrix::IDENTITY {
-            unit_ops.push(Op::new("cm", draw_matrix.map(pdfcraft_content::num).to_vec()));
+            unit_ops.push(Op::new("cm", draw_matrix.map(simplypdf_content::num).to_vec()));
         }
     } else if Matrix(draw_matrix) != current_ctm {
         let current_inv = current_ctm.invert().ok_or_else(|| EditError::Invalid("unsupported graphics state: non-invertible CTM".into()))?;
@@ -1179,7 +1179,7 @@ fn build_relocated_unit_ops(
             return Err(EditError::Invalid("unsupported graphics state: invalid transform coordinates".into()));
         }
         if delta != Matrix::IDENTITY {
-            unit_ops.push(Op::new("cm", delta.0.map(pdfcraft_content::num).to_vec()));
+            unit_ops.push(Op::new("cm", delta.0.map(simplypdf_content::num).to_vec()));
         }
     }
     unit_ops.push(extracted.do_op);
@@ -1193,7 +1193,7 @@ fn build_relocated_unit_ops(
 /// Change the stacking order of `img`, drawn on page `p` by its content streams `all`.
 fn arrange_image(
     doc: &mut Document,
-    p: &pdfcraft_model::Page,
+    p: &simplypdf_model::Page,
     all: &[(Object, Vec<u8>)],
     img: &PageImage,
     order: ArrangeOrder,
@@ -1347,7 +1347,7 @@ fn arrange_image(
         return Err(EditError::Invalid("unsupported graphics state: non-invertible CTM".into()));
     }
 
-    let owned_crop = ops.get(scope_start..target).unwrap_or_default().iter().any(|op| op.is("MP") && op.name(0) == Some(b"PdfCraftImageCrop"));
+    let owned_crop = ops.get(scope_start..target).unwrap_or_default().iter().any(|op| op.is("MP") && op.name(0) == Some(b"SimplyPDFImageCrop"));
     let extracted_scope = if owned_crop { None } else { extract_scope_state(&ops, scope_start, target, scope_start_ctm)? };
     let mut extracted = match extracted_scope {
         Some(ext) => ext,
@@ -1426,7 +1426,7 @@ fn arrange_image(
     }
     let mut leak_ops = leaking_ops;
     if leaking != Matrix::IDENTITY && leak_ops.iter().all(|o| !o.is("cm")) {
-        leak_ops.insert(0, Op::new("cm", leaking.0.map(pdfcraft_content::num).to_vec()));
+        leak_ops.insert(0, Op::new("cm", leaking.0.map(simplypdf_content::num).to_vec()));
     }
     let removal_replacement = if !leak_ops.is_empty() {
         let mut s = Vec::new();
@@ -1449,7 +1449,7 @@ fn arrange_image(
         if insertion > list.len() {
             return Err(EditError::Invalid("the destination content stream is missing".into()));
         }
-        let relocated = doc.add(Object::Stream(pdfcraft_cos::Stream::flate(Dict::new(), &serialized)));
+        let relocated = doc.add(Object::Stream(simplypdf_cos::Stream::flate(Dict::new(), &serialized)));
         list.insert(insertion, Object::Ref(relocated));
         doc.update_dict(p.obj, |d| d.set(b"Contents".to_vec(), Object::Array(list)))?;
         return Ok(());
@@ -1584,13 +1584,13 @@ fn image_scopes(ops: &[Op], target: usize, done: &str) -> Result<ImageScopes, Ed
 /// A marked-content point identifies only the clipping path written by this editor.
 /// It does not open a marked-content sequence or change the document's structure tags.
 fn crop_marker() -> Op {
-    Op::new("MP", vec![Object::Name(b"PdfCraftImageCrop".to_vec())])
+    Op::new("MP", vec![Object::Name(b"SimplyPDFImageCrop".to_vec())])
 }
 
 fn app_crop_ranges(ops: &[Op], start: usize, target: usize) -> Vec<std::ops::Range<usize>> {
     let mut ranges = Vec::new();
     for (index, op) in ops.iter().enumerate().take(target).skip(start) {
-        if !op.is("MP") || op.name(0) != Some(b"PdfCraftImageCrop") {
+        if !op.is("MP") || op.name(0) != Some(b"SimplyPDFImageCrop") {
             continue;
         }
         let path_start = index.saturating_add(1);
@@ -1605,18 +1605,18 @@ fn app_crop_ranges(ops: &[Op], start: usize, target: usize) -> Vec<std::ops::Ran
     ranges
 }
 
-/// Remove only crops written by PdfCraft, preserving the document author's clipping paths.
-fn remove_image_crop(doc: &mut Document, p: &pdfcraft_model::Page, all: &[(Object, Vec<u8>)], img: &PageImage) -> Result<(), EditError> {
+/// Remove only crops written by SimplyPDF, preserving the document author's clipping paths.
+fn remove_image_crop(doc: &mut Document, p: &simplypdf_model::Page, all: &[(Object, Vec<u8>)], img: &PageImage) -> Result<(), EditError> {
     let pieces = joined(all);
     let ops = pieces.parse().ops;
     let target = img.op;
     let scope = image_scopes(&ops, target, "cropped")?;
     let Some((start, _, _)) = scope.transform_scope(target) else {
-        return Err(EditError::Invalid("the image has no PdfCraft crop to remove".into()));
+        return Err(EditError::Invalid("the image has no SimplyPDF crop to remove".into()));
     };
     let crops = app_crop_ranges(&ops, start, target);
     if crops.is_empty() {
-        return Err(EditError::Invalid("the image has no PdfCraft crop to remove".into()));
+        return Err(EditError::Invalid("the image has no SimplyPDF crop to remove".into()));
     }
     let changed = crate::text::splice(&pieces, &ops, |index| (Vec::new(), !crops.iter().any(|r| r.contains(&index))));
     let contents = crate::text::rewritten_contents(doc, all, changed);
@@ -1699,7 +1699,7 @@ pub(crate) fn painted_over(doc: &Document, page: usize, rect: [f64; 4], from: us
 
 fn transform_image(
     doc: &mut Document,
-    page: &pdfcraft_model::Page,
+    page: &simplypdf_model::Page,
     streams: &[(Object, Vec<u8>)],
     image: &PageImage,
     transform: [f64; 6],
@@ -1765,7 +1765,7 @@ fn transform_image(
 /// box too and a later transform of the scope moves the crop with the pixels.
 fn crop_image_impl(
     doc: &mut Document,
-    page: &pdfcraft_model::Page,
+    page: &simplypdf_model::Page,
     streams: &[(Object, Vec<u8>)],
     image: &PageImage,
     keep: [f64; 4],

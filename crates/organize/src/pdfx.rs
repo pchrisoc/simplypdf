@@ -10,7 +10,7 @@
 
 use std::collections::HashMap;
 
-use pdfcraft_cos::{Dict, Document, ObjRef, Object, PdfString, Stream};
+use simplypdf_cos::{Dict, Document, ObjRef, Object, PdfString, Stream};
 
 use crate::OrganizeError;
 

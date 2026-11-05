@@ -1,7 +1,7 @@
 #[test]
 fn remote_documents_must_be_regular_pdf_files() {
     use super::{RemoteDocumentPathError as E, read_remote_document as read};
-    let dir = std::env::temp_dir().join(format!("pdfcraft-gotor-read-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("simplypdf-gotor-read-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("folder.pdf")).unwrap();
     std::fs::write(dir.join("doc.PDF"), b"%PDF-1.7\n").unwrap();
@@ -112,7 +112,7 @@ fn remote_document_paths_to_other_computers_and_devices_are_refused() {
 
 #[test]
 fn project_links_are_registered_and_point_to_the_correct_repositories() {
-    assert_eq!(super::APP_PAGE, format!("{}/apps/{}", super::WEBSITE, super::APP));
+    assert_eq!(super::APP_PAGE, super::GITHUB);
     assert_eq!(super::GITHUB, "https://github.com/pchrisoc/simplypdf");
     for l in super::LINKS {
         assert!(l.url.starts_with("https://"), "{}", l.url);

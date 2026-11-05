@@ -2,12 +2,12 @@
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use pdfcraft_engine::links;
-use pdfcraft_ui_egui::{Dialog, PdfCraftApp};
+use simplypdf_engine::links;
+use simplypdf_ui_egui::{Dialog, SimplyPDFApp};
 
-fn harness(setup: impl FnOnce(&mut PdfCraftApp) + 'static) -> Harness<'static, PdfCraftApp> {
+fn harness(setup: impl FnOnce(&mut SimplyPDFApp) + 'static) -> Harness<'static, SimplyPDFApp> {
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(move |_cc| {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.set_option("language", "en").unwrap();
         setup(&mut app);
         app
@@ -29,7 +29,7 @@ fn home_has_no_promotional_community_card() {
     h.get_by_label("Recommended tools");
     assert!(h.query_by_label("Join the ArtCraft community").is_none());
     assert!(h.query_by_label("Join our Discord").is_none());
-    assert!(h.query_by_label("PDFCraft upstream website").is_none());
+    assert!(h.query_by_label("SimplyPDF upstream website").is_none());
     assert!(h.query_by_label("ArtCraft website").is_none());
 }
 
@@ -41,7 +41,7 @@ fn about_dialog_shows_the_brand_and_links() {
         app.dialog = Some(Dialog::About);
     });
     assert!(h.query_all_by_label("SimplyPDF").next().is_some());
-    h.get_by_label("Based on PDFCraft by the ArtCraft team and contributors.");
+    h.get_by_label("Based on SimplyPDF by the ArtCraft team and contributors.");
     h.get_by_label("Join our Discord").click();
     h.run_steps(2);
     assert_eq!(h.state().last_opened_url.as_deref(), Some(links::DISCORD));
@@ -53,7 +53,7 @@ fn help_commands_open_each_link() {
         let mut h = harness(|_| {});
         assert!(h.state_mut().execute(l.command), "{}", l.command);
         assert_eq!(h.state().last_opened_url.as_deref(), Some(l.url));
-        assert_eq!(pdfcraft_engine::commands::command(l.command).unwrap().menu, Some("Help"));
+        assert_eq!(simplypdf_engine::commands::command(l.command).unwrap().menu, Some("Help"));
     }
 }
 
@@ -64,7 +64,7 @@ fn help_commands_open_each_link() {
 /// fixed number of frames is a guess at how long that takes: it was too few after the 0.5.0
 /// contributors refresh (78 names instead of 5) on some machines, the click on Table landed where
 /// the button had been, and the table never opened (#671).
-fn settled<'a>(h: &'a mut Harness<'static, PdfCraftApp>, label: &'a str) -> egui_kittest::Node<'a> {
+fn settled<'a>(h: &'a mut Harness<'static, SimplyPDFApp>, label: &'a str) -> egui_kittest::Node<'a> {
     let mut last = None;
     for _ in 0..60 {
         h.run_steps(1);

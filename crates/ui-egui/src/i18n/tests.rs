@@ -27,7 +27,7 @@ fn rows(text: &str) -> Vec<(String, String, String)> {
         .collect()
 }
 
-/// The embedded PdfCraft catalog of `code` (not the shared one), `""` without one.
+/// The embedded SimplyPDF catalog of `code` (not the shared one), `""` without one.
 fn app_catalog(code: &str) -> &'static str {
     CRAFT_I18N.iter().find(|(c, ..)| *c == code).map_or("", |(_, _, app)| *app)
 }
@@ -105,11 +105,11 @@ fn candidates_walk_from_specific_to_general() {
 }
 
 /// The locale variables, the first detection step: `LC_ALL` over `LC_MESSAGES` over `LANG`, an
-/// unsupported value passed over, and PdfCraft's own mappings (`no`/`nn` → Bokmål, Portuguese →
+/// unsupported value passed over, and SimplyPDF's own mappings (`no`/`nn` → Bokmål, Portuguese →
 /// Brazilian, Chinese by region), which the crate's matching doesn't all make.
 #[cfg(not(target_arch = "wasm32"))]
 #[test]
-fn locale_variables_pick_the_language_with_pdfcraft_mappings() {
+fn locale_variables_pick_the_language_with_simplypdf_mappings() {
     let env = |vars: &'static [(&'static str, &'static str)]| move |name: &str| vars.iter().find(|(k, _)| *k == name).map(|(_, v)| v.to_string());
     assert_eq!(env_lang(env(&[])), None);
     assert_eq!(env_lang(env(&[("LANG", "en_US.UTF-8")])), Some(Lang::EN));
@@ -215,7 +215,7 @@ fn preferences_resolve_with_fallback() {
     assert_eq!(normalize_pref("JA"), Some("ja"));
 }
 
-/// PdfCraft offers exactly the languages in `LANGUAGES` when craft-i18n is embedded, and English
+/// SimplyPDF offers exactly the languages in `LANGUAGES` when craft-i18n is embedded, and English
 /// alone when it isn't: a missing catalog never fails, it shows English.
 #[test]
 fn the_languages_offered_are_the_embedded_ones_of_the_list() {
@@ -229,11 +229,11 @@ fn the_languages_offered_are_the_embedded_ones_of_the_list() {
         return;
     }
     let listed: Vec<&str> = LANGUAGES.iter().map(|l| l.code).collect();
-    assert_eq!(all, listed, "every language PdfCraft lists has its catalog in craft-i18n");
+    assert_eq!(all, listed, "every language SimplyPDF lists has its catalog in craft-i18n");
     assert!(Lang::from_code("pseudo").is_none(), "the pseudo locale is never a setting");
-    // craft-i18n has catalogs PdfCraft doesn't offer (yet); they are never offered here.
+    // craft-i18n has catalogs SimplyPDF doesn't offer (yet); they are never offered here.
     for code in CRAFT_I18N.iter().map(|(c, ..)| *c).filter(|c| !listed.contains(c)) {
-        assert_eq!(Lang::from_code(code), None, "{code} is not one of PdfCraft's languages");
+        assert_eq!(Lang::from_code(code), None, "{code} is not one of SimplyPDF's languages");
     }
 }
 
@@ -373,7 +373,7 @@ fn ui_literals() -> std::collections::BTreeSet<String> {
 #[test]
 fn signature_appearance_labels_keep_their_separator() {
     needs_catalogs!();
-    let english = pdfcraft_engine::sign::AppearanceLabels::default();
+    let english = simplypdf_engine::sign::AppearanceLabels::default();
     for lang in Lang::all().filter(|l| *l != Lang::EN) {
         for (field, label) in english.fields() {
             let said = tr(lang, label);
@@ -388,7 +388,7 @@ fn signature_appearance_labels_keep_their_separator() {
 /// and with BIZ UDPGothic Regular alone (the web build's only Japanese face).
 #[test]
 fn japanese_labels_have_glyphs() {
-    let craft = pdfcraft_fonts::ui_japanese_fonts();
+    let craft = simplypdf_fonts::ui_japanese_fonts();
     let Some(web) = craft.iter().find(|f| f.family == "BIZ UDPGothic" && f.style == "Regular") else {
         eprintln!("skipping Japanese glyph checks: build with CRAFT_FONTS_DIR to run them");
         return;
@@ -398,7 +398,7 @@ fn japanese_labels_have_glyphs() {
     let web_name = web.name();
     let mut web_only = crate::theme::font_definitions();
     for family in web_only.families.values_mut() {
-        family.retain(|name| !pdfcraft_fonts::CRAFT_FONTS.iter().any(|face| face.name() == *name) || *name == web_name);
+        family.retain(|name| !simplypdf_fonts::CRAFT_FONTS.iter().any(|face| face.name() == *name) || *name == web_name);
     }
     use egui::epaint::text::{Fonts, TextOptions};
     for (build, defs) in [("desktop", crate::theme::font_definitions()), ("web", web_only)] {
@@ -445,11 +445,11 @@ fn an_id_row_that_changes_the_label_s_shape_is_not_used() {
     assert!(!same_shape("{name}} öffnen", "Open {name}"), "a second closing brace");
 }
 
-/// Command ids go by PdfCraft's own `@id` rows only: the shared catalog's are keyed by the other
+/// Command ids go by SimplyPDF's own `@id` rows only: the shared catalog's are keyed by the other
 /// apps' command ids (in Bulgarian its `file.close` row is the id itself). The Undo/Redo phrases
 /// are used only as a pair: a shared "Undo {action}" comes without its "Redo {action}".
 #[test]
-fn command_ids_and_undo_phrases_come_from_pdfcraft_s_own_rows() {
+fn command_ids_and_undo_phrases_come_from_simplypdf_s_own_rows() {
     let fx = fixture_lang(
         "x-own",
         "@id\tfile.close\tClose-FX\n\tUndo {action}\tFX-undo: {action}\n\tClose file\tClose file-FX\n\tUndo\tFX-U\n\tRedo\tFX-R\n",
@@ -507,9 +507,9 @@ fn plurals_and_placeholders() {
     assert_eq!(trn(JA(), 7, "{n} test item", "{n} test items"), "7 test items");
 }
 
-/// PdfCraft's plural rules before craft-i18n (form index by count), kept to show the crate's
+/// SimplyPDF's plural rules before craft-i18n (form index by count), kept to show the crate's
 /// CLDR categories pick the same form of the same rows.
-fn pdfcraft_plural_rule(code: &str) -> fn(u64) -> usize {
+fn simplypdf_plural_rule(code: &str) -> fn(u64) -> usize {
     fn one_other(n: u64) -> usize {
         usize::from(n != 1)
     }
@@ -599,18 +599,18 @@ fn plural_counts() -> impl Iterator<Item = u64> {
     (0..=200).chain([1000, 1001, 1002, 1003, 1011, 1012, 1021, 1100, 1_000_000, 1_000_001, 2_000_000, 123_456_789, u64::MAX - 13, u64::MAX])
 }
 
-/// craft-i18n picks plural forms by CLDR category, PdfCraft by its own rules: for every language
+/// craft-i18n picks plural forms by CLDR category, SimplyPDF by its own rules: for every language
 /// the two choose the same form wherever they list as many forms. Where CLDR lists more (Hindi
-/// and Turkish have two where PdfCraft had one), the catalog repeats the form, so the text is the
+/// and Turkish have two where SimplyPDF had one), the catalog repeats the form, so the text is the
 /// same; the embedded rows are checked for that and any that differ are reported.
 #[test]
-fn plural_forms_follow_the_rules_pdfcraft_had() {
+fn plural_forms_follow_the_rules_simplypdf_had() {
     let mut split = Vec::new();
-    // English has no catalog: its own two forms, `one` for 1 alone, as PdfCraft's rule had it.
+    // English has no catalog: its own two forms, `one` for 1 alone, as SimplyPDF's rule had it.
     assert_eq!(plural_counts().map(|n| trn(Lang::EN, n, "1", "x")).filter(|s| s == "1").count(), 1);
     for info in LANGUAGES.iter().filter(|l| l.code != "en") {
-        let rule = pdfcraft_plural_rule(info.code);
-        let pdfcraft_forms = (0..=1000).map(rule).max().unwrap_or(0) + 1;
+        let rule = simplypdf_plural_rule(info.code);
+        let simplypdf_forms = (0..=1000).map(rule).max().unwrap_or(0) + 1;
         // How many forms CLDR gives this language: the first form count whose row loads.
         let fixture = |forms: usize| {
             let row = (0..forms).map(|i| format!("F{i} {{n}}")).collect::<Vec<_>>().join("|");
@@ -618,9 +618,9 @@ fn plural_forms_follow_the_rules_pdfcraft_had() {
         };
         let (forms, lang) =
             (1..=6).map(|f| (f, fixture(f))).find(|(_, l)| trn(*l, 5, "{n} x", "{n} xs").starts_with('F')).expect("a form count loads");
-        if forms != pdfcraft_forms {
-            split.push((info.code, pdfcraft_forms, forms));
-            assert_eq!(pdfcraft_forms, 1, "{}: PdfCraft listed {pdfcraft_forms} forms, CLDR {forms}", info.code);
+        if forms != simplypdf_forms {
+            split.push((info.code, simplypdf_forms, forms));
+            assert_eq!(simplypdf_forms, 1, "{}: SimplyPDF listed {simplypdf_forms} forms, CLDR {forms}", info.code);
             continue;
         }
         for n in plural_counts() {
@@ -628,7 +628,7 @@ fn plural_forms_follow_the_rules_pdfcraft_had() {
         }
     }
     let codes: Vec<&str> = split.iter().map(|(c, ..)| *c).collect();
-    assert_eq!(codes, ["tr", "hi"], "the languages CLDR gives more forms than PdfCraft had");
+    assert_eq!(codes, ["tr", "hi"], "the languages CLDR gives more forms than SimplyPDF had");
     if !needs_catalogs() {
         return;
     }
@@ -637,7 +637,7 @@ fn plural_forms_follow_the_rules_pdfcraft_had() {
         for (_, source, forms) in lang.catalog_texts().flat_map(rows).filter(|(c, ..)| c == "@plural") {
             let distinct: std::collections::BTreeSet<&str> = forms.split('|').collect();
             if distinct.len() > 1 {
-                println!("{code}: {source:?} has forms that differ, so PdfCraft's single form is no longer the only text: {forms:?}");
+                println!("{code}: {source:?} has forms that differ, so SimplyPDF's single form is no longer the only text: {forms:?}");
             }
         }
     }
@@ -645,11 +645,11 @@ fn plural_forms_follow_the_rules_pdfcraft_had() {
 
 #[test]
 fn language_persists_and_invalid_input_keeps_current_language() {
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     assert_eq!(app.language, AUTO);
     assert!(app.set_option("language", "xx").is_err());
     // Settings written before the system-locale default (no key) follow the system.
-    let mut legacy = crate::PdfCraftApp::default();
+    let mut legacy = crate::SimplyPDFApp::default();
     legacy.restore("{}");
     assert_eq!(legacy.language, AUTO);
     needs_catalogs!();
@@ -657,7 +657,7 @@ fn language_persists_and_invalid_input_keeps_current_language() {
     assert_eq!(app.language, "ja");
     assert!(app.set_option("language", "xx").is_err());
     assert_eq!(app.language, "ja");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "ja");
     restored.restore(r#"{"language":"xx"}"#);
@@ -677,10 +677,10 @@ fn brazilian_portuguese_is_registered() {
     assert_eq!(lang_from_tag("pt_BR.UTF-8"), Some(pt));
     assert_eq!(lang_from_tag("pt_PT"), Some(pt));
     assert_eq!(tr(pt, "Arquivo do usuário.pdf"), "Arquivo do usuário.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "pt-br").unwrap();
     assert_eq!(app.language, "pt-br");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "pt-br");
 }
@@ -695,10 +695,10 @@ fn spanish_is_registered() {
     assert_eq!(lang_from_tag("es-MX"), Some(es));
     assert_eq!(first_supported("es-ES\r\nen-US"), Some(es));
     assert_eq!(tr(es, "Informe del usuario.pdf"), "Informe del usuario.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "es").unwrap();
     assert_eq!(app.language, "es");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "es");
 }
@@ -711,11 +711,11 @@ fn spanish_keeps_the_holes_in_what_the_engine_says() {
     needs_catalogs!();
     let es = Lang::from_code("es").expect("es registered");
     let lists: [&[&str]; 5] = [
-        pdfcraft_engine::a11y::WORDINGS,
-        pdfcraft_engine::pdfa::WORDINGS,
-        pdfcraft_engine::sign::pdf::WORDINGS,
-        pdfcraft_engine::print::WORDINGS,
-        pdfcraft_engine::field_table::WORDINGS,
+        simplypdf_engine::a11y::WORDINGS,
+        simplypdf_engine::pdfa::WORDINGS,
+        simplypdf_engine::sign::pdf::WORDINGS,
+        simplypdf_engine::print::WORDINGS,
+        simplypdf_engine::field_table::WORDINGS,
     ];
     for wording in lists.into_iter().flatten() {
         let said = tr(es, wording);
@@ -736,10 +736,10 @@ fn telugu_is_registered() {
     assert_eq!(lang_from_tag("te_IN.UTF-8"), Some(te));
     assert_eq!(first_supported("te-IN\r\nen-US"), Some(te));
     assert_eq!(tr(te, "నివేదిక.pdf"), "నివేదిక.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "te").unwrap();
     assert_eq!(app.language, "te");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "te");
 }
@@ -779,7 +779,7 @@ fn contextual_labels_fall_back_to_the_plain_translation() {
 /// it; Telugu labels must not need a Japanese or Arabic face).
 #[test]
 fn telugu_labels_have_glyphs() {
-    let telugu: Vec<String> = pdfcraft_fonts::ui_telugu_fonts().iter().map(|f| f.name()).collect();
+    let telugu: Vec<String> = simplypdf_fonts::ui_telugu_fonts().iter().map(|f| f.name()).collect();
     if telugu.is_empty() {
         eprintln!("skipping Telugu glyph checks: build with CRAFT_FONTS_DIR and a Telugu face to run them");
         return;
@@ -789,7 +789,7 @@ fn telugu_labels_have_glyphs() {
     let labels: String = translations("te").chars().chain(te.name().chars()).filter(|c| !c.is_control()).collect();
     let mut telugu_only = crate::theme::font_definitions();
     for family in telugu_only.families.values_mut() {
-        family.retain(|name| !pdfcraft_fonts::CRAFT_FONTS.iter().any(|face| face.name() == *name) || telugu.contains(name));
+        family.retain(|name| !simplypdf_fonts::CRAFT_FONTS.iter().any(|face| face.name() == *name) || telugu.contains(name));
     }
     use egui::epaint::text::{Fonts, TextOptions};
     for (build, defs) in [("all faces", crate::theme::font_definitions()), ("Telugu face only", telugu_only)] {
@@ -806,11 +806,11 @@ fn czech_is_registered_and_persists() {
     let cs = Lang::from_code("cs").expect("cs registered");
     assert_eq!(cs.name(), "Čeština");
     assert_eq!(tr(cs, "Žluťoučký kůň.pdf"), "Žluťoučký kůň.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "cs").unwrap();
     assert!(app.set_option("language", "cz").is_err());
     assert_eq!(app.language, "cs");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "cs");
 }
@@ -821,16 +821,16 @@ fn turkish_is_registered_and_persists() {
     let tr_lang = Lang::from_code("tr").expect("tr registered");
     assert_eq!(tr_lang.name(), "Türkçe");
     assert_eq!(tr(tr_lang, "Türkçe Belge.pdf"), "Türkçe Belge.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "tr").unwrap();
     assert!(app.set_option("language", "tu").is_err());
     assert_eq!(app.language, "tr");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "tr");
 }
 
-/// The code joins some labels with a space at either end, so these catalogs (PdfCraft's rows in
+/// The code joins some labels with a space at either end, so these catalogs (SimplyPDF's rows in
 /// craft-i18n) keep exactly the source's, and write … rather than three dots.
 #[test]
 fn catalog_rows_keep_the_source_spacing_and_ellipsis() {
@@ -873,10 +873,10 @@ fn french_is_registered() {
     assert_eq!(lang_from_tag("fr-CA"), Some(fr));
     assert_eq!(first_supported("fr-FR\r\nen-US"), Some(fr));
     assert_eq!(tr(fr, "Rapport de l'utilisateur.pdf"), "Rapport de l'utilisateur.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "fr").unwrap();
     assert_eq!(app.language, "fr");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "fr");
 }
@@ -892,10 +892,10 @@ fn german_is_registered() {
     assert_eq!(lang_from_tag("de_CH"), Some(de));
     assert_eq!(first_supported("de-DE\r\nen-US"), Some(de));
     assert_eq!(tr(de, "Bericht des Nutzers.pdf"), "Bericht des Nutzers.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "de").unwrap();
     assert_eq!(app.language, "de");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "de");
 }
@@ -935,10 +935,10 @@ fn russian_is_registered() {
     assert_eq!(lang_from_tag("ru-BY"), Some(ru));
     assert_eq!(first_supported("ru-RU\r\nen-US"), Some(ru));
     assert_eq!(tr(ru, "Rapport de l'utilisateur.pdf"), "Rapport de l'utilisateur.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "ru").unwrap();
     assert_eq!(app.language, "ru");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "ru");
 }
@@ -955,10 +955,10 @@ fn finnish_is_registered_and_persists() {
     // Filipino (`fil`) and Swedish in Finland (`sv-FI`) don't pick Finnish.
     assert_ne!(lang_from_tag("fil"), Some(fi));
     assert_ne!(lang_from_tag("sv-FI"), Some(fi));
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "FI").unwrap();
     assert_eq!(app.language, "fi");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "fi");
 }
@@ -972,10 +972,10 @@ fn lithuanian_is_registered_and_persists() {
     for tag in ["lt", "lt-LT", "lt_LT.UTF-8", "LT-lt"] {
         assert_eq!(lang_from_tag(tag), Some(lt), "{tag}");
     }
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "LT").unwrap();
     assert_eq!(app.language, "lt");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "lt");
     assert!(restored.set_option("language", "xx").is_err());
@@ -994,10 +994,10 @@ fn norwegian_bokmal_is_registered_and_persists() {
     }
     assert_eq!(first_supported("(\n    \"nb-NO\",\n    \"en-US\"\n)\n"), Some(nb));
     assert_eq!(first_supported("nn-NO\r\nen-US\r\n"), Some(nb));
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "NB").unwrap();
     assert_eq!(app.language, "nb");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "nb");
 }
@@ -1012,10 +1012,10 @@ fn vietnamese_is_registered_and_persists() {
         assert_eq!(lang_from_tag(tag), Some(vi), "{tag}");
     }
     assert_eq!(first_supported("vi-VN\r\nen-US"), Some(vi));
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "vi").unwrap();
     assert_eq!(app.language, "vi");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "vi");
     assert!(restored.set_option("language", "xx").is_err());
@@ -1047,10 +1047,10 @@ fn catalan_is_registered_and_persists() {
         assert_eq!(lang_from_tag(tag), Some(ca), "{tag}");
     }
     assert_eq!(first_supported("ca-ES\r\nen-US"), Some(ca));
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "CA").unwrap();
     assert_eq!(app.language, "ca");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "ca");
     assert!(restored.set_option("language", "xx").is_err());
@@ -1068,10 +1068,10 @@ fn slovene_is_registered_and_persists() {
     }
     assert_eq!(first_supported("sl-SI\r\nen-US"), Some(sl));
     assert_eq!(tr(sl, "Poročilo {n}.pdf"), "Poročilo {n}.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "SL").unwrap();
     assert_eq!(app.language, "sl");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "sl");
     assert!(restored.set_option("language", "xx").is_err());
@@ -1088,10 +1088,10 @@ fn albanian_is_registered_and_persists() {
         assert_eq!(lang_from_tag(tag), Some(sq), "{tag}");
     }
     assert_eq!(first_supported("sq-AL\r\nen-US"), Some(sq));
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "SQ").unwrap();
     assert_eq!(app.language, "sq");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "sq");
     assert!(restored.set_option("language", "xx").is_err());
@@ -1130,16 +1130,16 @@ fn indonesian_and_vietnamese_are_registered_and_persist() {
     }
     assert_eq!(first_supported("id-ID\r\nen-US"), Some(id));
     assert_eq!(first_supported("vi-VN\r\nen-US"), Some(vi));
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "ID").unwrap();
     assert_eq!(app.language, "id");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "id");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "vi").unwrap();
     assert_eq!(app.language, "vi");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "vi");
     assert!(restored.set_option("language", "xx").is_err());
@@ -1164,10 +1164,10 @@ fn hindi_and_korean_are_registered_and_persist() {
     assert_eq!(first_supported("hi-IN\r\nen-US"), Some(hi));
     assert_eq!(first_supported("ko-KR\r\nen-US"), Some(ko));
     for code in ["hi", "ko"] {
-        let mut app = crate::PdfCraftApp::default();
+        let mut app = crate::SimplyPDFApp::default();
         app.set_option("language", &code.to_uppercase()).unwrap();
         assert_eq!(app.language, code);
-        let mut restored = crate::PdfCraftApp::default();
+        let mut restored = crate::SimplyPDFApp::default();
         restored.restore(&app.persist());
         assert_eq!(restored.language, code);
         assert!(restored.set_option("language", "xx").is_err());
@@ -1185,10 +1185,10 @@ fn bulgarian_is_registered() {
     assert_eq!(lang_from_tag("bg-BG"), Some(bg));
     assert_eq!(first_supported("bg-BG\r\nen-US"), Some(bg));
     assert_eq!(tr(bg, "Rapport de l'utilisateur.pdf"), "Rapport de l'utilisateur.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "bg").unwrap();
     assert_eq!(app.language, "bg");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "bg");
 }
@@ -1203,10 +1203,10 @@ fn hungarian_is_registered() {
     assert_eq!(lang_from_tag("hu-HU"), Some(hu));
     assert_eq!(first_supported("hu-HU\r\nen-US"), Some(hu));
     assert_eq!(tr(hu, "Rapport de l'utilisateur.pdf"), "Rapport de l'utilisateur.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "hu").unwrap();
     assert_eq!(app.language, "hu");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "hu");
 }
@@ -1223,10 +1223,10 @@ fn ukrainian_is_registered_and_persists() {
     assert_eq!(first_supported("uk-UA\r\nen-US"), Some(uk));
     assert_eq!(first_supported("(\n    \"uk-UA\",\n    \"en-US\"\n)\n"), Some(uk));
     assert_eq!(tr(uk, "Звіт {n}.pdf"), "Звіт {n}.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "UK").unwrap();
     assert_eq!(app.language, "uk");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "uk");
     assert!(restored.set_option("language", "xx").is_err());
@@ -1266,10 +1266,10 @@ fn arabic_is_registered_and_persists() {
     assert_eq!(first_supported("ar-MA\r\nen-US"), Some(ar));
     // Unknown strings and user text are never reordered by a lookup.
     assert_eq!(tr(ar, "تقرير نهائي {n}.pdf"), "تقرير نهائي {n}.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "AR").unwrap();
     assert_eq!(app.language, "ar");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "ar");
     assert!(restored.set_option("language", "xx").is_err());
@@ -1284,7 +1284,7 @@ fn arabic_catalog_stays_logical() {
     needs_catalogs!();
     let ar = arabic();
     assert_eq!(tr(ar, "Save as…"), "حفظ باسم…");
-    assert_eq!(tr(ar, "About PdfCraft"), "حول PdfCraft");
+    assert_eq!(tr(ar, "About SimplyPDF"), "حول SimplyPDF");
     assert_eq!(tr(ar, "Name:"), "الاسم:");
     assert_eq!(tr(ar, "Issued by: "), "صادرة عن: ");
     // Placeholders survive in their logical positions.
@@ -1331,10 +1331,10 @@ fn persian_is_registered_and_persists() {
     assert_eq!(tr(fa, "File"), "فایل");
     // Unknown strings and user text are never reordered by a lookup.
     assert_eq!(tr(fa, "گزارش نهایی {n}.pdf"), "گزارش نهایی {n}.pdf");
-    let mut app = crate::PdfCraftApp::default();
+    let mut app = crate::SimplyPDFApp::default();
     app.set_option("language", "FA").unwrap();
     assert_eq!(app.language, "fa");
-    let mut restored = crate::PdfCraftApp::default();
+    let mut restored = crate::SimplyPDFApp::default();
     restored.restore(&app.persist());
     assert_eq!(restored.language, "fa");
     assert!(restored.set_option("language", "xx").is_err());
@@ -1360,7 +1360,7 @@ fn plural_fixture(code: &'static str, forms: usize) -> impl Fn(u64) -> usize {
 /// it; Arabic labels must not need a Japanese face).
 #[test]
 fn arabic_labels_have_glyphs() {
-    let faces: Vec<String> = pdfcraft_fonts::ui_arabic_fonts().iter().map(|f| f.name()).collect();
+    let faces: Vec<String> = simplypdf_fonts::ui_arabic_fonts().iter().map(|f| f.name()).collect();
     if faces.is_empty() {
         eprintln!("skipping Arabic glyph checks: build with CRAFT_FONTS_DIR and an Arabic face to run them");
         return;
@@ -1370,7 +1370,7 @@ fn arabic_labels_have_glyphs() {
     let labels: String = translations("ar").chars().chain(ar.name().chars()).filter(|c| !c.is_control()).collect();
     let mut arabic_only = crate::theme::font_definitions();
     for family in arabic_only.families.values_mut() {
-        family.retain(|name| !pdfcraft_fonts::CRAFT_FONTS.iter().any(|face| face.name() == *name) || faces.contains(name));
+        family.retain(|name| !simplypdf_fonts::CRAFT_FONTS.iter().any(|face| face.name() == *name) || faces.contains(name));
     }
     use egui::epaint::text::{Fonts, TextOptions};
     for (build, defs) in [("all faces", crate::theme::font_definitions()), ("Arabic face only", arabic_only)] {
@@ -1383,8 +1383,8 @@ fn arabic_labels_have_glyphs() {
 }
 
 /// The language list is well-formed. Problems in the embedded catalogs are not failed: craft-i18n
-/// checks its rows, a row PdfCraft can't use shows in English, and `translation_gaps_report`
-/// lists the `@id` rows PdfCraft doesn't use ([`unused_id_rows`]).
+/// checks its rows, a row SimplyPDF can't use shows in English, and `translation_gaps_report`
+/// lists the `@id` rows SimplyPDF doesn't use ([`unused_id_rows`]).
 #[test]
 fn bundled_catalogs_are_consistent() {
     let mut codes = std::collections::HashSet::new();
@@ -1402,8 +1402,8 @@ fn bundled_catalogs_are_consistent() {
     }
 }
 
-/// The `@id` rows of the embedded PdfCraft catalogs that are never shown, for the translation gaps
-/// report: a row for a command PdfCraft doesn't have, and one that doesn't keep its label's
+/// The `@id` rows of the embedded SimplyPDF catalogs that are never shown, for the translation gaps
+/// report: a row for a command SimplyPDF doesn't have, and one that doesn't keep its label's
 /// placeholders or trailing `…` ([`same_shape`]), whose label's translation shows instead. One
 /// line each under a heading; empty when there are none.
 fn unused_id_rows() -> String {
@@ -1413,8 +1413,8 @@ fn unused_id_rows() -> String {
             if id == "language.name" {
                 continue;
             }
-            let Some(command) = pdfcraft_engine::commands::command(&id) else {
-                out.push(format!("{}: @id {id:?} names a command PdfCraft doesn't have", lang.code()));
+            let Some(command) = simplypdf_engine::commands::command(&id) else {
+                out.push(format!("{}: @id {id:?} names a command SimplyPDF doesn't have", lang.code()));
                 continue;
             };
             if !same_shape(&translation, command.label) {
@@ -1429,8 +1429,8 @@ fn unused_id_rows() -> String {
     format!("{} @id rows not used (their label's translation shows):\n{}", out.len(), out.iter().map(|row| format!("  {row}\n")).collect::<String>())
 }
 
-/// The (context, English source) keys PdfCraft looks up: the UI source's literals, the commands,
-/// All tools, the engine's own wordings, and every key of every embedded PdfCraft catalog (which
+/// The (context, English source) keys SimplyPDF looks up: the UI source's literals, the commands,
+/// All tools, the engine's own wordings, and every key of every embedded SimplyPDF catalog (which
 /// covers contextual, plural and dynamically looked-up strings the scan can't see).
 fn english_keys() -> std::collections::BTreeSet<(String, String)> {
     use std::collections::BTreeSet;
@@ -1438,31 +1438,31 @@ fn english_keys() -> std::collections::BTreeSet<(String, String)> {
     let mut add = |s: &str| {
         plain.insert(s.to_string());
     };
-    for command in pdfcraft_engine::commands::COMMANDS {
+    for command in simplypdf_engine::commands::COMMANDS {
         add(command.label);
         command.menu.into_iter().for_each(&mut add);
     }
-    for group in pdfcraft_engine::catalog::TOOL_GROUPS {
+    for group in simplypdf_engine::catalog::TOOL_GROUPS {
         add(group.label);
         for section in group.sections {
             add(section.title);
             section.items.iter().for_each(|item| add(item.label));
         }
     }
-    pdfcraft_engine::catalog::TOOL_CATEGORIES.iter().for_each(|category| add(category.label));
+    simplypdf_engine::catalog::TOOL_CATEGORIES.iter().for_each(|category| add(category.label));
     let engine: [&[&str]; 9] = [
-        pdfcraft_engine::a11y::WORDINGS,
-        pdfcraft_engine::a11y::REPORT_WORDS,
-        pdfcraft_engine::pdfa::WORDINGS,
-        pdfcraft_engine::sign::pdf::WORDINGS,
-        pdfcraft_engine::sign::pdf::kind::ALL,
-        pdfcraft_engine::print::WORDINGS,
-        pdfcraft_engine::EDIT_LABELS,
-        pdfcraft_engine::BATCH_LABELS,
-        pdfcraft_engine::field_table::WORDINGS,
+        simplypdf_engine::a11y::WORDINGS,
+        simplypdf_engine::a11y::REPORT_WORDS,
+        simplypdf_engine::pdfa::WORDINGS,
+        simplypdf_engine::sign::pdf::WORDINGS,
+        simplypdf_engine::sign::pdf::kind::ALL,
+        simplypdf_engine::print::WORDINGS,
+        simplypdf_engine::EDIT_LABELS,
+        simplypdf_engine::BATCH_LABELS,
+        simplypdf_engine::field_table::WORDINGS,
     ];
     engine.into_iter().flatten().for_each(|s| add(s));
-    pdfcraft_engine::sign::AppearanceLabels::default().fields().into_iter().for_each(|(_, label)| add(label));
+    simplypdf_engine::sign::AppearanceLabels::default().fields().into_iter().for_each(|(_, label)| add(label));
     crate::credits::NameMode::ALL.iter().for_each(|mode| add(mode.label()));
     for key in crate::credits::SortKey::ALL {
         let (label, header) = key.label();
@@ -1485,7 +1485,7 @@ fn english_keys() -> std::collections::BTreeSet<(String, String)> {
 /// catalogs it says so.
 ///
 /// The English strings are the UI source's literals, the commands, All tools, the engine's
-/// own wordings, and every key of every embedded PdfCraft catalog (which covers contextual,
+/// own wordings, and every key of every embedded SimplyPDF catalog (which covers contextual,
 /// plural and dynamically looked-up strings the scan can't see).
 #[test]
 fn translation_gaps_report() {
@@ -1537,11 +1537,11 @@ const REPORT_END: &str = "=== end of translation gaps ===";
 #[test]
 fn date_languages_are_the_interface_languages() {
     let interface: Vec<&str> = LANGUAGES.iter().map(|l| l.code).collect();
-    let dates: Vec<&str> = pdfcraft_engine::dates::DATE_LANGUAGES.iter().map(|l| l.code).collect();
+    let dates: Vec<&str> = simplypdf_engine::dates::DATE_LANGUAGES.iter().map(|l| l.code).collect();
     assert_eq!(dates, interface);
     needs_catalogs!();
     let interface: Vec<(&str, &str)> = Lang::all().map(|l| (l.code(), l.name())).collect();
-    let dates: Vec<(&str, &str)> = pdfcraft_engine::dates::DATE_LANGUAGES.iter().map(|l| (l.code, l.name)).collect();
+    let dates: Vec<(&str, &str)> = simplypdf_engine::dates::DATE_LANGUAGES.iter().map(|l| (l.code, l.name)).collect();
     assert_eq!(dates, interface);
 }
 

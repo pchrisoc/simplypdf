@@ -1,5 +1,5 @@
 [package]
-name = "pdfcraft-measure"
+name = "simplypdf-measure"
 description = "Calibrated 2D PDF measurements, viewports and snapping"
 version.workspace = true
 edition.workspace = true
@@ -9,10 +9,10 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-pdfcraft-cos = { workspace = true }
-pdfcraft-model = { workspace = true }
-pdfcraft-content = { workspace = true }
-pdfcraft-annot = { workspace = true }
+simplypdf-cos = { workspace = true }
+simplypdf-model = { workspace = true }
+simplypdf-content = { workspace = true }
+simplypdf-annot = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 
@@ -21,4 +21,4 @@ rust_xlsxwriter = "0.102"
 tempfile = "3.27"
 
 [dev-dependencies]
-pdfcraft-testkit = { workspace = true }
+simplypdf-testkit = { workspace = true }

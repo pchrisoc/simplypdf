@@ -66,7 +66,7 @@ impl Automation {
     }
 
     /// The page as a PNG, followed by a JSON part listing the render warnings when there are any,
-    /// so a caller can tell that the picture is incomplete, as `pdfcraft-cli render` does (#4340).
+    /// so a caller can tell that the picture is incomplete, as `simplypdf-cli render` does (#4340).
     pub(crate) fn page_render(&mut self, a: &Args) -> Result<Vec<Content>> {
         let id = self.doc(a)?.id;
         let page = self.page(a)?;
@@ -108,7 +108,7 @@ impl Automation {
     /// the `page_render` tool only returns PNG, and encoding one to decode it again is wasted
     /// work on every scroll. It uses the same renderer, and the same per-document cache, as
     /// `page_render`.
-    pub fn render_pixels(&mut self, doc: u64, page: usize, scale: f32) -> Result<(u32, u32, pdfcraft_render::Pixels)> {
+    pub fn render_pixels(&mut self, doc: u64, page: usize, scale: f32) -> Result<(u32, u32, simplypdf_render::Pixels)> {
         if !(scale.is_finite() && scale > 0.0 && scale <= (MAX_DPI / 72.0) as f32) {
             return Err(ToolError::InvalidArgs(format!("scale must be between 0 and {}", MAX_DPI / 72.0)));
         }
@@ -179,7 +179,7 @@ impl Automation {
     }
 
     pub(crate) fn text_word_count(&self, a: &Args) -> Result<Value> {
-        use pdfcraft_engine::word_count::{self, Counts, Options};
+        use simplypdf_engine::word_count::{self, Counts, Options};
         let doc = self.doc_to_copy(a)?;
         let pages = match a.opt_ints("pages")? {
             Some(_) => self.pages(a, "pages")?,
@@ -322,13 +322,13 @@ impl Automation {
 
 /// A rendered raster as PNG, through the engine's encoder (Export ▸ Image writes the same).
 pub(crate) fn encode_png(width: u32, height: u32, premultiplied: &[u8]) -> Result<Vec<u8>> {
-    pdfcraft_engine::export::encode_png(width, height, premultiplied).map_err(failed)
+    simplypdf_engine::export::encode_png(width, height, premultiplied).map_err(failed)
 }
 
 /// The output of a page-rendering tool: the PNG of the 0-based `page`, followed by a JSON part
 /// listing its render warnings when there are any. Without warnings it is the PNG alone, as it
 /// always was.
-pub(crate) fn rendered_content(out: &pdfcraft_render::RenderedPage, page: usize) -> Result<Vec<Content>> {
+pub(crate) fn rendered_content(out: &simplypdf_render::RenderedPage, page: usize) -> Result<Vec<Content>> {
     let data = encode_png(out.width, out.height, &out.rgba)?;
     let mut content = vec![Content::Png { data, width: out.width, height: out.height }];
     if !out.warnings.is_empty() {
@@ -339,9 +339,9 @@ pub(crate) fn rendered_content(out: &pdfcraft_render::RenderedPage, page: usize)
     Ok(content)
 }
 
-/// What a render warning means, in the words `pdfcraft-cli render` prints for it.
-fn render_warning_text(warning: pdfcraft_render::RenderWarning) -> &'static str {
-    use pdfcraft_render::RenderWarning;
+/// What a render warning means, in the words `simplypdf-cli render` prints for it.
+fn render_warning_text(warning: simplypdf_render::RenderWarning) -> &'static str {
+    use simplypdf_render::RenderWarning;
     match warning {
         RenderWarning::ContentTruncated => "content past the page's safety budget was skipped",
         RenderWarning::ColourFallback => "a colour that could not be computed was painted in a fallback colour",

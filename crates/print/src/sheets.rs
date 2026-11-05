@@ -7,7 +7,7 @@ use super::{DecodeBudget, Dict, Document, Matrix, Object};
 /// sideways on a letter or A4 sheet), counting each text-showing operator once; form XObjects
 /// are followed a few levels deep.
 pub fn text_reads_up(doc: &Document, index: usize) -> bool {
-    let Some(page) = pdfcraft_model::pages(doc).into_iter().nth(index) else { return false };
+    let Some(page) = simplypdf_model::pages(doc).into_iter().nth(index) else { return false };
     let to_display = Matrix(page.view_matrix(doc)).invert().unwrap_or_default();
     let res = page.dict.get(b"Resources").and_then(|r| doc.resolve(r).as_dict().cloned()).unwrap_or_default();
     let mut score = 0i64;
@@ -20,7 +20,7 @@ pub fn text_reads_up(doc: &Document, index: usize) -> bool {
 
 pub(crate) fn text_direction(doc: &Document, data: &[u8], res: &Dict, base: Matrix, depth: usize, score: &mut i64, budget: &mut DecodeBudget) {
     let (mut ctm, mut tm, mut stack) = (base, Matrix::IDENTITY, Vec::new());
-    for op in pdfcraft_content::parse(data).ops {
+    for op in simplypdf_content::parse(data).ops {
         match op.op.as_slice() {
             // Bounded like the renderer's graphics-state stack: deeper saves are ignored.
             b"q" if stack.len() < 256 => stack.push(ctm),

@@ -124,7 +124,7 @@ impl CropMode {
     }
 }
 
-pub(crate) use pdfcraft_content::Matrix;
+pub(crate) use simplypdf_content::Matrix;
 
 /// The displayed crop frame, expressed in page user space, rather than the full image placement.
 fn resize_frame(obb: &ImageObb, xf: &PageXform, info: &DocInfo, page: usize) -> Matrix {
@@ -246,7 +246,7 @@ fn same_rect(a: [f64; 4], b: [f64; 4]) -> bool {
     a.into_iter().zip(b).all(|(a, b)| (a - b).abs() < 1e-3)
 }
 
-fn crop_bounds(image: &pdfcraft_engine::PageImage, xf: &PageXform, info: &DocInfo, page: usize) -> Rect {
+fn crop_bounds(image: &simplypdf_engine::PageImage, xf: &PageXform, info: &DocInfo, page: usize) -> Rect {
     let full = xf.user_rect(info, page, image.rect.map(|v| v as f32));
     if full.is_positive() { full } else { xf.user_rect(info, page, image.visible_rect.unwrap_or(image.rect).map(|v| v as f32)) }
 }
@@ -254,7 +254,7 @@ fn crop_bounds(image: &pdfcraft_engine::PageImage, xf: &PageXform, info: &DocInf
 /// Whether `p` is on the crop box or one of its handles (#5835). The Done, Cancel and Remove
 /// Crop pills are widgets of their own, so they take their clicks before the canvas does.
 pub(crate) fn crop_controls_contain(
-    image: &pdfcraft_engine::PageImage,
+    image: &simplypdf_engine::PageImage,
     mode: &CropMode,
     xf: &PageXform,
     info: &DocInfo,
@@ -272,7 +272,7 @@ pub(crate) fn crop_controls_contain(
 /// Crop mode for the selected image `i` whose visible frame is `b` (screen). Returns `true`
 /// (the pointer and keys are the crop's while it lasts).
 #[allow(clippy::cognitive_complexity)]
-fn crop_input(cx: &ImageCx<'_>, view: &mut DocView, i: usize, image: &pdfcraft_engine::PageImage) -> bool {
+fn crop_input(cx: &ImageCx<'_>, view: &mut DocView, i: usize, image: &simplypdf_engine::PageImage) -> bool {
     let ImageCx { ui, resp, xf, ptr, page, info, allow_interaction } = *cx;
     let painter = ui.painter();
     let Some(mode) = view.image_selection.as_mut().and_then(|s| s.crop.as_mut()) else { return false };
@@ -467,10 +467,10 @@ fn crop_input(cx: &ImageCx<'_>, view: &mut DocView, i: usize, image: &pdfcraft_e
         let is_full = same_rect(keep, image.rect);
         if is_full {
             if image.has_editor_crop() {
-                view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::RemoveCrop });
+                view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: simplypdf_engine::ImageEdit::RemoveCrop });
             }
         } else if image.visible_rect != Some(keep) {
-            view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Crop(keep) });
+            view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: simplypdf_engine::ImageEdit::Crop(keep) });
         }
     } else if (cancel_clicked || keys(egui::Key::Escape))
         && let Some(s) = view.image_selection.as_mut()
@@ -524,7 +524,7 @@ pub(crate) fn handle_hit(
     xf: &PageXform,
     page: usize,
     info: &DocInfo,
-    images: &[pdfcraft_engine::PageImage],
+    images: &[simplypdf_engine::PageImage],
     view: &DocView,
     p: Pos2,
 ) -> Option<Hit> {
@@ -552,7 +552,7 @@ pub(crate) fn crop_hit(view: &DocView, page: usize) -> Option<Hit> {
 /// The picture under `p` (its shape, not only its box): a click selects it, a drag moves the
 /// selected one. On the text layer, asked before the paragraphs: editable text on top of a
 /// picture takes the press.
-pub(crate) fn body_hit(xf: &PageXform, page: usize, info: &DocInfo, images: &[pdfcraft_engine::PageImage], view: &DocView, p: Pos2) -> Option<Hit> {
+pub(crate) fn body_hit(xf: &PageXform, page: usize, info: &DocInfo, images: &[simplypdf_engine::PageImage], view: &DocView, p: Pos2) -> Option<Hit> {
     if !xf.rect.contains(p) {
         return None;
     }
@@ -627,7 +627,7 @@ pub fn image_menu_id() -> egui::Id {
 
 /// Images on a page: select, move, resize, right-click. Returns `true` when the pointer was used.
 #[allow(clippy::cognitive_complexity)]
-pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage], view: &mut DocView) -> bool {
+pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[simplypdf_engine::PageImage], view: &mut DocView) -> bool {
     let ImageCx { ui, resp, xf, ptr, page, info, allow_interaction } = *cx;
     let boxes: Vec<Rect> = images.iter().map(|im| crate::canvas::image_screen_rect(im, xf, info, page)).collect();
     let painter = ui.painter();
@@ -815,7 +815,7 @@ pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage
                 }
                 if degrees.abs() >= 0.05 {
                     view.pending_edit =
-                        Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::RotateBy(f64::from(degrees)) });
+                        Some(Edit::EditPageImage { page, index: i, change: simplypdf_engine::ImageEdit::RotateBy(f64::from(degrees)) });
                 }
             }
             return true;
@@ -884,7 +884,7 @@ pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage
                     }
                     if preview != b {
                         view.pending_edit =
-                            Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Move(user_box(xf, info, page, target)) });
+                            Some(Edit::EditPageImage { page, index: i, change: simplypdf_engine::ImageEdit::Move(user_box(xf, info, page, target)) });
                     }
                 }
 
@@ -939,10 +939,10 @@ pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage
                     if matches!(drag.target, DragTarget::Move) {
                         let (dx, dy) = (px - sx, py - sy);
                         let new_rect = [image.rect[0] + dx, image.rect[1] + dy, image.rect[2] + dx, image.rect[3] + dy];
-                        view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Move(new_rect) });
+                        view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: simplypdf_engine::ImageEdit::Move(new_rect) });
                     } else if let Some(inv) = Matrix(drag.initial_matrix).invert() {
                         let t = inv.then(&m_new);
-                        view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Transform(t.0) });
+                        view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: simplypdf_engine::ImageEdit::Transform(t.0) });
                     }
                 }
             }
@@ -954,7 +954,7 @@ pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage
             && !ui.ctx().egui_wants_keyboard_input()
         {
             view.image_selection = None;
-            view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: pdfcraft_engine::ImageEdit::Delete });
+            view.pending_edit = Some(Edit::EditPageImage { page, index: i, change: simplypdf_engine::ImageEdit::Delete });
             return true;
         }
     }
@@ -1009,7 +1009,7 @@ pub(crate) fn image_input(cx: &ImageCx<'_>, images: &[pdfcraft_engine::PageImage
 pub(crate) fn image_context_menu(
     ui: &mut egui::Ui,
     view: &mut DocView,
-    images: &[pdfcraft_engine::PageImage],
+    images: &[simplypdf_engine::PageImage],
     page: usize,
     hit: usize,
     can_paste: bool,
@@ -1018,7 +1018,7 @@ pub(crate) fn image_context_menu(
     rotation: u16,
 ) {
     let Some(img) = images.get(hit) else { return };
-    use pdfcraft_engine::ImageEdit as E;
+    use simplypdf_engine::ImageEdit as E;
     let raster = !img.is_form;
 
     // Whether `entry` was clicked; a click closes the menu.
@@ -1086,7 +1086,7 @@ pub(crate) fn image_context_menu(
     }
 
     ui.menu_button(tl!("Arrange image"), |ui| {
-        use pdfcraft_engine::ArrangeOrder as A;
+        use simplypdf_engine::ArrangeOrder as A;
         for (order, label) in [
             (A::BringToFront, tl!("Bring to front")),
             (A::SendToBack, tl!("Send to back")),

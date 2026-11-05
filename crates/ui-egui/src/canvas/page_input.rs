@@ -2,7 +2,7 @@
 //! router, the text layer, and what is drawn over the page after its text.
 
 use egui::{Color32, CornerRadius, Pos2, Rect, Stroke, vec2};
-use pdfcraft_render::{DocInfo, PageText};
+use simplypdf_render::{DocInfo, PageText};
 
 use super::{DocView, PageEnv, PageFrame, PageSlot, PageXform, Selection, Span, cached_edit_images, click_unit, signature_badges};
 use crate::page_cursor::{Layer, Subject};
@@ -31,7 +31,7 @@ pub(crate) struct PageToolContext<'a> {
     pub xf: &'a PageXform,
     pub ptr: &'a PagePointer,
     pub page: usize,
-    pub doc: &'a pdfcraft_engine::Document,
+    pub doc: &'a simplypdf_engine::Document,
     pub info: &'a DocInfo,
 }
 
@@ -368,9 +368,9 @@ fn right_click(hits: &PageHits<'_>, under: &[crate::page_router::Hit], view: &mu
 /// Edit text's paragraphs and pictures on page `i`, kept while the document is unchanged.
 fn edit_inventory(
     view: &mut DocView,
-    doc: &pdfcraft_engine::Document,
+    doc: &simplypdf_engine::Document,
     i: usize,
-) -> (Vec<pdfcraft_engine::TextBlock>, Vec<pdfcraft_engine::PageImage>) {
+) -> (Vec<simplypdf_engine::TextBlock>, Vec<simplypdf_engine::PageImage>) {
     let generation = doc.edit_generation();
     let lines = match view.edit_lines.get(&i) {
         Some((g, l)) if *g == generation => l.clone(),
@@ -391,7 +391,7 @@ struct PageHits<'a> {
     info: &'a DocInfo,
     tool: QuickTool,
     pcx: &'a comments::PageCx<'a>,
-    form: &'a [pdfcraft_engine::FormField],
+    form: &'a [simplypdf_engine::FormField],
     can_fill: bool,
     can_modify: bool,
     /// Edit a PDF is open: added text and pictures can be picked up.
@@ -400,11 +400,11 @@ struct PageHits<'a> {
     field_tool: Option<crate::prepare::FieldTool>,
     /// Prepare may draw and move fields (not while a table is being set up).
     prepare_allowed: bool,
-    added: &'a [pdfcraft_engine::Added],
+    added: &'a [simplypdf_engine::Added],
     /// The document's links, as the engine lists them (the Link tool edits every one).
-    doc_links: &'a [pdfcraft_engine::LinkItem],
-    lines: &'a [pdfcraft_engine::TextBlock],
-    images: &'a [pdfcraft_engine::PageImage],
+    doc_links: &'a [simplypdf_engine::LinkItem],
+    lines: &'a [simplypdf_engine::TextBlock],
+    images: &'a [simplypdf_engine::PageImage],
     /// The pages' visible area (the picture's rotate knob stays inside it).
     clip: Rect,
 }
@@ -854,12 +854,12 @@ pub(super) fn page_overlays(ui: &mut egui::Ui, view: &mut DocView, frame: &mut P
     }
 }
 
-fn paint_field_highlights(painter: &egui::Painter, xf: &PageXform, info: &DocInfo, form: &[pdfcraft_engine::FormField], page: usize, enabled: bool) {
+fn paint_field_highlights(painter: &egui::Painter, xf: &PageXform, info: &DocInfo, form: &[simplypdf_engine::FormField], page: usize, enabled: bool) {
     if !enabled {
         return;
     }
     for field in form.iter() {
-        let required = field.has(pdfcraft_engine::field_flags::REQUIRED);
+        let required = field.has(simplypdf_engine::field_flags::REQUIRED);
         for widget in field.widgets.iter().filter(|widget| widget.page == Some(page) && !widget.hidden && !widget.read_only) {
             let rect = widget.rect;
             let screen_rect = xf.user_rect(info, page, [rect[0] as f32, rect[1] as f32, rect[2] as f32, rect[3] as f32]);

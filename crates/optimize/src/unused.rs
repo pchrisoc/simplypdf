@@ -17,7 +17,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use pdfcraft_cos::{Dict, Document, ObjRef, Object, Stream};
+use simplypdf_cos::{Dict, Document, ObjRef, Object, Stream};
 
 use crate::{OptimizeError, Stage};
 

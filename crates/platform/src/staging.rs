@@ -10,9 +10,9 @@ pub const STAGING_ATTEMPTS: usize = 16;
 /// Where the suffix goes in a staging name. Each caller keeps the form it has always used.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum StagingName {
-    /// `.{name}.{suffix}.pdfcraft-tmp`, used by the automation tools.
+    /// `.{name}.{suffix}.simplypdf-tmp`, used by the automation tools.
     SuffixThenTag,
-    /// `.{name}.pdfcraft-{suffix}.tmp`, used by the desktop app's save.
+    /// `.{name}.simplypdf-{suffix}.tmp`, used by the desktop app's save.
     TagThenSuffix,
 }
 
@@ -54,8 +54,8 @@ fn create_staging_as(
     }
     for suffix in suffixes.into_iter().take(STAGING_ATTEMPTS) {
         let tmp = dir.join(match form {
-            StagingName::SuffixThenTag => format!(".{stem}.{suffix:016x}.pdfcraft-tmp"),
-            StagingName::TagThenSuffix => format!(".{stem}.pdfcraft-{suffix:016x}.tmp"),
+            StagingName::SuffixThenTag => format!(".{stem}.{suffix:016x}.simplypdf-tmp"),
+            StagingName::TagThenSuffix => format!(".{stem}.simplypdf-{suffix:016x}.tmp"),
         });
         let mut options = std::fs::OpenOptions::new();
         options.write(true).create_new(true);

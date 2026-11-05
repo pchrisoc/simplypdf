@@ -3,8 +3,8 @@
 //! A per-document view setting: solid text and line-art paints remap for readability and the
 //! page clears to the setting's background when rendering. The file itself never changes.
 
-use pdfcraft_render::ReadingColors;
 use serde_json::{Value, json};
+use simplypdf_render::ReadingColors;
 
 use crate::{Args, Automation, Result, ToolError};
 

@@ -24,13 +24,13 @@ pub(crate) use files::same_file;
 use frame::migrate_panel_state;
 pub(crate) use prefs::{MAX_AUTHOR_CHARS, date_text_for_pdf};
 
-impl Default for PdfCraftApp {
+impl Default for SimplyPDFApp {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl PdfCraftApp {
+impl SimplyPDFApp {
     /// The window's title and, on the web, the page's, from the active document (#3640). Done in
     /// `logic` too, which also runs while the window or browser tab is hidden: a document opened
     /// then (a `?file=` download finishing) still names the page an embedding host reads.
@@ -40,7 +40,7 @@ impl PdfCraftApp {
         // what closing would ask about, so a draft not yet applied counts too.
         let dirty = self.active.is_some_and(|i| self.has_unsaved_work(i));
         let mark = if dirty { " •" } else { "" };
-        let app_name = pdfcraft_engine::build_info::APP_NAME;
+        let app_name = simplypdf_engine::build_info::APP_NAME;
         let titled = |name: Option<String>| {
             name.or_else(|| self.combine_showing().then(|| tl!("Combine files").to_owned()))
                 .map_or_else(|| app_name.to_owned(), |name| format!("{name}{mark} — {app_name}"))
@@ -153,6 +153,7 @@ impl PdfCraftApp {
             quick_tools: Vec::new(),
             mode_bar_rect: None,
             open_tools: Vec::new(),
+            tool_rail_collapsed: true,
             pin_tool_search: String::new(),
             toast: None,
             toast_script: None,
@@ -301,7 +302,7 @@ impl PdfCraftApp {
             link_draft: None,
             text_style: content_ui::default_style(),
             replace_draft: None,
-            number_draft: NumberDraft { from: 1, to: 1, style: pdfcraft_engine::LabelStyle::Decimal, prefix: String::new(), start: 1 },
+            number_draft: NumberDraft { from: 1, to: 1, style: simplypdf_engine::LabelStyle::Decimal, prefix: String::new(), start: 1 },
             word_count_draft: word_count_ui::Draft::default(),
         }
     }
@@ -381,12 +382,12 @@ impl PdfCraftApp {
 
     /// Pin a tool group to Home. Returns true if newly pinned.
     pub fn pin_tool(&mut self, id: &str) -> bool {
-        if pdfcraft_engine::catalog::group(id).is_none() {
+        if simplypdf_engine::catalog::group(id).is_none() {
             return false;
         }
         if !self.is_tool_pinned(id) {
             self.pinned_tools.push(id.to_string());
-            if let Some(g) = pdfcraft_engine::catalog::group(id) {
+            if let Some(g) = simplypdf_engine::catalog::group(id) {
                 self.notify_fmt("Pinned {tool} to Home", &[("tool", tl!(g.label))]);
             }
             return true;
@@ -398,7 +399,7 @@ impl PdfCraftApp {
     pub fn unpin_tool(&mut self, id: &str) {
         if let Some(pos) = self.pinned_tools.iter().position(|t| t == id) {
             self.pinned_tools.remove(pos);
-            if let Some(g) = pdfcraft_engine::catalog::group(id) {
+            if let Some(g) = simplypdf_engine::catalog::group(id) {
                 self.notify_fmt("Unpinned {tool} from Home", &[("tool", tl!(g.label))]);
             }
         }
@@ -415,7 +416,7 @@ impl PdfCraftApp {
     }
 }
 
-impl eframe::App for PdfCraftApp {
+impl eframe::App for SimplyPDFApp {
     /// While files are dragged over the window the system sends no pointer moves, so egui
     /// would keep the place the pointer entered at: tell it where the pointer really is, so the
     /// page grid can show (and use) the gap under it.
@@ -443,7 +444,7 @@ impl eframe::App for PdfCraftApp {
             let minimized = self.ctx.as_ref().is_some_and(|c| c.input(|i| i.viewport().minimized == Some(true)));
             self.window_state.keep(storage, minimized);
         }
-        storage.set_string("pdfcraft", self.persist());
+        storage.set_string("simplypdf", self.persist());
     }
 
     /// Each frame's work before drawing: opens, operating-system and control-channel requests,
@@ -681,6 +682,7 @@ impl eframe::App for PdfCraftApp {
         if self.all_tools_full && self.all_tools_tab != self.shown_tab() {
             self.all_tools_full = false;
         }
+        crate::tool_access::show(self, ui);
         side_panels::show(self, ui);
         crate::takeoff_workspace::show(self, ui);
         let t = theme::Tokens::get(&ctx);

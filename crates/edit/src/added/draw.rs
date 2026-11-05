@@ -223,7 +223,7 @@ fn type3_shaped(doc: &mut Document, clusters: &[&ShapedCluster], outlines: &Hash
             },
             |f| f.family,
         ),
-        None => "PdfCraft Shaped Text",
+        None => "SimplyPDF Shaped Text",
     };
     let mut descriptor = Dict::new();
     descriptor.set(b"Type".to_vec(), Object::name("FontDescriptor"));
@@ -283,8 +283,8 @@ pub(super) fn draw(doc: &mut Document, c: &Content, view: [f64; 6], taken: &Dict
             fonts.set(name.clone().into_bytes(), Object::Dict(font));
             let face_or_new = |has: fn(char) -> bool, face: bool| t.text.chars().any(has) && (face || !existing);
             if t.text.chars().any(is_thai)
-                || face_or_new(is_arabic, pdfcraft_fonts::document_arabic_font().is_some())
-                || face_or_new(is_hebrew, pdfcraft_fonts::document_hebrew_font(false).is_some())
+                || face_or_new(is_arabic, simplypdf_fonts::document_arabic_font().is_some())
+                || face_or_new(is_hebrew, simplypdf_fonts::document_hebrew_font(false).is_some())
             {
                 draw_shaped(doc, t, taken, &mut fonts, &mut out)?;
                 res.set(b"Font".to_vec(), Object::Dict(fonts));

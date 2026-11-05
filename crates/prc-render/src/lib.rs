@@ -1,6 +1,6 @@
 //! Headless CPU rendering of PRC 3D models (ISO 14739-1) to an RGBA image.
 //!
-//! Layer L3: depends only on `pdfcraft-prc`. [`assemble`] turns a parsed [`pdfcraft_prc::PrcFile`]
+//! Layer L3: depends only on `simplypdf-prc`. [`assemble`] turns a parsed [`simplypdf_prc::PrcFile`]
 //! into world-space meshes; [`render`] draws them from a [`Camera`] with one depth-tested sample per
 //! pixel centre and a light at the camera. Single-threaded and GUI-free, so it runs unchanged on wasm32.
 //! The image size is capped by [`MAX_RENDER_PIXELS`], the drawing work by [`MAX_RENDER_WORK`] and the

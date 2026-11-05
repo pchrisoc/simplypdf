@@ -1,6 +1,6 @@
 [package]
-name = "pdfcraft-platform"
-description = "Operating-system services shared by the PdfCraft desktop app and automation tools"
+name = "simplypdf-platform"
+description = "Operating-system services shared by the SimplyPDF desktop app and automation tools"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

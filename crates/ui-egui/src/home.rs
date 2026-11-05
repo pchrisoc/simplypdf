@@ -2,10 +2,10 @@
 //! another app's list).
 
 use egui::{Align2, CornerRadius, Rect, Sense, Stroke, vec2};
-use pdfcraft_engine::catalog;
+use simplypdf_engine::catalog;
 
 use crate::theme::{self, Tokens};
-use crate::{PdfCraftApp, icons, panels::human_size, widgets};
+use crate::{SimplyPDFApp, icons, panels::human_size, widgets};
 
 pub mod folders_ui;
 
@@ -22,7 +22,7 @@ pub(crate) fn card_lift(ui: &egui::Ui, t: &Tokens, rect: Rect, press: theme::Pre
 
 /// Render a single tool card with the standard lift, styling, icon, title, description, and action.
 /// If `allow_unpin` is true, an unpin button is always accessible in the top right corner.
-fn tool_card(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static catalog::ToolGroup, allow_unpin: bool) -> Option<&'static str> {
+fn tool_card(app: &mut SimplyPDFApp, ui: &mut egui::Ui, t: &Tokens, g: &'static catalog::ToolGroup, allow_unpin: bool) -> Option<&'static str> {
     let (rect, resp) = ui.allocate_exact_size(vec2(190.0, 104.0), Sense::click());
     resp.widget_info(|| egui::WidgetInfo::labeled(egui::Role::Button, true, tl!(g.label)));
     let press = theme::Press::track(ui, &resp);
@@ -72,7 +72,7 @@ fn tool_card(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static c
 }
 
 /// Draw the Home page with the welcome text, recommended tools and recent documents.
-pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
+pub fn show(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 36, right: 36, top: 28, bottom: 28 }).show(ui, |ui| {
@@ -253,9 +253,9 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
 mod tests {
     use super::*;
 
-    fn review_home_harness() -> egui_kittest::Harness<'static, PdfCraftApp> {
+    fn review_home_harness() -> egui_kittest::Harness<'static, SimplyPDFApp> {
         crate::i18n::set_current(crate::i18n::Lang::EN);
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.pinned_tools = vec!["edit".into()];
         let mut fonts = false;
         egui_kittest::Harness::builder().with_size(vec2(1500.0, 1200.0)).build_ui_state(
@@ -297,7 +297,7 @@ mod tests {
         crate::i18n::set_current(de);
         let ctx = egui::Context::default();
         ctx.set_fonts(theme::font_definitions());
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         let blurb = catalog::group("form")
             .unwrap()
             .sections

@@ -196,9 +196,9 @@ impl Document {
         // Read here, while nothing is decrypted yet.
         let members = self.encryption_members(enc);
         let handler = match credentials {
-            Credentials::Password(password) => Arc::new(pdfcraft_crypt::SecurityHandler::open(params, &id0, *password).map_err(|e| match e {
-                pdfcraft_crypt::CryptError::WrongPassword if password.is_none() => CosError::NeedsPassword,
-                pdfcraft_crypt::CryptError::WrongPassword => CosError::WrongPassword,
+            Credentials::Password(password) => Arc::new(simplypdf_crypt::SecurityHandler::open(params, &id0, *password).map_err(|e| match e {
+                simplypdf_crypt::CryptError::WrongPassword if password.is_none() => CosError::NeedsPassword,
+                simplypdf_crypt::CryptError::WrongPassword => CosError::WrongPassword,
                 other => CosError::Security(other.to_string()),
             })?),
             // The same encryption as the document whose key this is: that key opens it.
@@ -260,11 +260,11 @@ impl Document {
     /// Both passwords unlock the same file key, so nothing read so far is decoded again.
     pub fn unlock(&mut self, password: &str) -> Result<(), CosError> {
         let Some(current) = self.security.as_deref() else { return Ok(()) };
-        if current.auth() == pdfcraft_crypt::Auth::Owner {
+        if current.auth() == simplypdf_crypt::Auth::Owner {
             return Ok(());
         }
         let owner = current.authenticate_owner(&self.first_id(), password).map_err(|e| match e {
-            pdfcraft_crypt::CryptError::WrongPassword => CosError::WrongPassword,
+            simplypdf_crypt::CryptError::WrongPassword => CosError::WrongPassword,
             other => CosError::Security(other.to_string()),
         })?;
         self.security = Some(Arc::new(owner));
@@ -272,12 +272,12 @@ impl Document {
     }
 
     /// The security handler, when the document is encrypted.
-    pub fn security(&self) -> Option<&pdfcraft_crypt::SecurityHandler> {
+    pub fn security(&self) -> Option<&simplypdf_crypt::SecurityHandler> {
         self.security.as_deref()
     }
 
     /// What the opening password allows (`None` for unencrypted documents: everything).
-    pub fn permissions(&self) -> Option<pdfcraft_crypt::Permissions> {
+    pub fn permissions(&self) -> Option<simplypdf_crypt::Permissions> {
         self.security().map(|s| s.permissions())
     }
 
@@ -299,31 +299,31 @@ impl Document {
 
     /// The handler used to write: the new one after `set_encryption` / `remove_encryption`,
     /// otherwise the one the document was opened with.
-    pub(crate) fn output_security(&self) -> (Option<&pdfcraft_crypt::SecurityHandler>, Option<u32>) {
+    pub(crate) fn output_security(&self) -> (Option<&simplypdf_crypt::SecurityHandler>, Option<u32>) {
         if self.encryption_changed { (self.out_security.as_deref(), self.out_encrypt_num) } else { (self.security.as_deref(), self.encrypt_num) }
     }
 
     /// The security the next save writes: protection applied with `set_encryption`, none after
     /// `remove_encryption`, otherwise the security the document was opened with.
-    pub fn output_handler(&self) -> Option<&pdfcraft_crypt::SecurityHandler> {
+    pub fn output_handler(&self) -> Option<&simplypdf_crypt::SecurityHandler> {
         self.output_security().0
     }
 
     /// Protect the document with a password (§7.6.4). Takes effect on the next save, which is
     /// always a full rewrite. Returns the handler (authenticated as owner).
-    pub fn set_encryption(&mut self, params: &pdfcraft_crypt::NewEncryption) -> Result<(), CosError> {
+    pub fn set_encryption(&mut self, params: &simplypdf_crypt::NewEncryption) -> Result<(), CosError> {
         // The file identifier is part of the key; make sure it exists and keep it.
         let id = self.trailer.get(b"ID").map(|id| self.resolve(id));
         let id0 = match id.as_deref() {
             Some(Object::Array(a)) if a.len() == 2 => self.first_id(),
             _ => {
-                let id = pdfcraft_crypt::file_id(&params.seed);
+                let id = simplypdf_crypt::file_id(&params.seed);
                 let s = Object::String(crate::PdfString { bytes: id.clone(), hex: true });
                 self.trailer.set(b"ID".to_vec(), Object::Array(vec![s.clone(), s]));
                 id
             }
         };
-        let h = pdfcraft_crypt::create(params, &id0).map_err(|e| CosError::Security(e.to_string()))?;
+        let h = simplypdf_crypt::create(params, &id0).map_err(|e| CosError::Security(e.to_string()))?;
         let d = h.dict();
         let s = |b: &[u8]| Object::String(crate::PdfString { bytes: b.to_vec(), hex: true });
         let mut e = Dict::new();

@@ -1,7 +1,7 @@
 //! Field Properties ▸ Actions: what a field does on each trigger (§12.6.3, Table 197: the
 //! widget's `/A` for Mouse Up and its `/AA` D, E, X, Fo, Bl for the others).
 
-use pdfcraft_cos::{Dict, Document, Object, PdfString};
+use simplypdf_cos::{Dict, Document, Object, PdfString};
 
 use crate::{FormError, fields};
 
@@ -105,7 +105,7 @@ fn texts(doc: &Document, o: &Object) -> Vec<String> {
     }
 }
 
-fn read(doc: &Document, o: &Object, pages: &[pdfcraft_cos::ObjRef], scripts: &mut pdfcraft_cos::DecodeBudget) -> Option<FieldAction> {
+fn read(doc: &Document, o: &Object, pages: &[simplypdf_cos::ObjRef], scripts: &mut simplypdf_cos::DecodeBudget) -> Option<FieldAction> {
     let a = doc.resolve(o);
     let d = a.as_dict()?;
     Some(match d.name(b"S")? {
@@ -213,7 +213,7 @@ pub fn field_action_chains(doc: &Document, name: &str) -> Result<Vec<(Trigger, u
         .collect())
 }
 
-fn write(doc: &mut Document, a: &FieldAction, pages: &[pdfcraft_cos::ObjRef]) -> Result<Option<Object>, FormError> {
+fn write(doc: &mut Document, a: &FieldAction, pages: &[simplypdf_cos::ObjRef]) -> Result<Option<Object>, FormError> {
     let mut d = Dict::new();
     d.set(b"Type".to_vec(), Object::name("Action"));
     let list = |v: &[String]| Object::Array(v.iter().map(|s| Object::String(PdfString::text(s))).collect());
@@ -270,8 +270,8 @@ struct TriggerUpdate<'a> {
 
 fn replace_trigger(
     doc: &mut Document,
-    pages: &[pdfcraft_cos::ObjRef],
-    scripts: &mut pdfcraft_cos::DecodeBudget,
+    pages: &[simplypdf_cos::ObjRef],
+    scripts: &mut simplypdf_cos::DecodeBudget,
     update: TriggerUpdate<'_>,
     aa: &mut Dict,
     a_entry: &mut Option<Object>,

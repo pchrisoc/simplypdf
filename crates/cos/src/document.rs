@@ -60,7 +60,7 @@ pub struct Document {
     header_offset: usize,
     version: String,
     /// The authenticated security handler of an encrypted document.
-    security: Option<Arc<pdfcraft_crypt::SecurityHandler>>,
+    security: Option<Arc<simplypdf_crypt::SecurityHandler>>,
     /// Object number of the `/Encrypt` dictionary (never encrypted itself).
     encrypt_num: Option<u32>,
     /// What that dictionary and `/ID` refer to, which the key comes from, and so is as stored.
@@ -72,7 +72,7 @@ pub struct Document {
     /// Set by edits that must not leave earlier revisions in the file (redaction).
     full_save: bool,
     /// The handler and `/Encrypt` object number that saves use, when encryption changed.
-    out_security: Option<Arc<pdfcraft_crypt::SecurityHandler>>,
+    out_security: Option<Arc<simplypdf_crypt::SecurityHandler>>,
     out_encrypt_num: Option<u32>,
 }
 

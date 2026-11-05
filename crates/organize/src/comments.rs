@@ -4,7 +4,7 @@
 
 use std::collections::{HashMap, HashSet};
 
-use pdfcraft_cos::{Dict, Document, ObjRef, Object};
+use simplypdf_cos::{Dict, Document, ObjRef, Object};
 
 use crate::import::{Copier, register_layers};
 use crate::{OrganizeError, walk};
@@ -316,7 +316,7 @@ impl PageAnnots {
 mod tests {
     use std::sync::Arc;
 
-    use pdfcraft_cos::{SaveOptions, write_full};
+    use simplypdf_cos::{SaveOptions, write_full};
 
     use super::*;
 

@@ -62,7 +62,7 @@ impl AppearanceLabels {
     /// can't draw, and that character. Signing refuses such a label when it is shown, so an
     /// interface checks its translated labels here and falls back to [`Default`] if one fails.
     pub fn first_undrawable(&self) -> Option<(&'static str, char)> {
-        self.fields().into_iter().find_map(|(field, text)| pdfcraft_fonts::first_undrawable(text).map(|c| (field, c)))
+        self.fields().into_iter().find_map(|(field, text)| simplypdf_fonts::first_undrawable(text).map(|c| (field, c)))
     }
 }
 
@@ -93,7 +93,7 @@ pub struct SignOptions {
 /// opened with the user password (the owner may do anything): signing an existing, empty
 /// signature field is filling in a form field (bit 9, or bit 6); creating a new signature
 /// field needs bits 6 and 4; certifying sets the catalog's `/Perms`, a document change (bit 4).
-/// The signature's `/Contents` stays unencrypted (`pdfcraft-cos` exempts it, §7.6.2), so the
+/// The signature's `/Contents` stays unencrypted (`simplypdf-cos` exempts it, §7.6.2), so the
 /// placeholder can be patched after hashing exactly as in an unencrypted file.
 fn check_signing_permissions(doc: &Document, opts: &SignOptions) -> Result<(), SignError> {
     let Some(p) = doc.permissions() else { return Ok(()) };
@@ -173,7 +173,7 @@ fn sign_inner(
         }
     }
     let mut app = Dict::new();
-    app.set(b"Name".to_vec(), Object::name("PdfCraft"));
+    app.set(b"Name".to_vec(), Object::name("SimplyPDF"));
     let mut build = Dict::new();
     build.set(b"App".to_vec(), Object::Dict(app));
     v.set(b"Prop_Build".to_vec(), Object::Dict(build));
@@ -196,7 +196,7 @@ fn sign_inner(
         doc.update_dict(root, |c| c.set(b"Perms".to_vec(), Object::Dict(perms)))?;
     }
     // The field and its widget.
-    let pages = pdfcraft_annot::page_refs(&doc).map_err(|e| SignError::Pdf(e.to_string()))?;
+    let pages = simplypdf_annot::page_refs(&doc).map_err(|e| SignError::Pdf(e.to_string()))?;
     let existing = opts
         .field
         .as_deref()
@@ -239,7 +239,7 @@ fn sign_inner(
             w.set(b"F".to_vec(), Object::Int(4 | 128));
             // On a page shown turned, the signature reads upright as the page is displayed: the
             // widget is turned back by the page's rotation (ISO 32000-2 §12.5.6.19, `/MK /R`).
-            let turn = pdfcraft_model::pages(&doc).get(opts.page).map_or(0, |p| p.rotation(&doc));
+            let turn = simplypdf_model::pages(&doc).get(opts.page).map_or(0, |p| p.rotation(&doc));
             if turn != 0 {
                 let mut mk = Dict::new();
                 mk.set(b"R".to_vec(), Object::Int(turn));
@@ -304,7 +304,7 @@ fn sign_inner(
     // reachable (the signature through the field's `/V`), and the placeholders are found in the
     // written bytes.
     let save = SaveOptions { mod_date: Some(opts.date.clone()), object_streams: false, drop_unlinked: true, ..SaveOptions::default() };
-    let mut out = pdfcraft_cos::write_incremental(&doc, &save)?;
+    let mut out = simplypdf_cos::write_incremental(&doc, &save)?;
     let (br_at, gap) = locate(&out, reserve)?;
     let (start, end) = gap;
     let ranges = [0usize, start, end, out.len() - end];
@@ -364,13 +364,13 @@ pub fn timestamp_document(doc: &Document, tsa: &dyn crate::timestamp::TimestampA
     v.set(b"Contents".to_vec(), Object::String(PdfString { bytes: vec![0; TOKEN_RESERVE], hex: true }));
     v.set(b"M".to_vec(), PdfString::literal(date.as_bytes().to_vec()));
     let mut app = Dict::new();
-    app.set(b"Name".to_vec(), Object::name("PdfCraft"));
+    app.set(b"Name".to_vec(), Object::name("SimplyPDF"));
     let mut build = Dict::new();
     build.set(b"App".to_vec(), Object::Dict(app));
     v.set(b"Prop_Build".to_vec(), Object::Dict(build));
     doc.add(Object::Dict(v));
     let save = SaveOptions { mod_date: Some(date.to_string()), object_streams: false, ..SaveOptions::default() };
-    let mut out = pdfcraft_cos::write_incremental(&doc, &save)?;
+    let mut out = simplypdf_cos::write_incremental(&doc, &save)?;
     let (br_at, gap) = locate(&out, TOKEN_RESERVE)?;
     let (start, end) = gap;
     let ranges = [0usize, start, end, out.len() - end];
@@ -433,7 +433,7 @@ pub fn display_date(pdf: &str) -> String {
 /// `turn` is the widget's `/MK /R` (0, 90, 180 or 270; anything else counts as 0): the layout is
 /// drawn upright in the box as turned by it, and a `/Matrix` maps that box onto `rect`.
 fn appearance(doc: &mut Document, rect: [f64; 4], turn: i64, name: &str, cert: &Certificate, opts: &SignOptions) -> Result<Stream, SignError> {
-    use pdfcraft_fonts::{first_undrawable, helvetica_width, inter_width, literal, undrawable_message, win_ansi, wrap, wrap_with};
+    use simplypdf_fonts::{first_undrawable, helvetica_width, inter_width, literal, undrawable_message, win_ansi, wrap, wrap_with};
     let turn = if matches!(turn, 90 | 180 | 270) { turn } else { 0 };
     let (rw, rh) = ((rect[2] - rect[0]).max(0.0), (rect[3] - rect[1]).max(0.0));
     // The upright layout box: a quarter turn swaps its sides.
@@ -457,7 +457,7 @@ fn appearance(doc: &mut Document, rect: [f64; 4], turn: i64, name: &str, cert: &
                     if matches!(c, '\n' | '\r') {
                         continue;
                     }
-                    if !pdfcraft_fonts::embedding::covers(pdfcraft_fonts::INTER_REGULAR, &c.to_string()) {
+                    if !simplypdf_fonts::embedding::covers(simplypdf_fonts::INTER_REGULAR, &c.to_string()) {
                         return Err(SignError::Unsupported(format!(
                             "{}; sign without a visible appearance, or leave {what} out of it",
                             undrawable_message(&format!("{what} of the visible signature"), c)
@@ -508,14 +508,14 @@ fn appearance(doc: &mut Document, rect: [f64; 4], turn: i64, name: &str, cert: &
     let mut image = None;
     let mut fonts = Dict::new();
     let (font_tag, metrics) = if needs_unicode {
-        let tag = pdfcraft_fonts::embedding::embed(doc, &mut fonts, pdfcraft_fonts::INTER_REGULAR, "Inter")
+        let tag = simplypdf_fonts::embedding::embed(doc, &mut fonts, simplypdf_fonts::INTER_REGULAR, "Inter")
             .map_err(|e| SignError::Pdf(format!("failed to embed signature font: {e}")))?;
         let font_dict = fonts
             .get(tag.as_bytes())
             .map(|o| doc.resolve(o))
             .and_then(|o| o.as_dict().cloned())
             .ok_or_else(|| SignError::Pdf("embedded signature font dictionary not found".into()))?;
-        let m = pdfcraft_fonts::pdf::Metrics::from_dict(doc, &font_dict);
+        let m = simplypdf_fonts::pdf::Metrics::from_dict(doc, &font_dict);
         (tag, Some(m))
     } else {
         let mut font = Dict::new();
@@ -586,10 +586,10 @@ fn appearance(doc: &mut Document, rect: [f64; 4], turn: i64, name: &str, cert: &
     if turn != 0 {
         // Viewers fit the box, transformed by `/Matrix`, to the widget's `/Rect` (ISO 32000-2
         // §12.5.5); this one lands on `rect` exactly, turned as `/MK /R` says.
-        let mut m = pdfcraft_model::view_matrix_for(turn, [rect[0], rect[1], rect[0] + rw, rect[1] + rh]);
+        let mut m = simplypdf_model::view_matrix_for(turn, [rect[0], rect[1], rect[0] + rw, rect[1] + rh]);
         if !m.iter().all(|x| x.is_finite()) {
             // A caller's non-finite corner: the turn alone, which viewers fit to `/Rect` the same.
-            m = pdfcraft_model::view_matrix_for(turn, [0.0; 4]);
+            m = simplypdf_model::view_matrix_for(turn, [0.0; 4]);
         }
         d.set(b"Matrix".to_vec(), Object::Array(m.iter().map(|x| Object::Real(*x)).collect()));
     }

@@ -1,4 +1,4 @@
-use super::{Color32, CornerRadius, DocInfo, DocView, PdfCraftApp, Pos2, Rect, Sense, SnapshotKind, Stroke, Tokens, icons, vec2};
+use super::{Color32, CornerRadius, DocInfo, DocView, Pos2, Rect, Sense, SimplyPDFApp, SnapshotKind, Stroke, Tokens, icons, vec2};
 
 /// Whether `p` lies in the bottom-left quadrant of `area`, where the page size shows (#1855).
 pub(super) fn in_size_hint_zone(area: Rect, p: Pos2) -> bool {
@@ -63,7 +63,7 @@ pub(super) enum Notice {
 /// off, security, forms and warnings.
 pub(super) fn notices(
     view: &mut DocView,
-    doc: &pdfcraft_engine::Document,
+    doc: &simplypdf_engine::Document,
     secured: bool,
     repaired: bool,
     signed: Option<(&str, Color32, &str, String)>,
@@ -157,19 +157,19 @@ pub(super) fn notices(
             text.push('.');
         }
         Some(("text-cursor-input", text, true))
-    } else if info.xfa == Some(pdfcraft_render::Xfa::Dynamic) {
+    } else if info.xfa == Some(simplypdf_render::Xfa::Dynamic) {
         Some((
             "triangle-alert",
-            tl!("This is a dynamic XFA form, which PdfCraft can't display yet. What you see is the file's placeholder page.").to_string(),
+            tl!("This is a dynamic XFA form, which SimplyPDF can't display yet. What you see is the file's placeholder page.").to_string(),
             false,
         ))
-    } else if info.xfa == Some(pdfcraft_render::Xfa::Static) {
+    } else if info.xfa == Some(simplypdf_render::Xfa::Static) {
         Some((
             "text-cursor-input",
             tl!("XFA form: its fields and its XFA data are kept in step, so other viewers show what you fill in.").to_string(),
             true,
         ))
-    } else if info.fields.iter().any(|f| f.kind != pdfcraft_render::FieldKind::PushButton) {
+    } else if info.fields.iter().any(|f| f.kind != simplypdf_render::FieldKind::PushButton) {
         // Push buttons alone (LaTeX `animate` frames, navigation buttons) leave nothing to fill in.
         Some((
             "text-cursor-input",
@@ -289,7 +289,7 @@ pub(crate) fn quick_bar_offset(margin: f32, width: f32) -> f32 {
 }
 
 /// The unified quick-action bar and hotbar in the margin or docked to an edge.
-pub(super) fn quick_bar(app: &mut PdfCraftApp, area: Rect, page_left: Option<f32>, ui: &mut egui::Ui) {
+pub(super) fn quick_bar(app: &mut SimplyPDFApp, area: Rect, page_left: Option<f32>, ui: &mut egui::Ui) {
     crate::hotbar::show(app, area, page_left, ui);
 }
 

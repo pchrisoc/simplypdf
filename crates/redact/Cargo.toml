@@ -1,5 +1,5 @@
 [package]
-name = "pdfcraft-redact"
+name = "simplypdf-redact"
 description = "Redaction (architecture §11.2): marks, apply (glyphs, images, vectors, XObjects, annotations, fields), verification"
 version.workspace = true
 edition.workspace = true
@@ -9,17 +9,17 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-pdfcraft-cos = { workspace = true }
-pdfcraft-content = { workspace = true }
-pdfcraft-fonts = { workspace = true }
-pdfcraft-model = { workspace = true }
-pdfcraft-forms = { workspace = true }
-pdfcraft-edit = { workspace = true }
-pdfcraft-annot = { workspace = true }
-pdfcraft-xfa = { workspace = true }
+simplypdf-cos = { workspace = true }
+simplypdf-content = { workspace = true }
+simplypdf-fonts = { workspace = true }
+simplypdf-model = { workspace = true }
+simplypdf-forms = { workspace = true }
+simplypdf-edit = { workspace = true }
+simplypdf-annot = { workspace = true }
+simplypdf-xfa = { workspace = true }
 # CCITT Group 4 and JBIG2 encoding for cleared one-bit images.
-pdfcraft-filters = { workspace = true }
+simplypdf-filters = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-pdfcraft-testkit = { workspace = true }
+simplypdf-testkit = { workspace = true }

@@ -1,13 +1,13 @@
 //! Dockable measurement settings and a searchable takeoff table.
 
 use egui_extras::{Column, TableBuilder};
-use pdfcraft_engine::{
+use serde::{Deserialize, Serialize};
+use simplypdf_engine::{
     DocId,
     measure::{Listing, Measurement},
 };
-use serde::{Deserialize, Serialize};
 
-use crate::{LeftPanel, PdfCraftApp, QuickTool, side_panels::ToolsSide};
+use crate::{LeftPanel, QuickTool, SimplyPDFApp, side_panels::ToolsSide};
 
 const HEADERS: [&str; 12] = ["Page", "Index", "Type", "Value", "Unit", "Label", "Author", "Profile", "Material", "Size", "System", "Scale"];
 
@@ -54,6 +54,16 @@ pub struct State {
     descending: bool,
     #[serde(skip)]
     cache: Option<Cache>,
+    #[serde(skip)]
+    editor: Option<CellEdit>,
+}
+
+struct CellEdit {
+    page: usize,
+    index: usize,
+    column: usize,
+    text: String,
+    focus: bool,
 }
 
 impl Default for State {
@@ -70,6 +80,7 @@ impl Default for State {
             sort: 0,
             descending: false,
             cache: None,
+            editor: None,
         }
     }
 }
@@ -105,10 +116,11 @@ fn cells(m: &Measurement) -> [String; 12] {
 }
 
 impl State {
-    fn refresh(&mut self, doc: &pdfcraft_engine::Document) -> Result<(), String> {
+    fn refresh(&mut self, doc: &simplypdf_engine::Document) -> Result<(), String> {
         if self.cache.as_ref().is_none_or(|cache| cache.doc != doc.id || cache.generation != doc.edit_generation()) {
             if self.cache.as_ref().is_some_and(|cache| cache.doc != doc.id) {
                 self.query.clear();
+                self.editor = None;
             }
             let listing = match doc.measurements() {
                 Ok(listing) => listing,
@@ -172,7 +184,7 @@ impl State {
 }
 
 /// The same controls are available in the docked settings and floating window.
-pub fn settings_header(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
+pub fn settings_header(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let current = if app.takeoff_workspace.settings_floating {
         Location::Floating
     } else if app.side_panels.tools_side == ToolsSide::Left {
@@ -197,7 +209,7 @@ pub fn settings_header(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     ui.add_space(6.0);
 }
 
-pub fn settings_window(app: &mut PdfCraftApp, ctx: &egui::Context) {
+pub fn settings_window(app: &mut SimplyPDFApp, ctx: &egui::Context) {
     if app.takeoff_workspace.settings_floating && app.left_open && app.active.is_some() && matches!(app.left, LeftPanel::Tool("measure")) {
         let mut open = true;
         egui::Window::new(tl!("Measurement settings"))
@@ -215,7 +227,7 @@ pub fn settings_window(app: &mut PdfCraftApp, ctx: &egui::Context) {
     }
 }
 
-pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
+pub fn show(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let Some((_, id)) = app.active_ids() else {
         app.takeoff_workspace.cache = None;
         app.takeoff_workspace.query.clear();
@@ -264,11 +276,13 @@ pub fn show(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     }
 }
 
-fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
+fn table(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let active_view = app.active_ids().map(|(index, _)| index);
     let selected_markup = active_view.and_then(|index| app.views.get(index)).and_then(|view| view.comments.selected);
     let export_doc = app.active_ids().map(|(_, id)| id);
     let may_export = export_doc.and_then(|id| app.session.get(id)).is_some_and(|doc| doc.allows_copying());
+    let may_edit = export_doc.and_then(|id| app.session.get(id)).is_some_and(|doc| doc.allows_annotation());
+    let mut edits = Vec::new();
     let state = &mut app.takeoff_workspace;
     crate::widgets::begin_dialog(ui);
     ui.horizontal_wrapped(|ui| {
@@ -283,6 +297,35 @@ fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                 if ui.selectable_label(state.table_location == location, tl!(location.label())).clicked() {
                     state.table_location = location;
                     ui.close();
+                }
+            }
+        });
+        let visibility = crate::widgets::ghost_button(ui, "layers", tl!("Visibility"));
+        egui::Popup::menu(&visibility).show(|ui| {
+            ui.label(tl!("Show or hide takeoffs by category"));
+            if let Some(cache) = &state.cache {
+                for category in ["Profile", "Material", "System"] {
+                    ui.separator();
+                    ui.label(egui::RichText::new(tl!(category)).strong());
+                    let mut groups = std::collections::BTreeMap::<&str, Vec<&Measurement>>::new();
+                    for measurement in &cache.listing.measurements {
+                        groups.entry(category_value(measurement, category)).or_default().push(measurement);
+                    }
+                    if groups.len() > 200 {
+                        ui.label(tl!("Showing the first 200 categories; other takeoffs can be toggled in the table."));
+                    }
+                    for (name, members) in groups.into_iter().take(200) {
+                        let mut visible = members.iter().any(|m| m.visible);
+                        if ui.add_enabled(may_edit, crate::widgets::checkbox(&mut visible, name)).changed() {
+                            for m in members {
+                                edits.push(simplypdf_engine::Edit::UpdateMeasurement {
+                                    page: m.page,
+                                    index: m.index,
+                                    patch: simplypdf_engine::measure::MeasurementPatch { visible: Some(visible), ..Default::default() },
+                                });
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -316,6 +359,7 @@ fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
         );
     }
     if !state.expanded {
+        apply_edits(app, export_doc, edits);
         return;
     }
     let mut sort = None;
@@ -327,7 +371,9 @@ fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
             .auto_shrink([false, false])
             .striped(true)
             .sense(egui::Sense::click())
-            .columns(Column::initial(100.0).at_least(55.0).resizable(true).clip(true), HEADERS.len())
+            .columns(Column::initial(100.0).at_least(55.0).resizable(true).clip(true), 9)
+            .column(Column::initial(180.0).at_least(160.0).resizable(true).clip(true))
+            .columns(Column::initial(100.0).at_least(55.0).resizable(true).clip(true), 2)
             .header(34.0, |mut header| {
                 for (index, name) in HEADERS.iter().enumerate() {
                     header.col(|ui| {
@@ -342,19 +388,39 @@ fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
                 }
             })
             .body(|body| {
-                body.rows(24.0, cache.visible.len(), |mut row| {
+                body.rows(34.0, cache.visible.len(), |mut row| {
                     let Some(index) = cache.visible.get(row.index()).copied() else { return };
                     let Some(cells) = cache.cells.get(index) else { return };
+                    let Some(measurement) = cache.listing.measurements.get(index) else { return };
                     row.set_selected(cache.listing.measurements.get(index).is_some_and(|m| selected_markup == Some((m.page, m.index))));
-                    for cell in cells {
+                    for (column, cell) in cells.iter().enumerate() {
                         row.col(|ui| {
-                            if cell.is_empty() {
-                                ui.label("");
-                            } else {
-                                let response = ui.add(egui::Label::new(cell).truncate().sense(egui::Sense::click())).on_hover_text(cell);
-                                if response.clicked() {
-                                    selected = Some(index);
-                                }
+                            if column == 0 {
+                                ui.horizontal(|ui| {
+                                    let mut visible = measurement.visible;
+                                    let response = ui.add_enabled(may_edit, crate::widgets::checkbox_without_text(&mut visible));
+                                    response.widget_info(|| {
+                                        egui::WidgetInfo::labeled(
+                                            egui::Role::CheckBox,
+                                            may_edit,
+                                            format!("Show takeoff {}:{}", measurement.page + 1, measurement.index + 1),
+                                        )
+                                    });
+                                    if response.changed() {
+                                        edits.push(simplypdf_engine::Edit::UpdateMeasurement {
+                                            page: measurement.page,
+                                            index: measurement.index,
+                                            patch: simplypdf_engine::measure::MeasurementPatch { visible: Some(visible), ..Default::default() },
+                                        });
+                                    }
+                                    if ui.add(egui::Label::new(cell).sense(egui::Sense::click())).clicked() {
+                                        selected = Some(index);
+                                    }
+                                });
+                            } else if let Some(patch) = edit_cell(ui, measurement, column, cell, &mut state.editor, may_edit) {
+                                edits.push(simplypdf_engine::Edit::UpdateMeasurement { page: measurement.page, index: measurement.index, patch });
+                            } else if ui.ctx().input(|i| i.pointer.primary_clicked()) && ui.rect_contains_pointer(ui.min_rect()) {
+                                selected = Some(index);
                             }
                         });
                     }
@@ -370,18 +436,157 @@ fn table(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     }
     if let Some(index) = selected
         && let Some(m) = cache.listing.measurements.get(index)
-        && let Some(view) = active_view
+        && let Some(view) = active_view.and_then(|index| app.views.get_mut(index))
     {
-        let view = &mut app.views[view];
         view.current = m.page;
         view.comments.selected = Some((m.page, m.index));
         view.measure.reading = Some(m.reading.clone());
         view.measure.scale = Some(m.scale.clone());
         app.quick_tool = QuickTool::Select;
     }
+    apply_edits(app, export_doc, edits);
 }
 
-pub fn set_option(app: &mut PdfCraftApp, key: &str, value: &str) -> Result<(), String> {
+fn apply_edits(app: &mut SimplyPDFApp, doc: Option<DocId>, edits: Vec<simplypdf_engine::Edit>) {
+    if !edits.is_empty()
+        && let Some(doc) = doc
+        && let Err(error) = app.session.apply(doc, simplypdf_engine::Edit::Batch { label: "Edit takeoffs".into(), edits })
+    {
+        app.notify(error.to_string());
+    }
+}
+
+fn category_value<'a>(m: &'a Measurement, category: &str) -> &'a str {
+    match (m.hvac.as_ref(), category) {
+        (Some(h), "Profile") => &h.profile,
+        (Some(h), "Material") => &h.material,
+        (Some(h), "System") => &h.service,
+        _ => m.reading.kind.name(),
+    }
+}
+
+fn edit_cell(
+    ui: &mut egui::Ui,
+    m: &Measurement,
+    column: usize,
+    text: &str,
+    editor: &mut Option<CellEdit>,
+    may_edit: bool,
+) -> Option<simplypdf_engine::measure::MeasurementPatch> {
+    use simplypdf_engine::measure::MeasurementPatch;
+    if (7..=10).contains(&column)
+        && let Some(hvac) = &m.hvac
+    {
+        let mut value = hvac.clone();
+        ui.push_id((m.page, m.index, column), |ui| {
+            ui.add_enabled_ui(may_edit, |ui| {
+                if column == 9 {
+                    if value.profile == "rectangular duct" {
+                        ui.menu_button(value.size.clone(), |ui| crate::hvac_ui::fields(ui, &mut value));
+                    } else {
+                        let sizes = value.sizes();
+                        let descending = value.profile == "pipe";
+                        crate::hvac_ui::size(ui, "takeoff-size", &mut value.size, sizes, descending);
+                    }
+                } else {
+                    let choices = match column {
+                        7 => &["pipe", "round duct", "rectangular duct"][..],
+                        8 => value.materials(),
+                        _ => value.systems(),
+                    };
+                    let field = match column {
+                        7 => &mut value.profile,
+                        8 => &mut value.material,
+                        _ => &mut value.service,
+                    };
+                    craft_ui::ComboBox::from_id_salt("takeoff-choice").selected_text(field.as_str()).width(ui.available_width()).show_ui(ui, |ui| {
+                        for name in choices {
+                            ui.selectable_value(field, (*name).into(), *name);
+                        }
+                    });
+                    if value.profile != hvac.profile {
+                        let profile = value.profile.clone();
+                        value = if profile == "pipe" {
+                            simplypdf_engine::measure::hvac::Takeoff::pipe()
+                        } else {
+                            simplypdf_engine::measure::hvac::Takeoff::duct()
+                        };
+                        value.profile = profile;
+                        if value.profile == "rectangular duct" {
+                            value.size = "4 x 4 in".into();
+                        }
+                    }
+                }
+            })
+        });
+        return (value != *hvac).then_some(MeasurementPatch { hvac: Some(value), ..Default::default() });
+    }
+    if !may_edit {
+        *editor = None;
+    }
+    if let Some(edit) = editor.as_mut().filter(|edit| edit.page == m.page && edit.index == m.index && edit.column == column) {
+        let response = ui.add(crate::widgets::line(&mut edit.text).desired_width(ui.available_width()).char_limit(512));
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::Role::TextInput,
+                may_edit,
+                format!("Edit {} {}:{}", HEADERS.get(column).unwrap_or(&"cell"), m.page + 1, m.index + 1),
+            )
+        });
+        if edit.focus {
+            response.request_focus();
+            edit.focus = false;
+            return None;
+        }
+        if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            *editor = None;
+            return None;
+        }
+        if response.lost_focus() || response.has_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
+            let text = edit.text.clone();
+            *editor = None;
+            let mut patch = MeasurementPatch::default();
+            match column {
+                3 => match text.parse::<f64>() {
+                    Ok(value) => patch.value = Some(value),
+                    Err(_) => {
+                        return Some(MeasurementPatch { value: Some(f64::NAN), ..Default::default() });
+                    }
+                },
+                4 => patch.unit = Some(text),
+                5 => patch.label = Some(text),
+                6 => patch.author = Some(text),
+                _ => return None,
+            }
+            return Some(patch);
+        }
+        return None;
+    }
+    let color = if !m.visible {
+        crate::theme::Tokens::get(ui.ctx()).text_muted
+    } else {
+        m.hvac.as_ref().map_or(crate::theme::Tokens::get(ui.ctx()).text, crate::hvac_ui::color)
+    };
+    let response = ui.add(egui::Label::new(egui::RichText::new(text).color(color)).truncate().sense(egui::Sense::click()));
+    if (3..=6).contains(&column) && may_edit {
+        response.widget_info(|| {
+            egui::WidgetInfo::labeled(
+                egui::Role::Button,
+                true,
+                format!("Edit {} {}:{}", HEADERS.get(column).unwrap_or(&"cell"), m.page + 1, m.index + 1),
+            )
+        });
+        if response.clicked() {
+            *editor = Some(CellEdit { page: m.page, index: m.index, column, text: text.into(), focus: true });
+        }
+        response.on_hover_text(tl!("Click to edit; Enter saves; Escape cancels"));
+    } else {
+        response.on_hover_text(text);
+    }
+    None
+}
+
+pub fn set_option(app: &mut SimplyPDFApp, key: &str, value: &str) -> Result<(), String> {
     match key {
         "measurement-settings" => {
             let side = match value {
@@ -420,7 +625,7 @@ pub fn set_option(app: &mut PdfCraftApp, key: &str, value: &str) -> Result<(), S
     Ok(())
 }
 
-pub fn state(app: &PdfCraftApp) -> serde_json::Value {
+pub fn state(app: &SimplyPDFApp) -> serde_json::Value {
     let workspace = &app.takeoff_workspace;
     serde_json::json!({
         "settings_floating": workspace.settings_floating,
@@ -433,12 +638,13 @@ pub fn state(app: &PdfCraftApp) -> serde_json::Value {
         "visible_count": workspace.cache.as_ref().map(|cache| cache.visible.len()),
         "totals": workspace.cache.as_ref().map(|cache| cache.totals.iter().take(200).collect::<Vec<_>>()),
         "visible_rows": workspace.cache.as_ref().map(|cache| cache.visible.iter().take(200).collect::<Vec<_>>()),
+        "visibility": workspace.cache.as_ref().map(|cache| cache.listing.measurements.iter().take(200).map(|m| serde_json::json!({"page":m.page+1,"index":m.index+1,"visible":m.visible})).collect::<Vec<_>>()),
         "rows": workspace.cache.as_ref().map(|cache| cache.visible.iter().take(200).filter_map(|index| cache.cells.get(*index)).collect::<Vec<_>>()),
     })
 }
 
 /// One format chooser for the table export action.
-pub fn export_dialog(app: &mut PdfCraftApp, ctx: &egui::Context) {
+pub fn export_dialog(app: &mut SimplyPDFApp, ctx: &egui::Context) {
     let Some(source) = app.takeoff_workspace.export_doc else { return };
     let mut confirm = false;
     let mut cancel = false;

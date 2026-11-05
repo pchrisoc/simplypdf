@@ -7,13 +7,13 @@ pub(crate) fn same_file(a: &str, b: &str) -> bool {
     a == b || matches!((std::path::absolute(a), std::path::absolute(b)), (Ok(x), Ok(y)) if x == y)
 }
 
-impl PdfCraftApp {
+impl SimplyPDFApp {
     /// Open a document the way it asks to be opened: navigation panel, layout, magnification,
     /// page and the place on it (Document Properties ▸ Initial View, `/OpenAction`). With Always
     /// use my default zoom and page layout on, the layout and magnification stay at the defaults
     /// the view opened with, and the view goes to the opening page's top.
-    fn apply_initial_view(&mut self, index: usize, v: &pdfcraft_engine::InitialView) {
-        use pdfcraft_engine::{InitialLayout as L, Magnification as M, Navigation as N};
+    fn apply_initial_view(&mut self, index: usize, v: &simplypdf_engine::InitialView) {
+        use simplypdf_engine::{InitialLayout as L, Magnification as M, Navigation as N};
         let pages = self.session.get(self.views[index].id).map_or(0, |d| d.info.pages.len());
         // A right panel the user closed stays closed, whatever the document asks for (#2884).
         // A document that asks for full screen gets the panel it names for outside it
@@ -200,9 +200,9 @@ impl PdfCraftApp {
                     }
                     Err(error) => self.notify_fmt("Couldn't open {name}: {e}", &[("name", &pending.name), ("e", &error)]),
                 },
-                Err(error @ (pdfcraft_render::OpenError::NeedsPassword | pdfcraft_render::OpenError::WrongPassword)) => {
+                Err(error @ (simplypdf_render::OpenError::NeedsPassword | simplypdf_render::OpenError::WrongPassword)) => {
                     let password_error =
-                        matches!(error, pdfcraft_render::OpenError::WrongPassword).then(|| "Incorrect password. Try again.".to_string());
+                        matches!(error, simplypdf_render::OpenError::WrongPassword).then(|| "Incorrect password. Try again.".to_string());
                     self.password_prompt = Some(PasswordPrompt {
                         name: pending.name,
                         path: pending.path,
@@ -230,7 +230,7 @@ impl PdfCraftApp {
         password: Option<&str>,
         activate: bool,
     ) -> Result<(), String> {
-        use pdfcraft_render::OpenError;
+        use simplypdf_render::OpenError;
         let prepared = match self.session.prepare_open(name, path.clone(), bytes.clone(), password) {
             Ok(prepared) => prepared,
             Err(e @ (OpenError::NeedsPassword | OpenError::WrongPassword)) => {
@@ -263,7 +263,7 @@ impl PdfCraftApp {
         name: &str,
         path: Option<String>,
         size: usize,
-        prepared: pdfcraft_engine::PreparedDocument,
+        prepared: simplypdf_engine::PreparedDocument,
         activate: bool,
     ) -> Result<DocId, String> {
         let id = self.session.commit_open(prepared);
@@ -375,8 +375,8 @@ impl PdfCraftApp {
                 return;
             }
         };
-        let mime = pdfcraft_engine::mime_for_name(&name).map(str::to_string);
-        if self.apply_edit(pdfcraft_engine::Edit::AddAttachment { name, bytes, description: None, mime }) {
+        let mime = simplypdf_engine::mime_for_name(&name).map(str::to_string);
+        if self.apply_edit(simplypdf_engine::Edit::AddAttachment { name, bytes, description: None, mime }) {
             self.choose_right_panel(Some(RightPanel::Attachments));
         }
     }
@@ -385,7 +385,7 @@ impl PdfCraftApp {
     pub fn attachment_action(&mut self, doc: DocId, index: usize, open: bool) {
         let Some(d) = self.session.get(doc) else { return };
         let Some(att) = d.info.attachments.get(index).cloned() else { return };
-        let data = pdfcraft_render::attachment_data(&d.bytes, d.password.as_deref(), &att);
+        let data = simplypdf_render::attachment_data(&d.bytes, d.password.as_deref(), &att);
         match (data, open) {
             (Err(e), _) => self.notify_fmt("Couldn't read {name}: {e}", &[("name", &att.name), ("e", &e.to_string())]),
             (Ok(bytes), true) => {
@@ -412,7 +412,7 @@ impl PdfCraftApp {
 
     /// [`Self::attachment_action`] for the file of the attachment comment at (page, index).
     pub fn comment_attachment_action(&mut self, doc: DocId, page: usize, index: usize, open: bool) {
-        let source = pdfcraft_render::AttachmentSource::Annotation { page, index };
+        let source = simplypdf_render::AttachmentSource::Annotation { page, index };
         // The menus offer the items only for a listed file, so a miss is a comment gone since.
         if let Some(i) = self.session.get(doc).and_then(|d| d.info.attachments.iter().position(|a| a.source == source)) {
             self.attachment_action(doc, i, open);
@@ -526,7 +526,7 @@ impl PdfCraftApp {
                 }
                 _ => self.notify_tr("Restrictions lifted"),
             },
-            Err(pdfcraft_engine::EditError::WrongPassword) => {
+            Err(simplypdf_engine::EditError::WrongPassword) => {
                 p.input.clear();
                 p.error = Some("Incorrect password. Try again.".to_string());
                 self.unlock_prompt = Some(p);

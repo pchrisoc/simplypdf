@@ -4207,566 +4207,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pdfcraft"
-version = "0.18.1"
-dependencies = [
- "chrono",
- "craft-update",
- "eframe",
- "egui",
- "fmv-macos-events",
- "log",
- "pdfcraft-engine",
- "pdfcraft-ui-egui",
- "pollster 1.0.1",
- "raw-window-handle",
- "serde_json",
- "uds_windows",
- "wayland-client",
- "wayland-protocols",
- "windows",
- "winit",
- "winresource",
- "winsafe",
-]
-
-[[package]]
-name = "pdfcraft-a11y"
-version = "0.18.1"
-dependencies = [
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-filters",
- "pdfcraft-fonts",
- "pdfcraft-model",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-annot"
-version = "0.18.1"
-dependencies = [
- "hayro-syntax",
- "pdfcraft-cos",
- "pdfcraft-fonts",
- "pdfcraft-model",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-audit"
-version = "0.18.1"
-dependencies = [
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-edit",
- "pdfcraft-model",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-automation"
-version = "0.18.1"
-dependencies = [
- "base64 0.23.1",
- "flate2",
- "image",
- "pdfcraft-cos",
- "pdfcraft-engine",
- "pdfcraft-fonts",
- "pdfcraft-model",
- "pdfcraft-organize",
- "pdfcraft-platform",
- "pdfcraft-prc",
- "pdfcraft-prc-render",
- "pdfcraft-render",
- "pdfcraft-xfa",
- "png 0.18.1",
- "rustix 1.1.5",
- "serde_json",
- "sha2 0.11.1",
- "tempfile",
- "zip",
-]
-
-[[package]]
-name = "pdfcraft-cli"
-version = "0.18.1"
-dependencies = [
- "base64 0.23.1",
- "pdfcraft-audit",
- "pdfcraft-automation",
- "pdfcraft-cos",
- "pdfcraft-engine",
- "pdfcraft-platform",
- "pdfcraft-preflight",
- "pdfcraft-render",
- "png 0.18.1",
- "rustix 1.1.5",
- "serde_json",
- "winresource",
-]
-
-[[package]]
-name = "pdfcraft-compare"
-version = "0.18.1"
-
-[[package]]
-name = "pdfcraft-content"
-version = "0.18.1"
-dependencies = [
- "hayro-syntax",
- "pdfcraft-cos",
-]
-
-[[package]]
-name = "pdfcraft-cos"
-version = "0.18.1"
-dependencies = [
- "chrono",
- "hayro-syntax",
- "pdfcraft-crypt",
- "pdfcraft-filters",
- "pdfcraft-oracle",
- "pdfcraft-testkit",
- "proptest",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-create"
-version = "0.18.1"
-dependencies = [
- "encoding_rs",
- "hayro-ccitt",
- "hayro-syntax",
- "image",
- "pdfcraft-cos",
- "pdfcraft-filters",
- "pdfcraft-fonts",
- "pdfcraft-model",
- "pdfcraft-xfa",
- "png 0.18.1",
- "thiserror 2.0.21",
- "tiff",
- "zune-jpeg",
-]
-
-[[package]]
-name = "pdfcraft-crypt"
-version = "0.18.1"
-dependencies = [
- "aes",
- "md-5",
- "proptest",
- "sha2 0.11.1",
- "stringprep",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-edit"
-version = "0.18.1"
-dependencies = [
- "hayro-syntax",
- "kurbo 0.13.1",
- "pdfcraft-annot",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-fonts",
- "pdfcraft-model",
- "pdfcraft-render",
- "proptest",
- "sha2 0.11.1",
- "thiserror 2.0.21",
- "unicode-bidi",
-]
-
-[[package]]
-name = "pdfcraft-engine"
-version = "0.18.1"
-dependencies = [
- "chrono",
- "craft-docpath",
- "getrandom 0.4.3",
- "icu_properties",
- "idna",
- "image",
- "pdfcraft-a11y",
- "pdfcraft-annot",
- "pdfcraft-audit",
- "pdfcraft-compare",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-create",
- "pdfcraft-edit",
- "pdfcraft-export",
- "pdfcraft-filters",
- "pdfcraft-fonts",
- "pdfcraft-forms",
- "pdfcraft-geom",
- "pdfcraft-js",
- "pdfcraft-measure",
- "pdfcraft-model",
- "pdfcraft-ocr",
- "pdfcraft-optimize",
- "pdfcraft-organize",
- "pdfcraft-preflight",
- "pdfcraft-print",
- "pdfcraft-redact",
- "pdfcraft-render",
- "pdfcraft-sign",
- "pdfcraft-testkit",
- "pdfcraft-xfa",
- "pdfcraft-xfdf",
- "png 0.18.1",
- "thiserror 2.0.21",
- "tiff",
- "unicode-segmentation",
- "url",
-]
-
-[[package]]
-name = "pdfcraft-export"
-version = "0.18.1"
-dependencies = [
- "flate2",
-]
-
-[[package]]
-name = "pdfcraft-filters"
-version = "0.18.1"
-dependencies = [
- "fax",
- "flate2",
- "hayro-ccitt",
- "hayro-jbig2",
- "proptest",
- "thiserror 2.0.21",
- "weezl 0.2.1",
-]
-
-[[package]]
-name = "pdfcraft-fonts"
-version = "0.18.1"
-dependencies = [
- "harfrust",
- "pdfcraft-cos",
- "skrifa 0.44.0",
- "unicode-bidi",
-]
-
-[[package]]
-name = "pdfcraft-forms"
-version = "0.18.1"
-dependencies = [
- "hayro-syntax",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-fonts",
- "pdfcraft-model",
- "proptest",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-geom"
-version = "0.18.1"
-
-[[package]]
-name = "pdfcraft-js"
-version = "0.18.1"
-dependencies = [
- "boa_engine",
- "chrono",
-]
-
-[[package]]
-name = "pdfcraft-measure"
-version = "0.18.1"
-dependencies = [
- "pdfcraft-annot",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-model",
- "pdfcraft-testkit",
- "rust_xlsxwriter",
- "serde",
- "tempfile",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-model"
-version = "0.18.1"
-dependencies = [
- "pdfcraft-cos",
-]
-
-[[package]]
-name = "pdfcraft-ocr"
-version = "0.18.1"
-dependencies = [
- "ocrs",
- "pdfcraft-fonts",
- "rten",
- "tempfile",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-optimize"
-version = "0.18.1"
-dependencies = [
- "image",
- "pdfcraft-annot",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-filters",
- "pdfcraft-model",
- "pdfcraft-render",
- "proptest",
- "thiserror 2.0.21",
- "zune-jpeg",
-]
-
-[[package]]
-name = "pdfcraft-oracle"
-version = "0.18.1"
-
-[[package]]
-name = "pdfcraft-organize"
-version = "0.18.1"
-dependencies = [
- "hayro-syntax",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-oracle",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-platform"
-version = "0.18.1"
-dependencies = [
- "async-channel",
- "futures-lite",
- "rustix 1.1.5",
- "zbus",
-]
-
-[[package]]
-name = "pdfcraft-prc"
-version = "0.18.1"
-dependencies = [
- "flate2",
- "proptest",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-prc-render"
-version = "0.18.1"
-dependencies = [
- "flate2",
- "pdfcraft-prc",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-preflight"
-version = "0.18.1"
-dependencies = [
- "flate2",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-model",
- "roxmltree 0.21.2",
-]
-
-[[package]]
-name = "pdfcraft-print"
-version = "0.18.1"
-dependencies = [
- "craft-print",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-model",
- "pdfcraft-render",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-redact"
-version = "0.18.1"
-dependencies = [
- "pdfcraft-annot",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-edit",
- "pdfcraft-filters",
- "pdfcraft-fonts",
- "pdfcraft-forms",
- "pdfcraft-model",
- "pdfcraft-testkit",
- "pdfcraft-xfa",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-render"
-version = "0.18.1"
-dependencies = [
- "bytemuck",
- "flate2",
- "getrandom 0.4.3",
- "hayro",
- "hayro-syntax",
- "kurbo 0.13.1",
- "log",
- "lopdf",
- "pdfcraft-cos",
- "pdfcraft-fonts",
- "serde",
- "skrifa 0.44.0",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-sign"
-version = "0.18.1"
-dependencies = [
- "aes",
- "aws-lc-rs",
- "base64 0.23.1",
- "bp256",
- "bp384",
- "cbc",
- "chrono",
- "crypto-bigint",
- "des",
- "ecdsa",
- "ed25519-dalek",
- "getrandom 0.4.3",
- "hmac",
- "p256",
- "p384",
- "p521",
- "pbkdf2",
- "pdfcraft-annot",
- "pdfcraft-cos",
- "pdfcraft-fonts",
- "pdfcraft-model",
- "rc2",
- "ripemd",
- "rsa",
- "rustls-cng",
- "security-framework",
- "sha1 0.11.0",
- "sha2 0.11.1",
- "sha3",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-testkit"
-version = "0.18.1"
-
-[[package]]
-name = "pdfcraft-ui-egui"
-version = "0.18.1"
-dependencies = [
- "arboard",
- "base64 0.23.1",
- "block2 0.6.2",
- "bytemuck",
- "chrono",
- "craft-i18n",
- "craft-keymap",
- "craft-menu",
- "craft-quit",
- "craft-ui",
- "craft-update",
- "eframe",
- "egui",
- "egui_extras",
- "egui_kittest",
- "fontconfig-parser",
- "getrandom 0.4.3",
- "image",
- "js-sys",
- "log",
- "objc2 0.6.5",
- "objc2-app-kit 0.3.2",
- "objc2-foundation 0.3.2",
- "pdfcraft-content",
- "pdfcraft-cos",
- "pdfcraft-engine",
- "pdfcraft-fonts",
- "pdfcraft-model",
- "pdfcraft-platform",
- "pdfcraft-render",
- "pdfcraft-xfa",
- "plist",
- "png 0.18.1",
- "pollster 1.0.1",
- "proptest",
- "rfd",
- "rustix 1.1.5",
- "serde",
- "serde_json",
- "skrifa 0.44.0",
- "sys-locale",
- "toml",
- "unicode-bidi",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "web-sys",
- "web-time",
- "winsafe",
- "xattr",
-]
-
-[[package]]
-name = "pdfcraft-web"
-version = "0.18.1"
-dependencies = [
- "eframe",
- "egui",
- "js-sys",
- "pdfcraft-ui-egui",
- "wasm-bindgen-futures",
- "web-sys",
-]
-
-[[package]]
-name = "pdfcraft-xfa"
-version = "0.18.1"
-dependencies = [
- "base64 0.23.1",
- "image",
- "pdfcraft-cos",
- "pdfcraft-fonts",
- "png 0.18.1",
- "roxmltree 0.21.2",
- "sha2 0.11.1",
- "thiserror 2.0.21",
-]
-
-[[package]]
-name = "pdfcraft-xfdf"
-version = "0.18.1"
-dependencies = [
- "pdfcraft-annot",
- "pdfcraft-cos",
- "pdfcraft-forms",
- "pdfcraft-model",
- "roxmltree 0.21.2",
- "thiserror 2.0.21",
-]
-
-[[package]]
 name = "pem"
 version = "3.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6432,6 +5872,566 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a9c6883ca9c3c7c90e888de77b7a5c849c779d25d74a1269b0218b14e8b136c"
 dependencies = [
  "log",
+]
+
+[[package]]
+name = "simplypdf"
+version = "0.18.1"
+dependencies = [
+ "chrono",
+ "craft-update",
+ "eframe",
+ "egui",
+ "fmv-macos-events",
+ "log",
+ "pollster 1.0.1",
+ "raw-window-handle",
+ "serde_json",
+ "simplypdf-engine",
+ "simplypdf-ui-egui",
+ "uds_windows",
+ "wayland-client",
+ "wayland-protocols",
+ "windows",
+ "winit",
+ "winresource",
+ "winsafe",
+]
+
+[[package]]
+name = "simplypdf-a11y"
+version = "0.18.1"
+dependencies = [
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-filters",
+ "simplypdf-fonts",
+ "simplypdf-model",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-annot"
+version = "0.18.1"
+dependencies = [
+ "hayro-syntax",
+ "simplypdf-cos",
+ "simplypdf-fonts",
+ "simplypdf-model",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-audit"
+version = "0.18.1"
+dependencies = [
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-edit",
+ "simplypdf-model",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-automation"
+version = "0.18.1"
+dependencies = [
+ "base64 0.23.1",
+ "flate2",
+ "image",
+ "png 0.18.1",
+ "rustix 1.1.5",
+ "serde_json",
+ "sha2 0.11.1",
+ "simplypdf-cos",
+ "simplypdf-engine",
+ "simplypdf-fonts",
+ "simplypdf-model",
+ "simplypdf-organize",
+ "simplypdf-platform",
+ "simplypdf-prc",
+ "simplypdf-prc-render",
+ "simplypdf-render",
+ "simplypdf-xfa",
+ "tempfile",
+ "zip",
+]
+
+[[package]]
+name = "simplypdf-cli"
+version = "0.18.1"
+dependencies = [
+ "base64 0.23.1",
+ "png 0.18.1",
+ "rustix 1.1.5",
+ "serde_json",
+ "simplypdf-audit",
+ "simplypdf-automation",
+ "simplypdf-cos",
+ "simplypdf-engine",
+ "simplypdf-platform",
+ "simplypdf-preflight",
+ "simplypdf-render",
+ "winresource",
+]
+
+[[package]]
+name = "simplypdf-compare"
+version = "0.18.1"
+
+[[package]]
+name = "simplypdf-content"
+version = "0.18.1"
+dependencies = [
+ "hayro-syntax",
+ "simplypdf-cos",
+]
+
+[[package]]
+name = "simplypdf-cos"
+version = "0.18.1"
+dependencies = [
+ "chrono",
+ "hayro-syntax",
+ "proptest",
+ "serde_json",
+ "simplypdf-crypt",
+ "simplypdf-filters",
+ "simplypdf-oracle",
+ "simplypdf-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-create"
+version = "0.18.1"
+dependencies = [
+ "encoding_rs",
+ "hayro-ccitt",
+ "hayro-syntax",
+ "image",
+ "png 0.18.1",
+ "simplypdf-cos",
+ "simplypdf-filters",
+ "simplypdf-fonts",
+ "simplypdf-model",
+ "simplypdf-xfa",
+ "thiserror 2.0.21",
+ "tiff",
+ "zune-jpeg",
+]
+
+[[package]]
+name = "simplypdf-crypt"
+version = "0.18.1"
+dependencies = [
+ "aes",
+ "md-5",
+ "proptest",
+ "sha2 0.11.1",
+ "stringprep",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-edit"
+version = "0.18.1"
+dependencies = [
+ "hayro-syntax",
+ "kurbo 0.13.1",
+ "proptest",
+ "sha2 0.11.1",
+ "simplypdf-annot",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-fonts",
+ "simplypdf-model",
+ "simplypdf-render",
+ "thiserror 2.0.21",
+ "unicode-bidi",
+]
+
+[[package]]
+name = "simplypdf-engine"
+version = "0.18.1"
+dependencies = [
+ "chrono",
+ "craft-docpath",
+ "getrandom 0.4.3",
+ "icu_properties",
+ "idna",
+ "image",
+ "png 0.18.1",
+ "simplypdf-a11y",
+ "simplypdf-annot",
+ "simplypdf-audit",
+ "simplypdf-compare",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-create",
+ "simplypdf-edit",
+ "simplypdf-export",
+ "simplypdf-filters",
+ "simplypdf-fonts",
+ "simplypdf-forms",
+ "simplypdf-geom",
+ "simplypdf-js",
+ "simplypdf-measure",
+ "simplypdf-model",
+ "simplypdf-ocr",
+ "simplypdf-optimize",
+ "simplypdf-organize",
+ "simplypdf-preflight",
+ "simplypdf-print",
+ "simplypdf-redact",
+ "simplypdf-render",
+ "simplypdf-sign",
+ "simplypdf-testkit",
+ "simplypdf-xfa",
+ "simplypdf-xfdf",
+ "thiserror 2.0.21",
+ "tiff",
+ "unicode-segmentation",
+ "url",
+]
+
+[[package]]
+name = "simplypdf-export"
+version = "0.18.1"
+dependencies = [
+ "flate2",
+]
+
+[[package]]
+name = "simplypdf-filters"
+version = "0.18.1"
+dependencies = [
+ "fax",
+ "flate2",
+ "hayro-ccitt",
+ "hayro-jbig2",
+ "proptest",
+ "thiserror 2.0.21",
+ "weezl 0.2.1",
+]
+
+[[package]]
+name = "simplypdf-fonts"
+version = "0.18.1"
+dependencies = [
+ "harfrust",
+ "simplypdf-cos",
+ "skrifa 0.44.0",
+ "unicode-bidi",
+]
+
+[[package]]
+name = "simplypdf-forms"
+version = "0.18.1"
+dependencies = [
+ "hayro-syntax",
+ "proptest",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-fonts",
+ "simplypdf-model",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-geom"
+version = "0.18.1"
+
+[[package]]
+name = "simplypdf-js"
+version = "0.18.1"
+dependencies = [
+ "boa_engine",
+ "chrono",
+]
+
+[[package]]
+name = "simplypdf-measure"
+version = "0.18.1"
+dependencies = [
+ "rust_xlsxwriter",
+ "serde",
+ "simplypdf-annot",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-model",
+ "simplypdf-testkit",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-model"
+version = "0.18.1"
+dependencies = [
+ "simplypdf-cos",
+]
+
+[[package]]
+name = "simplypdf-ocr"
+version = "0.18.1"
+dependencies = [
+ "ocrs",
+ "rten",
+ "simplypdf-fonts",
+ "tempfile",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-optimize"
+version = "0.18.1"
+dependencies = [
+ "image",
+ "proptest",
+ "simplypdf-annot",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-filters",
+ "simplypdf-model",
+ "simplypdf-render",
+ "thiserror 2.0.21",
+ "zune-jpeg",
+]
+
+[[package]]
+name = "simplypdf-oracle"
+version = "0.18.1"
+
+[[package]]
+name = "simplypdf-organize"
+version = "0.18.1"
+dependencies = [
+ "hayro-syntax",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-oracle",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-platform"
+version = "0.18.1"
+dependencies = [
+ "async-channel",
+ "futures-lite",
+ "rustix 1.1.5",
+ "zbus",
+]
+
+[[package]]
+name = "simplypdf-prc"
+version = "0.18.1"
+dependencies = [
+ "flate2",
+ "proptest",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-prc-render"
+version = "0.18.1"
+dependencies = [
+ "flate2",
+ "simplypdf-prc",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-preflight"
+version = "0.18.1"
+dependencies = [
+ "flate2",
+ "roxmltree 0.21.2",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-model",
+]
+
+[[package]]
+name = "simplypdf-print"
+version = "0.18.1"
+dependencies = [
+ "craft-print",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-model",
+ "simplypdf-render",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-redact"
+version = "0.18.1"
+dependencies = [
+ "simplypdf-annot",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-edit",
+ "simplypdf-filters",
+ "simplypdf-fonts",
+ "simplypdf-forms",
+ "simplypdf-model",
+ "simplypdf-testkit",
+ "simplypdf-xfa",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-render"
+version = "0.18.1"
+dependencies = [
+ "bytemuck",
+ "flate2",
+ "getrandom 0.4.3",
+ "hayro",
+ "hayro-syntax",
+ "kurbo 0.13.1",
+ "log",
+ "lopdf",
+ "serde",
+ "simplypdf-cos",
+ "simplypdf-fonts",
+ "skrifa 0.44.0",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-sign"
+version = "0.18.1"
+dependencies = [
+ "aes",
+ "aws-lc-rs",
+ "base64 0.23.1",
+ "bp256",
+ "bp384",
+ "cbc",
+ "chrono",
+ "crypto-bigint",
+ "des",
+ "ecdsa",
+ "ed25519-dalek",
+ "getrandom 0.4.3",
+ "hmac",
+ "p256",
+ "p384",
+ "p521",
+ "pbkdf2",
+ "rc2",
+ "ripemd",
+ "rsa",
+ "rustls-cng",
+ "security-framework",
+ "sha1 0.11.0",
+ "sha2 0.11.1",
+ "sha3",
+ "simplypdf-annot",
+ "simplypdf-cos",
+ "simplypdf-fonts",
+ "simplypdf-model",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-testkit"
+version = "0.18.1"
+
+[[package]]
+name = "simplypdf-ui-egui"
+version = "0.18.1"
+dependencies = [
+ "arboard",
+ "base64 0.23.1",
+ "block2 0.6.2",
+ "bytemuck",
+ "chrono",
+ "craft-i18n",
+ "craft-keymap",
+ "craft-menu",
+ "craft-quit",
+ "craft-ui",
+ "craft-update",
+ "eframe",
+ "egui",
+ "egui_extras",
+ "egui_kittest",
+ "fontconfig-parser",
+ "getrandom 0.4.3",
+ "image",
+ "js-sys",
+ "log",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "plist",
+ "png 0.18.1",
+ "pollster 1.0.1",
+ "proptest",
+ "rfd",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "simplypdf-content",
+ "simplypdf-cos",
+ "simplypdf-engine",
+ "simplypdf-fonts",
+ "simplypdf-model",
+ "simplypdf-platform",
+ "simplypdf-render",
+ "simplypdf-xfa",
+ "skrifa 0.44.0",
+ "sys-locale",
+ "toml",
+ "unicode-bidi",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
+ "winsafe",
+ "xattr",
+]
+
+[[package]]
+name = "simplypdf-web"
+version = "0.18.1"
+dependencies = [
+ "eframe",
+ "egui",
+ "js-sys",
+ "simplypdf-ui-egui",
+ "wasm-bindgen-futures",
+ "web-sys",
+]
+
+[[package]]
+name = "simplypdf-xfa"
+version = "0.18.1"
+dependencies = [
+ "base64 0.23.1",
+ "image",
+ "png 0.18.1",
+ "roxmltree 0.21.2",
+ "sha2 0.11.1",
+ "simplypdf-cos",
+ "simplypdf-fonts",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "simplypdf-xfdf"
+version = "0.18.1"
+dependencies = [
+ "roxmltree 0.21.2",
+ "simplypdf-annot",
+ "simplypdf-cos",
+ "simplypdf-forms",
+ "simplypdf-model",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -8407,12 +8407,12 @@ dependencies = [
  "anyhow",
  "chrono",
  "lopdf",
- "pdfcraft-cos",
- "pdfcraft-oracle",
  "png 0.18.1",
  "serde",
  "serde_json",
  "sha2 0.11.1",
+ "simplypdf-cos",
+ "simplypdf-oracle",
  "toml",
 ]
 

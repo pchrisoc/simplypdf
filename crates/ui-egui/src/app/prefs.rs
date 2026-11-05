@@ -1,13 +1,13 @@
 use super::*;
 
-/// [`PdfCraftApp::date_text`] for callers that already borrow other parts of the app.
+/// [`SimplyPDFApp::date_text`] for callers that already borrow other parts of the app.
 pub(crate) fn date_text(session: &Session, fmt: Option<&str>) -> Result<String, String> {
     let lang = session.date_language().unwrap_or(i18n::current().code());
     session.today_text(fmt, Some(lang))
 }
 
 /// Today in Preferences ▸ Date format for stamping into a PDF; refused when it has characters
-/// Fill & Sign can't write yet (see [`pdfcraft_engine::dates::unwritable`]).
+/// Fill & Sign can't write yet (see [`simplypdf_engine::dates::unwritable`]).
 pub(crate) fn date_text_for_pdf(session: &Session) -> Result<String, String> {
     let lang = session.date_language().unwrap_or(i18n::current().code());
     session.today_text_for_pdf(None, Some(lang))
@@ -35,7 +35,7 @@ fn rgb_triple(v: &serde_json::Value) -> Option<[f64; 3]> {
     Some(out)
 }
 
-impl PdfCraftApp {
+impl SimplyPDFApp {
     pub fn set_theme_preference(&mut self, preference: ThemePreference) {
         self.theme_preference = preference;
         if let Some(ctx) = self.ctx.clone() {
@@ -49,7 +49,7 @@ impl PdfCraftApp {
     /// The app-wide reading-colours preference: sets it and applies it to every open document,
     /// not just the active one (Preferences ▸ Reading colours, Acrobat's Replace Document
     /// Colors). A document the change actually touches re-renders.
-    pub fn set_reading_colors(&mut self, colors: pdfcraft_render::ReadingColors) {
+    pub fn set_reading_colors(&mut self, colors: simplypdf_render::ReadingColors) {
         self.reading_colors = colors;
         for i in 0..self.views.len() {
             // Idempotent per document: the engine says whether anything changed.
@@ -74,7 +74,7 @@ impl PdfCraftApp {
 
     /// Serialize the user's persistent state (recent files, theme). Local only.
     pub fn persist(&self) -> String {
-        let trusted: Vec<String> = self.session.trusted_certificates().iter().map(pdfcraft_engine::sign::x509::to_pem).collect();
+        let trusted: Vec<String> = self.session.trusted_certificates().iter().map(simplypdf_engine::sign::x509::to_pem).collect();
         let mut v = serde_json::json!({
             "side_panels": self.side_panels.to_json(self.left_open),
             "takeoff_workspace": self.takeoff_workspace,
@@ -145,6 +145,7 @@ impl PdfCraftApp {
         v["fill_text_color"] = serde_json::json!(self.fill_text_color);
         v["redact_prefs"] = self.redact_defaults.to_json();
         v["pinned_tools"] = serde_json::json!(self.pinned_tools);
+        v["tool_rail_collapsed"] = serde_json::json!(self.tool_rail_collapsed);
         v["quick_tools"] = serde_json::json!(self.quick_tools);
         // Set outside json! above, which is at serde_json's macro recursion limit.
         v["hide_empty_highlight_hover"] = serde_json::Value::Bool(self.comment_prefs.hide_empty_highlight_hover);
@@ -154,7 +155,7 @@ impl PdfCraftApp {
         v["show_secured_notice"] = serde_json::Value::Bool(self.show_secured_notice);
         v["organize_zoom"] = serde_json::json!(self.organize_zoom);
         // Canonical names survive changes to the order of PAPERS and do not depend on UI language.
-        v["print_paper"] = serde_json::json!(pdfcraft_engine::print::PAPERS.get(self.print_draft.paper).map(|(name, _)| *name));
+        v["print_paper"] = serde_json::json!(simplypdf_engine::print::PAPERS.get(self.print_draft.paper).map(|(name, _)| *name));
         v.to_string()
     }
 
@@ -177,6 +178,7 @@ impl PdfCraftApp {
                 crate::tool_access::pin_quick(self, id);
             }
         }
+        self.tool_rail_collapsed = v["tool_rail_collapsed"].as_bool().unwrap_or(true);
         let panels = side_panels::restore(&v);
         self.side_panels = panels.panels;
         if let Some(open) = panels.tools_open {
@@ -238,7 +240,7 @@ impl PdfCraftApp {
             let mut tools = Vec::new();
             for item in items {
                 if let Some(id) = item.as_str()
-                    && pdfcraft_engine::catalog::group(id).is_some()
+                    && simplypdf_engine::catalog::group(id).is_some()
                     && !tools.iter().any(|t| t == id)
                 {
                     tools.push(id.to_string());
@@ -280,7 +282,7 @@ impl PdfCraftApp {
         if let Some(paper) = v
             .get("print_paper")
             .and_then(serde_json::Value::as_str)
-            .and_then(|name| pdfcraft_engine::print::PAPERS.iter().position(|(canonical, _)| *canonical == name))
+            .and_then(|name| simplypdf_engine::print::PAPERS.iter().position(|(canonical, _)| *canonical == name))
         {
             self.print_draft.paper = paper;
         }
@@ -323,7 +325,7 @@ impl PdfCraftApp {
     fn restore_view_prefs(&mut self, v: &serde_json::Value) {
         // Settings are untrusted: an unreadable value (a colour that isn't three bytes, say)
         // fails to deserialize and keeps Off.
-        if let Ok(colors) = serde_json::from_value::<pdfcraft_render::ReadingColors>(v["reading_colors"].clone()) {
+        if let Ok(colors) = serde_json::from_value::<simplypdf_render::ReadingColors>(v["reading_colors"].clone()) {
             self.reading_colors = colors;
         }
         // Settings are untrusted: a size out of range follows the system instead.
@@ -407,7 +409,7 @@ impl PdfCraftApp {
             self.session.set_javascript(on);
         }
         if let Ok(pems) = serde_json::from_value::<Vec<String>>(v["trusted"].clone()) {
-            let certs = pems.iter().filter_map(|p| pdfcraft_engine::sign::x509::load_certificates(p.as_bytes()).ok()).flatten().collect();
+            let certs = pems.iter().filter_map(|p| simplypdf_engine::sign::x509::load_certificates(p.as_bytes()).ok()).flatten().collect();
             self.apply_trusted_certificates(certs);
         }
     }

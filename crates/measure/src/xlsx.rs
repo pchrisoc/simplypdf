@@ -11,7 +11,25 @@ pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String
     let sheet = book.add_worksheet();
     sheet.set_name("Takeoff").map_err(failed)?;
     sheet
-        .write_row(0, 0, ["Page", "Index", "Type", "Value", "Unit", "Label", "Author", "Scale", "Annotation ID", "HVAC profile", "Material", "Nominal size", "System"])
+        .write_row(
+            0,
+            0,
+            [
+                "Page",
+                "Index",
+                "Type",
+                "Value",
+                "Unit",
+                "Label",
+                "Author",
+                "Scale",
+                "Annotation ID",
+                "HVAC profile",
+                "Material",
+                "Nominal size",
+                "System",
+            ],
+        )
         .map_err(failed)?;
     sheet.set_freeze_panes(1, 0).map_err(failed)?;
     for (offset, m) in measurements.iter().enumerate() {
@@ -20,9 +38,7 @@ pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String
         sheet.write_number(row, 1, m.index.saturating_add(1) as f64).map_err(failed)?;
         sheet.write_string(row, 2, m.reading.kind.name()).map_err(failed)?;
         sheet.write_number(row, 3, m.reading.value).map_err(failed)?;
-        sheet
-            .write_row(row, 4, [m.reading.unit.as_str(), &m.label, &m.author, &m.scale.ratio, &m.id])
-            .map_err(failed)?;
+        sheet.write_row(row, 4, [m.reading.unit.as_str(), &m.label, &m.author, &m.scale.ratio, &m.id]).map_err(failed)?;
         if let Some(hvac) = &m.hvac {
             sheet.write_row(row, 9, [&hvac.profile, &hvac.material, &hvac.size, &hvac.service]).map_err(failed)?;
         }

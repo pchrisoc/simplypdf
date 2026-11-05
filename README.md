@@ -48,19 +48,28 @@ Shortcuts use **Ctrl** on Windows/Linux and **⌘** on macOS.
 | Pipe takeoff | Ctrl/⌘ + Shift + J |
 | Sheet-metal takeoff | Ctrl/⌘ + Shift + K |
 
-Select **Pipe takeoff** or **Sheet-metal takeoff** in Measure, then use the **HVAC specifications** dropdowns to choose pipe, round duct, or rectangular
-duct, material, nominal size, and system. Square ducts use equal width and height. Material
-options include copper, carbon steel, stainless steel, galvanized steel, aluminum, and
-plastic piping. System options include supply, return, exhaust, outside air, hydronic,
-refrigerant, and condensate.
+Select **Pipe takeoff** or **Sheet-metal takeoff** in Measure. The **HVAC specifications**
+controls appear near the top of the tool pane. Choose pipe, round duct, or rectangular duct;
+rectangular ducts have separate width and height controls.
 
-Common nominal sizes are selectable, and the size field also accepts custom sizes with units.
+| Route | Materials | Systems | Standard sizes |
+| --- | --- | --- | --- |
+| Pipe | Copper | HHW Supply, HHW Return, CHW Supply, CHW Return | 3 in, 2.5 in, then 2 in down to 0.25 in in quarter-inch steps |
+| Sheet metal | Galvanized (default), Stainless steel, Aluminum | SA (supply air), R (return air), EA (exhaust air) | 4–48 in in two-inch steps, for diameter or each rectangular dimension |
+
+Use the **− / +** buttons to move to the adjacent size without opening a menu, or select a
+size from the dropdown. Pipe defaults to 3 in, Copper, HHW Supply; sheet metal defaults to
+4 in, Galvanized, SA. Standard presets are enforced by both the desktop app and automation.
+Copper is orange, galvanized is blue, stainless steel is purple, and aluminum is green.
+
 Specifications are saved with the PDF measurement and exported in dedicated XLSX columns.
 Quantities measure the drawn centerline. Fittings, rise/drop, insulation, duct surface area,
 and fabrication allowances remain on the roadmap.
 
 MCP exposes `takeoff_pipe` and `takeoff_duct`, with the same optional `hvac` fields
-(`profile`, `material`, `size`, and `service`).
+(`profile`, `material`, `size`, and `service`). `measure_update` edits a saved takeoff's
+quantity, unit, label, author, HVAC specification, or visibility using the one-based page and
+annotation index from `measure_list`.
 
 ## Measurement workspace
 
@@ -69,24 +78,36 @@ it taller or shorter. Search across measurement and HVAC fields, then click any 
 to sort. Clicking the header again reverses the order. Quantities sort numerically, and the
 filtered totals keep each unit separate. Selecting a row selects its markup and page.
 
+Click a **Value**, **Unit**, **Label**, or **Author** cell to edit it directly. Press **Enter**
+to save or **Escape** to cancel; leaving the field also saves. HVAC profile, material, size,
+and system cells have inline preset controls. Quantity edits change the takeoff's local
+conversion without moving its route geometry. Edits support undo/redo and save/reopen.
+
+Use each row's visibility checkbox, or **Visibility** to show or hide takeoffs by profile,
+material, or system. Visibility is saved in the PDF, including changes made while the table
+is collapsed. Hidden takeoffs remain in the table and quantity totals.
+
 Use **Table placement** to attach the table to the bottom, left, or right, or open it in a
 floating window. Drag a floating window by its title bar and resize its edges. The table
 contains saved measurements and HVAC routes.
 
 In Measure, the docking icons move the controls to the left sidebar, right sidebar, or a
 floating window. Positions and the bottom table height are remembered. Scale presets and HVAC
-properties use dropdowns. Expand **Custom scale**, **Snap options**, or **Custom size** for
-additional controls.
+properties use dropdowns. Expand **Custom scale** or **Snap options** for additional controls.
 
-The tools sidebar lists pinned tools first, then other tools opened in this session. A dot
-marks the active tool. Use **Browse all tools** for the complete catalog. Right-click a tool
-to pin it. Drag a tool row, catalog tile, or measurement action onto the top mode bar to save
+The far-left tool navigator lists pinned tools first, then other tools opened in this session.
+Collapse it to icons or expand it to show labels. The active tool's settings occupy a separate
+column immediately to its right; collapse those settings independently with **Toggle tool
+settings**. Clicking another tool icon opens its settings in that column. A dot marks the
+active tool, and pinned tools appear only in the pinned section. Use **Browse all tools** for
+the complete catalog. Right-click a tool to pin it. Drag a tool row, catalog tile, or measurement action onto the top mode bar to save
 a quick-access icon. Right-click an icon to remove it. Quick-access icons persist.
 
 Use **Export takeoff…** in the takeoff bar to choose XLSX or CSV before selecting a file.
 
 The opt-in UI control channel supports `ui.set` keys `measurement-settings`,
-`takeoff-table`, `takeoff-search`, `takeoff-sort`, and `quick-tool`. Quick-tool values are a
+`takeoff-table`, `takeoff-search`, `takeoff-sort`, `tool-rail`, `tool-settings`, and `quick-tool`.
+Use `tool-rail=icons|expanded` and `tool-settings=collapsed|expanded`. Quick-tool values are a
 catalog group ID or `command:<command-id>`; prefix `remove:` to remove a shortcut. Sort values are column names such as
 `Value` or `-Value` for descending order.
 
@@ -141,6 +162,11 @@ features. Keep the proprietary installer and any captured artifacts outside the 
 - [x] Refine measurement settings into icon rows, dropdowns and expandable advanced controls.
 - [x] Open takeoffs after the first saved measurement and move CSV/XLSX export into a format chooser.
 - [x] Add mode-bar drag-and-drop shortcuts and a pinned/open tools sidebar with active indicators.
+- [x] Split the tool navigator and settings into independently collapsible columns.
+- [x] Edit takeoff quantities and specifications directly in the table, with undo and save/reopen.
+- [x] Show or hide takeoffs individually or by profile, material, and system.
+- [x] Constrain HVAC presets to standard materials, systems, and sizes, with material colors and
+  adjacent-size buttons.
 - [x] Remove the top-right Discord promotion.
 
 - [x] Add a resizable bottom takeoff table with search, column sorting, unit-separated totals,
@@ -171,8 +197,10 @@ features. Keep the proprietary installer and any captured artifacts outside the 
 
 ### Checkpoint 3 · Ship the desktop workflow
 
-- [ ] Finish the SimplyPDF release identity, including original icons, application IDs, executable
-  names, and installers. Verify a SimplyPDF install can coexist with PDFCraft.
+- [x] Rename app, CLI, crates, application IDs, executable names, and installer metadata to SimplyPDF.
+  Preserve upstream credits, asset provenance, and legacy file/settings compatibility.
+- [ ] Finish original release artwork and verify installed SimplyPDF builds can coexist with PDFCraft
+  on Windows, macOS, and Linux.
 - [ ] Package SimplyPDF for Windows, macOS, and Linux. Test opening a PDF and starting the opt-in
   MCP server from a clean install on each platform.
 - [ ] Run a release smoke test on each platform using the same synthetic drawing and linked
@@ -183,14 +211,14 @@ features. Keep the proprietary installer and any captured artifacts outside the 
 Install Rust 1.95 or later. From the checkout, open a drawing in the desktop app.
 
 ```sh
-cargo run --locked --release -p pdfcraft -- drawing.pdf
+cargo run --locked --release -p simplypdf -- drawing.pdf
 ```
 
 Build the CLI and start its MCP server with access confined to your drawing folder.
 
 ```sh
-cargo build --locked --release -p pdfcraft-cli
-cargo run --locked --release -p pdfcraft-cli -- mcp --root ./work
+cargo build --locked --release -p simplypdf-cli
+cargo run --locked --release -p simplypdf-cli -- mcp --root ./work
 ```
 
 See the [MCP guide](docs/mcp.md) for client configuration.
@@ -213,7 +241,7 @@ session.
 ```
 
 ```sh
-cargo run --locked --release -p pdfcraft-cli -- run --script takeoff.json --root ./work
+cargo run --locked --release -p simplypdf-cli -- run --script takeoff.json --root ./work
 ```
 
 The export creates `work/takeoff.xlsx` and requires a fresh output path. In a separate

@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use pdfcraft_cos::{Document, SaveOptions, write_full, write_incremental};
+use simplypdf_cos::{Document, SaveOptions, write_full, write_incremental};
 
 use super::*;
 
@@ -43,7 +43,7 @@ fn reopen(doc: &Document) -> Document {
 
 /// The decoded content streams of a page, in order.
 fn streams(doc: &Document, page: usize) -> Vec<String> {
-    let p = &pdfcraft_model::pages(doc)[page];
+    let p = &simplypdf_model::pages(doc)[page];
     let c = p.dict.get(b"Contents").cloned();
     let list = match c.map(|c| doc.resolve(&c)).as_deref() {
         Some(Object::Array(a)) => a.clone(),
@@ -138,11 +138,11 @@ fn header_and_footer_are_drawn_in_display_space_and_wrap_the_original_content() 
     assert!(s1.last().unwrap().contains("0 1 -1 0 600 0 cm") && s1.last().unwrap().contains("(Page 2 of 3)"), "{s1:?}");
     // A page without content gets just the mark; its inherited resources are copied, not changed.
     assert_eq!(streams(&doc, 2).len(), 1);
-    let p2 = &pdfcraft_model::pages(&doc)[2];
+    let p2 = &simplypdf_model::pages(&doc)[2];
     let res = doc.resolve(p2.dict.get(b"Resources").unwrap());
     let fonts = doc.resolve(res.as_dict().unwrap().get(b"Font").unwrap());
     assert!(fonts.as_dict().unwrap().contains(b"PCHelv") && fonts.as_dict().unwrap().contains(b"F1"));
-    let shared = doc.get(pdfcraft_cos::ObjRef::new(6, 0));
+    let shared = doc.get(simplypdf_cos::ObjRef::new(6, 0));
     let shared_fonts = doc.resolve(shared.as_dict().unwrap().get(b"Font").unwrap());
     assert!(!shared_fonts.as_dict().unwrap().contains(b"PCHelv"), "the shared dictionary is untouched");
     assert_eq!(marks_present(&doc), [MarkKind::HeaderFooter]);
@@ -165,9 +165,9 @@ fn header_and_footer_are_drawn_in_the_chosen_standard_face() {
         let mark = streams(&doc, 0).last().cloned().unwrap();
         assert!(mark.contains(&format!("/{resource} 8 Tf")), "{base}: {mark}");
         let x = 600.0 - 72.0 - font.width(text, 8.0, false, false);
-        assert!((x - (600.0 - 72.0 - pdfcraft_fonts::helvetica_width(text, 8.0))).abs() > 1.0, "{base}: the faces differ in width");
+        assert!((x - (600.0 - 72.0 - simplypdf_fonts::helvetica_width(text, 8.0))).abs() > 1.0, "{base}: the faces differ in width");
         assert!(mark.contains(&format!("1 0 0 1 {} ", n(x))), "{base}: right-aligned by its own widths: {mark}");
-        let page = &pdfcraft_model::pages(&doc)[0];
+        let page = &simplypdf_model::pages(&doc)[0];
         let res = doc.resolve(page.dict.get(b"Resources").unwrap());
         let fonts = doc.resolve(res.as_dict().unwrap().get(b"Font").unwrap()).as_dict().cloned().unwrap();
         let face = doc.resolve(fonts.get(resource.as_bytes()).unwrap()).as_dict().cloned().unwrap();
@@ -187,7 +187,7 @@ fn a_header_never_takes_over_a_font_name_the_page_already_draws_with() {
     // From review of #3756: a page that already draws a different font as /PCTimes keeps it; the
     // header's Times goes under a free name, and an update reuses that name, not a third one.
     let mut doc = fixture();
-    let page = pdfcraft_model::pages(&doc)[0].obj;
+    let page = simplypdf_model::pages(&doc)[0].obj;
     let mut fonts = Dict::new();
     let mut theirs = Dict::new();
     theirs.set(b"Type".to_vec(), Object::name("Font"));
@@ -203,7 +203,7 @@ fn a_header_never_takes_over_a_font_name_the_page_already_draws_with() {
         ..HeaderFooter::default()
     };
     let base_of = |doc: &Document, name: &[u8]| {
-        let fonts = page_fonts(doc, &pdfcraft_model::pages(doc)[0]);
+        let fonts = page_fonts(doc, &simplypdf_model::pages(doc)[0]);
         fonts.get(name).map(|f| doc.resolve(f)).and_then(|f| f.as_dict().and_then(|d| d.name(b"BaseFont")).map(<[u8]>::to_vec))
     };
     add_header_footer(&mut doc, &[0], &hf, false, &cx()).unwrap();
@@ -221,8 +221,8 @@ fn a_header_never_takes_over_a_font_name_the_page_already_draws_with() {
     assert_eq!(base_of(&doc, b"PCTimes").as_deref(), Some(&b"Helvetica-Bold"[..]));
     // The same face with more to it (here a /ToUnicode map) is the page's own too: kept whole.
     let mut doc = fixture();
-    let page = pdfcraft_model::pages(&doc)[0].obj;
-    let map = doc.add(Object::Stream(pdfcraft_cos::Stream::flate(Dict::new(), b"/CIDInit /ProcSet findresource begin")));
+    let page = simplypdf_model::pages(&doc)[0].obj;
+    let map = doc.add(Object::Stream(simplypdf_cos::Stream::flate(Dict::new(), b"/CIDInit /ProcSet findresource begin")));
     let mut theirs = Dict::new();
     for (k, v) in [("Type", "Font"), ("Subtype", "Type1"), ("BaseFont", "Times-Roman"), ("Encoding", "WinAnsiEncoding")] {
         theirs.set(k.as_bytes().to_vec(), Object::name(v));
@@ -235,7 +235,7 @@ fn a_header_never_takes_over_a_font_name_the_page_already_draws_with() {
     doc.update_dict(page, |d| d.set(b"Resources".to_vec(), Object::Dict(res))).unwrap();
     add_header_footer(&mut doc, &[0], &hf, false, &cx()).unwrap();
     let doc = reopen(&doc);
-    let fonts = page_fonts(&doc, &pdfcraft_model::pages(&doc)[0]);
+    let fonts = page_fonts(&doc, &simplypdf_model::pages(&doc)[0]);
     let kept = doc.resolve(fonts.get(b"PCTimes").unwrap()).as_dict().cloned().unwrap();
     assert!(kept.contains(b"ToUnicode"), "the page's map is kept");
     assert!(streams(&doc, 0).last().unwrap().contains("/PCTimes_1 8 Tf"));
@@ -350,7 +350,7 @@ fn shrink_follows_the_display_space_of_a_rotated_page() {
     add_header_footer(&mut doc, &[1], &shrinking("", "<<1>>"), false, &cx()).unwrap();
     let s = streams(&doc, 1);
     let m = first_cm(&s[1]);
-    let page = &pdfcraft_model::pages(&doc)[1];
+    let page = &simplypdf_model::pages(&doc)[1];
     let v = page.view_matrix(&doc);
     let k = (600.0 - 46.4) / 600.0;
     // Display (x, y) is user v·(x, y): the shrunk content's display corners.
@@ -480,7 +480,7 @@ fn invalid_requests_change_nothing() {
 
 #[test]
 fn flattening_draws_appearances_into_the_page_and_removes_the_comments() {
-    use pdfcraft_annot::{Meta, NewAnnotation, NoteIcon, Shape, Style, add_annotation, add_reply};
+    use simplypdf_annot::{Meta, NewAnnotation, NoteIcon, Shape, Style, add_annotation, add_reply};
     let mut doc = fixture();
     let meta = Meta { date: None, id: "x".into() };
     let add = |doc: &mut Document, shape: Shape| {
@@ -494,7 +494,7 @@ fn flattening_draws_appearances_into_the_page_and_removes_the_comments() {
     let n = flatten(&mut doc, &[0], true, false).unwrap();
     assert_eq!(n, 2, "the rectangle and the note icon are drawn; the reply has nothing to draw");
     let doc = reopen(&doc);
-    let p = &pdfcraft_model::pages(&doc)[0];
+    let p = &simplypdf_model::pages(&doc)[0];
     assert!(!p.dict.contains(b"Annots"), "comments, pop-up and reply are gone");
     let s = streams(&doc, 0);
     assert_eq!(s.len(), before.len() + 3, "wrapped original + flattened content: {s:?}");
@@ -565,7 +565,7 @@ fn flattening_keeps_a_cloudy_square_it_cannot_draw() {
         let before = streams(&doc, 0);
         assert_eq!(flatten(&mut doc, &[0], true, false).unwrap(), drawn);
         let doc = reopen(&doc);
-        let p = &pdfcraft_model::pages(&doc)[0];
+        let p = &simplypdf_model::pages(&doc)[0];
         assert_eq!(p.dict.contains(b"Annots"), left);
         if drawn == 0 {
             assert_eq!(streams(&doc, 0), before, "nothing was drawn in place of the comment");
@@ -591,7 +591,7 @@ fn flattening_keeps_a_note_whose_appearance_is_missing() {
     ]);
     assert_eq!(flatten(&mut doc, &[0], true, false).unwrap(), 1, "the note icon is drawn");
     let doc = reopen(&doc);
-    let p = &pdfcraft_model::pages(&doc)[0];
+    let p = &simplypdf_model::pages(&doc)[0];
     assert!(!p.dict.contains(b"Annots"), "the note is gone once its icon is baked in");
     let flat = streams(&doc, 0).pop().unwrap();
     assert!(flat.contains("q 1 0 0 1 10 10 cm /PCFl0 Do Q"), "{flat}");
@@ -642,8 +642,8 @@ fn flattening_fields_drops_the_ones_on_no_page() {
     let root = doc.root().unwrap();
     let af = doc.resolve(doc.get(root).as_dict().unwrap().get(b"AcroForm").unwrap());
     let fields = doc.resolve(af.as_dict().unwrap().get(b"Fields").unwrap());
-    let left: Vec<pdfcraft_cos::ObjRef> = fields.as_array().unwrap().iter().filter_map(|f| f.as_ref()).collect();
-    assert_eq!(left, [pdfcraft_cos::ObjRef::new(7, 0)], "only the hidden field on the page stays");
+    let left: Vec<simplypdf_cos::ObjRef> = fields.as_array().unwrap().iter().filter_map(|f| f.as_ref()).collect();
+    assert_eq!(left, [simplypdf_cos::ObjRef::new(7, 0)], "only the hidden field on the page stays");
 }
 
 /// #1794: a form field whose widget has no usable appearance (none stored, or none for its
@@ -666,13 +666,13 @@ fn flattening_keeps_a_valued_widget_it_cannot_draw() {
     assert_eq!(flatten(&mut doc, &[0], false, true).unwrap(), 1, "only the field with an appearance is drawn");
     let doc = reopen(&doc);
     let refs = |o: &Object| -> Vec<u32> { doc.resolve(o).as_array().unwrap().iter().filter_map(|f| f.as_ref()).map(|r| r.num).collect() };
-    let p = &pdfcraft_model::pages(&doc)[0];
+    let p = &simplypdf_model::pages(&doc)[0];
     assert_eq!(refs(p.dict.get(b"Annots").unwrap()), [5, 6], "the undrawable widgets stay on the page");
     let root = doc.root().unwrap();
     let af = doc.resolve(doc.get(root).as_dict().unwrap().get(b"AcroForm").unwrap());
     assert_eq!(refs(af.as_dict().unwrap().get(b"Fields").unwrap()), [5, 6], "and in the form");
-    let value = |n: u32| doc.get(pdfcraft_cos::ObjRef::new(n, 0)).as_dict().unwrap().get(b"V").cloned();
-    assert_eq!(value(5), Some(Object::String(pdfcraft_cos::PdfString::literal(b"Ada".to_vec()))));
+    let value = |n: u32| doc.get(simplypdf_cos::ObjRef::new(n, 0)).as_dict().unwrap().get(b"V").cloned();
+    assert_eq!(value(5), Some(Object::String(simplypdf_cos::PdfString::literal(b"Ada".to_vec()))));
     assert_eq!(value(6), Some(Object::name("Yes")));
 }
 
@@ -697,7 +697,7 @@ fn flattening_removes_an_empty_widget_it_cannot_draw() {
     assert_eq!(flatten(&mut doc, &[0], false, true).unwrap(), 1, "only the field with an appearance is drawn");
     let doc = reopen(&doc);
     let refs = |o: &Object| -> Vec<u32> { doc.resolve(o).as_array().unwrap().iter().filter_map(|f| f.as_ref()).map(|r| r.num).collect() };
-    let p = &pdfcraft_model::pages(&doc)[0];
+    let p = &simplypdf_model::pages(&doc)[0];
     assert_eq!(refs(p.dict.get(b"Annots").unwrap()), [9], "only the widget with an inherited value stays on the page");
     let root = doc.root().unwrap();
     let af = doc.resolve(doc.get(root).as_dict().unwrap().get(b"AcroForm").unwrap());
@@ -721,7 +721,7 @@ fn flattening_keeps_a_widget_whose_value_is_past_the_parent_limit() {
     let mut doc = build(&objs.iter().map(String::as_str).collect::<Vec<_>>());
     flatten(&mut doc, &[0], false, true).unwrap();
     let doc = reopen(&doc);
-    let annots = pdfcraft_model::pages(&doc)[0].dict.get(b"Annots").map(|a| doc.resolve(a).as_array().map_or(0, Vec::len));
+    let annots = simplypdf_model::pages(&doc)[0].dict.get(b"Annots").map(|a| doc.resolve(a).as_array().map_or(0, Vec::len));
     assert_eq!(annots, Some(1), "the widget stays");
 }
 
@@ -742,14 +742,14 @@ fn flattening_keeps_an_undrawn_reply_to_a_flattened_comment() {
     ]);
     assert_eq!(flatten(&mut doc, &[0], true, false).unwrap(), 1, "the comment is drawn; the cloudy reply cannot be");
     let doc = reopen(&doc);
-    let p = &pdfcraft_model::pages(&doc)[0];
+    let p = &simplypdf_model::pages(&doc)[0];
     let left: Vec<u32> = doc.resolve(p.dict.get(b"Annots").unwrap()).as_array().unwrap().iter().filter_map(|f| f.as_ref()).map(|r| r.num).collect();
     assert_eq!(left, [6], "the undrawn reply stays; the comment and its pop-up are gone");
 }
 
 /// Flattening never makes a `?` permanent: it refuses, changing nothing, a text box without an
 /// appearance whose text Helvetica can't draw (another program's), and a comment or form field
-/// whose appearance PdfCraft drew with `?` (marked `PCUndrawn`). A comment another program drew
+/// whose appearance SimplyPDF drew with `?` (marked `PCUndrawn`). A comment another program drew
 /// with a font that has those characters (an appearance, no mark) flattens as before.
 #[test]
 fn flattening_refuses_what_would_bake_in_question_marks() {
@@ -767,7 +767,7 @@ fn flattening_refuses_what_would_bake_in_question_marks() {
         let err = flatten(&mut doc, &[0], comments, fields).unwrap_err().to_string();
         assert!(err.contains(what) && err.contains("page 1") && err.contains("\"欢\" (U+6B22)") && err.contains("nothing was flattened"), "{err}");
         assert_eq!(write_incremental(&doc, &SaveOptions::default()).unwrap(), before, "a refused flatten changes nothing");
-        assert!(pdfcraft_model::pages(&doc)[0].dict.contains(b"Annots"), "the annotation is still there");
+        assert!(simplypdf_model::pages(&doc)[0].dict.contains(b"Annots"), "the annotation is still there");
     };
     refused(
         "<< /Type /Annot /Subtype /FreeText /Rect [10 10 150 40] /DA (0 g /Helv 12 Tf) /Contents <FEFF6B228FCE> /F 4 >>",
@@ -805,7 +805,7 @@ fn flattening_refuses_what_would_bake_in_question_marks() {
 #[test]
 fn added_items_follow_the_page_user_unit() {
     let mut doc = fixture();
-    let page = pdfcraft_model::pages(&doc)[2].obj;
+    let page = simplypdf_model::pages(&doc)[2].obj;
     doc.update_dict(page, |d| d.set(b"UserUnit".to_vec(), Object::Int(2))).unwrap();
     let text = AddedText { rect: [72.0, 600.0, 300.0, 700.0], text: "Scaled".into(), size: 14.0, ..AddedText::default() };
     add_content(&mut doc, 2, &Content::Text(text.clone())).unwrap();
@@ -849,12 +849,12 @@ fn added_text_params() -> Dict {
     let mut params = Dict::new();
     params.set(b"Rect".to_vec(), Object::Array([10, 20, 110, 40].into_iter().map(Object::Int).collect()));
     params.set(b"Kind".to_vec(), Object::name("Text"));
-    params.set(b"Text".to_vec(), Object::String(pdfcraft_cos::PdfString::text("Added text")));
+    params.set(b"Text".to_vec(), Object::String(simplypdf_cos::PdfString::text("Added text")));
     params.set(b"Size".to_vec(), Object::Int(12));
     params
 }
 
-fn added_image_params(image: pdfcraft_cos::ObjRef) -> Dict {
+fn added_image_params(image: simplypdf_cos::ObjRef) -> Dict {
     let mut params = Dict::new();
     params.set(b"Rect".to_vec(), Object::Array([10, 20, 110, 70].into_iter().map(Object::Int).collect()));
     params.set(b"Kind".to_vec(), Object::name("Image"));
@@ -863,7 +863,7 @@ fn added_image_params(image: pdfcraft_cos::ObjRef) -> Dict {
 }
 
 fn set_page_contents(doc: &mut Document, contents: Object, user_unit: Option<Object>) {
-    let page = pdfcraft_model::pages(doc)[0].obj;
+    let page = simplypdf_model::pages(doc)[0].obj;
     doc.update_dict(page, |dict| {
         dict.set(b"Contents".to_vec(), contents);
         if let Some(user_unit) = user_unit {
@@ -954,7 +954,7 @@ fn combined_marker_scan_matches_the_independent_scans() {
     let mut malformed = fixture();
     let indirect_mark = malformed.add(Object::Dict(tagged_dictionary("HeaderFooter", None)));
     let missing_added = tagged_stream(&mut malformed, "Added", None);
-    let invalid_added = tagged_stream(&mut malformed, "Added", Some(Object::String(pdfcraft_cos::PdfString::text("bad params"))));
+    let invalid_added = tagged_stream(&mut malformed, "Added", Some(Object::String(simplypdf_cos::PdfString::text("bad params"))));
     let unknown = tagged_stream(&mut malformed, "FutureKind", None);
     let direct_watermark = Object::Dict(tagged_dictionary("Watermark", None));
     let direct_added = Object::Dict(tagged_dictionary("Added", Some(Object::Dict(added_text_params()))));
@@ -1060,12 +1060,12 @@ fn an_isolated_item_is_all_that_is_left_on_its_page() {
     assert!(before.contains("(First) Tj") && before.contains("(Second) Tj"), "{before}");
     assert!(isolate_content(&mut doc, 0, 2).is_err(), "no third item");
     assert!(isolate_content(&mut doc, 9, 0).is_err(), "no such page");
-    let page = pdfcraft_model::pages(&doc).swap_remove(0);
+    let page = simplypdf_model::pages(&doc).swap_remove(0);
     doc.update_dict(page.obj, |d| d.set(b"Annots".to_vec(), Object::Array(Vec::new()))).unwrap();
     isolate_content(&mut doc, 0, 1).unwrap();
     let after = streams(&doc, 0).join("\n");
     assert!(after.contains("(Second) Tj") && !after.contains("(First) Tj"), "{after}");
-    let page = pdfcraft_model::pages(&doc).swap_remove(0);
+    let page = simplypdf_model::pages(&doc).swap_remove(0);
     assert!(page.dict.get(b"Annots").is_none(), "no annotations are drawn over it");
     assert_eq!(list_added(&doc).len(), 1);
 }
@@ -1109,10 +1109,10 @@ fn a_paste_steps_past_copies_of_itself_only() {
     assert_eq!(stuck, [200.0, 0.0, 300.0, 14.4]);
     // An image pasted into another document draws its picture from an object of that document:
     // still a copy, so the next paste steps past it.
-    let image = Content::Image(AddedImage { crop: [0.1, 0.0, 0.0, 0.0], ..AddedImage::new(step(0.0), pdfcraft_cos::ObjRef::new(7, 0)) });
-    let pasted = Content::Image(AddedImage { crop: [0.1, 0.0, 0.0, 0.0], ..AddedImage::new(step(0.0), pdfcraft_cos::ObjRef::new(42, 0)) });
+    let image = Content::Image(AddedImage { crop: [0.1, 0.0, 0.0, 0.0], ..AddedImage::new(step(0.0), simplypdf_cos::ObjRef::new(7, 0)) });
+    let pasted = Content::Image(AddedImage { crop: [0.1, 0.0, 0.0, 0.0], ..AddedImage::new(step(0.0), simplypdf_cos::ObjRef::new(42, 0)) });
     assert_eq!(paste_place([&pasted], &image, page), step(1.0), "a copy whose picture is stored anew");
-    let turned = Content::Image(AddedImage { rotation: 1, ..AddedImage::new(step(0.0), pdfcraft_cos::ObjRef::new(7, 0)) });
+    let turned = Content::Image(AddedImage { rotation: 1, ..AddedImage::new(step(0.0), simplypdf_cos::ObjRef::new(7, 0)) });
     assert_eq!(paste_place([&turned], &image, page), step(0.0), "the same picture turned or cropped otherwise isn't a copy");
 }
 
@@ -1121,7 +1121,7 @@ fn added_arabic_text_is_shaped_in_display_order_and_stays_searchable() {
     let mut doc = fixture();
     let text =
         AddedText { rect: [72.0, 600.0, 400.0, 700.0], text: "مرحبا World".into(), size: 14.0, align: Align::Right, ..AddedText::default() };
-    if pdfcraft_fonts::document_arabic_font().is_none() {
+    if simplypdf_fonts::document_arabic_font().is_none() {
         eprintln!("skipping the Arabic drawing checks: built without a craft-fonts Arab face (set CRAFT_FONTS_DIR)");
         let err = add_content(&mut doc, 0, &Content::Text(text)).unwrap_err();
         assert!(matches!(&err, EditError::Invalid(m) if m.contains("CRAFT_FONTS_DIR")), "{err:?}");
@@ -1147,7 +1147,7 @@ fn added_arabic_text_is_shaped_in_display_order_and_stays_searchable() {
     let arabic_x = x_before(item, item[arabic_at..].find(" Tj").unwrap() + arabic_at);
     assert!(latin_x < arabic_x, "{item}");
     // The Arabic glyphs come from Type 3 fonts whose ToUnicode maps give back each letter.
-    let p = &pdfcraft_model::pages(&doc)[0];
+    let p = &simplypdf_model::pages(&doc)[0];
     let res = doc.resolve(p.dict.get(b"Resources").unwrap());
     let fonts = doc.resolve(res.as_dict().unwrap().get(b"Font").unwrap()).as_dict().unwrap().clone();
     let arabic: Vec<_> = fonts.iter().filter(|(k, _)| k.starts_with(b"PCAr")).map(|(_, v)| doc.resolve(v).as_dict().unwrap().clone()).collect();
@@ -1172,7 +1172,7 @@ fn added_hebrew_text_is_drawn_right_to_left_and_stays_searchable() {
         align: Align::Right,
         ..AddedText::default()
     };
-    if pdfcraft_fonts::document_hebrew_font(false).is_none() {
+    if simplypdf_fonts::document_hebrew_font(false).is_none() {
         eprintln!("skipping the Hebrew drawing checks: built without a craft-fonts Hebr face (set CRAFT_FONTS_DIR)");
         assert_eq!(first_undrawable(&text), Some('ש'));
         let err = add_content(&mut doc, 0, &Content::Text(text)).unwrap_err();
@@ -1185,7 +1185,7 @@ fn added_hebrew_text_is_drawn_right_to_left_and_stays_searchable() {
     // Points stay on their letters; a Hebrew line in an Arabic item and Arabic in a Hebrew one.
     for other in ["שָׁלוֹם", "שלום مرحبا"] {
         let other = AddedText { text: other.into(), rect: [72.0, 500.0, 400.0, 520.0], ..text.clone() };
-        if other.text.chars().any(|c| ('\u{0600}'..='\u{06FF}').contains(&c)) && pdfcraft_fonts::document_arabic_font().is_none() {
+        if other.text.chars().any(|c| ('\u{0600}'..='\u{06FF}').contains(&c)) && simplypdf_fonts::document_arabic_font().is_none() {
             continue;
         }
         add_content(&mut doc, 0, &Content::Text(other)).unwrap();
@@ -1210,7 +1210,7 @@ fn added_hebrew_text_is_drawn_right_to_left_and_stays_searchable() {
     assert!(item.contains(&format!("/ActualText <FEFF{logical}>")), "{item}");
     // The Hebrew glyphs come from a Type 3 font named after the face, whose ToUnicode map gives
     // back each letter.
-    let p = &pdfcraft_model::pages(&doc)[0];
+    let p = &simplypdf_model::pages(&doc)[0];
     let res = doc.resolve(p.dict.get(b"Resources").unwrap());
     let fonts = doc.resolve(res.as_dict().unwrap().get(b"Font").unwrap()).as_dict().unwrap().clone();
     let shaped: Vec<_> = fonts.iter().filter(|(k, _)| k.starts_with(b"PCAr")).map(|(_, v)| doc.resolve(v).as_dict().unwrap().clone()).collect();
@@ -1234,13 +1234,13 @@ fn odd_hebrew_text_never_panics() {
     let long = "שלום עולם ".repeat(2_000);
     for s in ["\u{202E}ש\u{05B8}\u{05B8} (]", "\u{05B8}", "א\u{200F}\u{2067}b\u{2069}", "א\n\nב\tc", "׳״ 456", long.as_str()] {
         let r = add_content(&mut doc, 0, &Content::Text(AddedText { rect: [0.0, 800.0, 300.0, 780.0], text: s.into(), ..AddedText::default() }));
-        assert_eq!(r.is_ok(), pdfcraft_fonts::document_hebrew_font(false).is_some(), "{:?}: {r:?}", s.chars().take(12).collect::<String>());
+        assert_eq!(r.is_ok(), simplypdf_fonts::document_hebrew_font(false).is_some(), "{:?}: {r:?}", s.chars().take(12).collect::<String>());
     }
 }
 
 /// The `PCAr` font names in page `page`'s resources.
 fn arabic_font_names(doc: &Document, page: usize) -> Vec<String> {
-    let p = &pdfcraft_model::pages(doc)[page];
+    let p = &simplypdf_model::pages(doc)[page];
     let Some(res) = p.dict.get(b"Resources").map(|r| doc.resolve(r)) else { return vec![] };
     let Some(fonts) = res.as_dict().and_then(|r| r.get(b"Font")).map(|f| doc.resolve(f)) else { return vec![] };
     fonts.as_dict().unwrap().iter().map(|(k, _)| String::from_utf8_lossy(k).into_owned()).filter(|k| k.starts_with("PCAr")).collect()
@@ -1250,7 +1250,7 @@ fn arabic_font_names(doc: &Document, page: usize) -> Vec<String> {
 fn arabic_items_keep_their_own_fonts_through_saves_updates_and_deletes() {
     let mut doc = fixture();
     let text = AddedText { rect: [72.0, 600.0, 400.0, 700.0], text: "مرحبا".into(), size: 14.0, ..AddedText::default() };
-    if pdfcraft_fonts::document_arabic_font().is_none() {
+    if simplypdf_fonts::document_arabic_font().is_none() {
         // An item that already holds Arabic (stored by an older version, drawn as "?") can still
         // be moved and retyped without the face.
         add_content(&mut doc, 0, &Content::Text(AddedText { text: "x".into(), ..text.clone() })).unwrap();
@@ -1266,13 +1266,13 @@ fn arabic_items_keep_their_own_fonts_through_saves_updates_and_deletes() {
     }
     let mut res = Dict::new();
     res.set(b"Font".to_vec(), Object::Dict(taken));
-    let page = pdfcraft_model::pages(&doc)[0].obj;
+    let page = simplypdf_model::pages(&doc)[0].obj;
     doc.update_dict(page, |d| d.set(b"Resources".to_vec(), Object::Dict(res))).unwrap();
     add_content(&mut doc, 0, &Content::Text(text.clone())).unwrap();
     add_content(&mut doc, 0, &Content::Text(AddedText { text: "شكرا".into(), rect: [72.0, 500.0, 400.0, 520.0], ..text.clone() })).unwrap();
     let names = arabic_font_names(&doc, 0);
     assert_eq!(names.len(), 1_999 + 2, "nothing replaced");
-    let p = &pdfcraft_model::pages(&doc)[0];
+    let p = &simplypdf_model::pages(&doc)[0];
     let fonts = doc.resolve(p.dict.get(b"Resources").unwrap()).as_dict().unwrap().get(b"Font").cloned().unwrap();
     let fonts = doc.resolve(&fonts).as_dict().unwrap().clone();
     assert_eq!(fonts.iter().filter(|(_, v)| v.as_name() == Some(&b"Taken"[..])).count(), 1_999);
@@ -1303,7 +1303,7 @@ fn odd_arabic_text_never_panics() {
     let long = "بسم الله ".repeat(2_000);
     for s in ["\u{202E}ب\u{064B}\u{064B} (]", "\u{064B}", "ا\u{200F}\u{2067}b\u{2069}", "ا\n\nب\tc", "ﷺ ١٢٣ 456", long.as_str()] {
         let r = add_content(&mut doc, 0, &Content::Text(AddedText { rect: [0.0, 800.0, 300.0, 780.0], text: s.into(), ..AddedText::default() }));
-        assert_eq!(r.is_ok(), pdfcraft_fonts::document_arabic_font().is_some(), "{:?}: {r:?}", s.chars().take(12).collect::<String>());
+        assert_eq!(r.is_ok(), simplypdf_fonts::document_arabic_font().is_some(), "{:?}: {r:?}", s.chars().take(12).collect::<String>());
     }
     // U+2029 and U+0085 (paragraph and line separators) have no WinAnsi code, so the standard font
     // would draw them as `?`: refused, by name, rather than written (#125). Laying it out still
@@ -1314,11 +1314,11 @@ fn odd_arabic_text_never_panics() {
         &Content::Text(AddedText { rect: [0.0, 800.0, 300.0, 780.0], text: "ا\u{2029}ب\rc\u{85}د\n".into(), ..AddedText::default() }),
     );
     assert!(r.is_err(), "{r:?}");
-    if pdfcraft_fonts::document_arabic_font().is_some() {
+    if simplypdf_fonts::document_arabic_font().is_some() {
         assert!(matches!(&r, Err(EditError::Invalid(m)) if m.contains("U+2029") || m.contains("U+0085")), "{r:?}");
     }
     // A character the face lacks is an error that names it, not a box or a crash.
-    if pdfcraft_fonts::document_arabic_font().is_some() && !pdfcraft_fonts::arabic_has('\u{FDFD}') {
+    if simplypdf_fonts::document_arabic_font().is_some() && !simplypdf_fonts::arabic_has('\u{FDFD}') {
         let r = add_content(
             &mut doc,
             0,
@@ -1439,7 +1439,7 @@ fn tracked_text_positions_do_not_count_character_spacing_twice() {
             let mut x = 72.0;
             for c in expected.chars() {
                 content.push_str(&format!("1 0 0 1 {x:.4} 700 Tm ({c}) Tj "));
-                x += pdfcraft_fonts::helvetica_width(&c.to_string(), 10.0) + 2.0001;
+                x += simplypdf_fonts::helvetica_width(&c.to_string(), 10.0) + 2.0001;
             }
             content.push_str("ET Q");
             let doc = text_page(&content);
@@ -1476,7 +1476,7 @@ fn descriptor_text_page() -> Document {
 
 /// The Japanese fallback face comes from craft-fonts, an optional build input.
 fn without_craft_fonts(test: &str) -> bool {
-    if pdfcraft_fonts::document_japanese_font().is_some() {
+    if simplypdf_fonts::document_japanese_font().is_some() {
         return false;
     }
     eprintln!("skipping {test}: built without craft-fonts (set CRAFT_FONTS_DIR to run it)");
@@ -1501,15 +1501,15 @@ fn japanese_line_uses_unicode_type3_fallback() {
 
 fn styled_text_page(base: &str) -> Document {
     let mut doc = text_page("BT /F1 12 Tf 72 700 Td (Original) Tj ET");
-    let r = pdfcraft_cos::ObjRef::new(5, 0);
+    let r = simplypdf_cos::ObjRef::new(5, 0);
     let mut font = doc.get(r).as_dict().unwrap().clone();
-    font.set(b"BaseFont".to_vec(), pdfcraft_cos::Object::name(base));
-    doc.set(r, pdfcraft_cos::Object::Dict(font));
+    font.set(b"BaseFont".to_vec(), simplypdf_cos::Object::name(base));
+    doc.set(r, simplypdf_cos::Object::Dict(font));
     doc
 }
 
 fn fallback_paths(doc: &Document) -> Vec<Vec<u8>> {
-    let p = pdfcraft_model::pages(doc).swap_remove(0);
+    let p = simplypdf_model::pages(doc).swap_remove(0);
     let res = doc.resolve(p.dict.get(b"Resources").unwrap());
     let fonts = doc.resolve(res.as_dict().unwrap().get(b"Font").unwrap());
     let font = doc.resolve(fonts.as_dict().unwrap().get(b"PCJp").unwrap());
@@ -1519,7 +1519,7 @@ fn fallback_paths(doc: &Document) -> Vec<Vec<u8>> {
         .unwrap()
         .iter()
         .map(|(_, object)| match &*doc.resolve(object) {
-            pdfcraft_cos::Object::Stream(s) => s.decoded().unwrap(),
+            simplypdf_cos::Object::Stream(s) => s.decoded().unwrap(),
             other => panic!("expected a glyph stream, got {other:?}"),
         })
         .collect()
@@ -1538,7 +1538,7 @@ fn japanese_line_fallback_uses_real_source_family_and_weight() {
     text::replace_line(&mut bold, 0, 0, replacement).unwrap();
     text::replace_line(&mut serif, 0, 0, replacement).unwrap();
     assert_ne!(fallback_paths(&sans), fallback_paths(&serif), "sans source must not use Mincho outlines");
-    if pdfcraft_fonts::CRAFT_FONTS.iter().any(|f| f.family == "BIZ UDPGothic" && f.style == "Bold") {
+    if simplypdf_fonts::CRAFT_FONTS.iter().any(|f| f.family == "BIZ UDPGothic" && f.style == "Bold") {
         assert_ne!(fallback_paths(&sans), fallback_paths(&bold), "bold must change the actual glyph paths");
     }
     for doc in [&sans, &bold, &serif] {
@@ -1573,7 +1573,7 @@ fn japanese_paragraph_fallback_honors_requested_family_and_weight() {
     )
     .unwrap();
     assert_ne!(fallback_paths(&regular), fallback_paths(&serif), "requested serif must change actual outlines");
-    if pdfcraft_fonts::CRAFT_FONTS.iter().any(|f| f.family == "BIZ UDPGothic" && f.style == "Bold") {
+    if simplypdf_fonts::CRAFT_FONTS.iter().any(|f| f.family == "BIZ UDPGothic" && f.style == "Bold") {
         assert_ne!(fallback_paths(&regular), fallback_paths(&bold), "requested bold must change actual outlines");
         let mut source_bold = styled_text_page("Helvetica-Bold");
         text::replace_block(&mut source_bold, 0, 0, replacement).unwrap();
@@ -1590,7 +1590,7 @@ fn japanese_fallback_reports_the_face_after_save_and_reopen() {
         return;
     }
     // F2 is (a subset of) Arial: a regular sans face, so the fallback is the regular Gothic.
-    let face = pdfcraft_fonts::document_japanese_font_for_style(false, false).unwrap();
+    let face = simplypdf_fonts::document_japanese_font_for_style(false, false).unwrap();
     let expected = format!("{}-{}", face.family, face.style).replace(' ', "");
     for paragraph in [false, true] {
         let mut doc = text_page("BT /F2 12 Tf 72 700 Td (ab) Tj ET");
@@ -1615,8 +1615,8 @@ fn cyrillic_in_a_serif_line_falls_back_to_a_face_that_has_it() {
         return;
     }
     let replacement = "Привет, world";
-    let has_all = |f: &pdfcraft_fonts::CraftFont| replacement.chars().all(|ch| pdfcraft_fonts::japanese_glyph_from(f, ch).is_ok());
-    if !pdfcraft_fonts::CRAFT_FONTS.iter().any(|f| f.covers("Jpan") && has_all(f)) {
+    let has_all = |f: &simplypdf_fonts::CraftFont| replacement.chars().all(|ch| simplypdf_fonts::japanese_glyph_from(f, ch).is_ok());
+    if !simplypdf_fonts::CRAFT_FONTS.iter().any(|f| f.covers("Jpan") && has_all(f)) {
         eprintln!("skipping: no Japanese fallback face has Cyrillic");
         return;
     }
@@ -1658,8 +1658,8 @@ fn cyrillic_the_japanese_faces_carry_keeps_them() {
     if without_craft_fonts("cyrillic_the_japanese_faces_carry_keeps_them") {
         return;
     }
-    let face = pdfcraft_fonts::document_japanese_font_for_style(false, false).unwrap();
-    if pdfcraft_fonts::japanese_glyph_from(face, 'ф').is_err() {
+    let face = simplypdf_fonts::document_japanese_font_for_style(false, false).unwrap();
+    if simplypdf_fonts::japanese_glyph_from(face, 'ф').is_err() {
         eprintln!("skipping: the Japanese fallback face has no Cyrillic");
         return;
     }
@@ -1685,10 +1685,10 @@ fn japanese_paragraph_uses_unicode_type3_fallback() {
 /// whichever face an edit picks has them all. Without craft-fonts there are no faces, every character
 /// passes, and the text is still long.
 fn covered_japanese_chars(n: usize) -> String {
-    let faces = pdfcraft_fonts::document_japanese_fonts_for_style(false, false);
+    let faces = simplypdf_fonts::document_japanese_fonts_for_style(false, false);
     (0x4E00..0xA000)
         .filter_map(char::from_u32)
-        .filter(|ch| faces.iter().all(|face| pdfcraft_fonts::japanese_glyph_from(face, *ch).is_ok()))
+        .filter(|ch| faces.iter().all(|face| simplypdf_fonts::japanese_glyph_from(face, *ch).is_ok()))
         .take(n)
         .collect()
 }
@@ -1711,8 +1711,8 @@ fn fallback_fonts_nothing_shows_any_more_leave_with_a_rewrite() {
         Dict::from_iter([(b"Subtype".to_vec(), Object::name("Form")), (b"BBox".to_vec(), Object::Array(vec![Object::Int(0); 4]))]),
         b"BT /PCJp2 12 Tf ET".to_vec(),
     )));
-    let p = pdfcraft_model::pages(&doc)[0].obj;
-    let mut fonts = Dict::from_iter([(b"F1".to_vec(), Object::Ref(pdfcraft_cos::ObjRef::new(5, 0)))]);
+    let p = simplypdf_model::pages(&doc)[0].obj;
+    let mut fonts = Dict::from_iter([(b"F1".to_vec(), Object::Ref(simplypdf_cos::ObjRef::new(5, 0)))]);
     for (name, font) in [("PCJp", unused), ("PCJp1", page_shown), ("PCJp2", form_shown), ("PCJpOther", own)] {
         fonts.set(name.as_bytes().to_vec(), Object::Ref(font));
     }
@@ -1722,7 +1722,7 @@ fn fallback_fonts_nothing_shows_any_more_leave_with_a_rewrite() {
     ]);
     doc.update_dict(p, |d| d.set(b"Resources".to_vec(), Object::Dict(resources.clone()))).unwrap();
     let names = |doc: &Document| {
-        let page = pdfcraft_model::pages(doc).remove(0);
+        let page = simplypdf_model::pages(doc).remove(0);
         let res = doc.resolve(page.dict.get(b"Resources").unwrap()).as_dict().unwrap().clone();
         let mut names: Vec<String> =
             doc.resolve(res.get(b"Font").unwrap()).as_dict().unwrap().iter().map(|(n, _)| String::from_utf8_lossy(n).into_owned()).collect();
@@ -1745,8 +1745,8 @@ fn fallback_fonts_nothing_shows_any_more_leave_with_a_rewrite() {
         ]),
         b"not deflate data".to_vec(),
     )));
-    let p = pdfcraft_model::pages(&doc)[0].obj;
-    let fonts = Dict::from_iter([(b"F1".to_vec(), Object::Ref(pdfcraft_cos::ObjRef::new(5, 0))), (b"PCJp".to_vec(), Object::Ref(unused))]);
+    let p = simplypdf_model::pages(&doc)[0].obj;
+    let fonts = Dict::from_iter([(b"F1".to_vec(), Object::Ref(simplypdf_cos::ObjRef::new(5, 0))), (b"PCJp".to_vec(), Object::Ref(unused))]);
     let resources = Dict::from_iter([
         (b"Font".to_vec(), Object::Dict(fonts)),
         (b"XObject".to_vec(), Object::Dict(Dict::from_iter([(b"Fm0".to_vec(), Object::Ref(broken))]))),
@@ -1760,7 +1760,7 @@ fn fallback_fonts_nothing_shows_any_more_leave_with_a_rewrite() {
 fn rewriting_japanese_twice_keeps_only_the_fallback_fonts_it_shows() {
     let mut doc = text_page("BT /F1 12 Tf 72 700 Td (Hello) Tj ET");
     if text::rewrite_block(&mut doc, 0, 0, Some("日本語の文章"), &text::BlockStyle::default()).is_err() {
-        assert!(pdfcraft_fonts::document_japanese_font().is_none());
+        assert!(simplypdf_fonts::document_japanese_font().is_none());
         eprintln!("built without a craft-fonts Japanese face: the Type 3 path is checked with CRAFT_FONTS_DIR");
         return;
     }
@@ -1776,7 +1776,7 @@ fn rewriting_japanese_twice_keeps_only_the_fallback_fonts_it_shows() {
 
 /// The page's Type 3 fallback fonts (`PCJp`, `PCJp1`, ...) by resource name.
 fn fallback_fonts(doc: &Document) -> Vec<(Vec<u8>, Dict)> {
-    let p = pdfcraft_model::pages(doc).swap_remove(0);
+    let p = simplypdf_model::pages(doc).swap_remove(0);
     let res = doc.resolve(p.dict.get(b"Resources").unwrap());
     let fonts = doc.resolve(res.as_dict().unwrap().get(b"Font").unwrap());
     fonts
@@ -1869,7 +1869,7 @@ fn styled_fallback_batches_keep_face_choices_and_range_styles() {
     if without_craft_fonts("styled_fallback_batches_keep_face_choices_and_range_styles") {
         return;
     }
-    if !pdfcraft_fonts::CRAFT_FONTS.iter().any(|f| f.family == "BIZ UDPGothic" && f.style == "Bold") {
+    if !simplypdf_fonts::CRAFT_FONTS.iter().any(|f| f.family == "BIZ UDPGothic" && f.style == "Bold") {
         eprintln!("skipping: no bold Gothic face");
         return;
     }
@@ -1903,7 +1903,7 @@ fn styled_fallback_batches_keep_face_choices_and_range_styles() {
     let mut summary: Vec<_> = fonts
         .iter()
         .map(|(_, f)| {
-            let face = pdfcraft_fonts::pdf::Metrics::from_dict(&doc, f).base_font;
+            let face = simplypdf_fonts::pdf::Metrics::from_dict(&doc, f).base_font;
             let count = doc.dict(f.get(b"CharProcs").unwrap()).unwrap().len();
             (face, count)
         })
@@ -1951,12 +1951,12 @@ fn styled_fallback_same_base_font_and_character_keep_both_weights() {
     if without_craft_fonts("styled_fallback_same_base_font_and_character_keep_both_weights") {
         return;
     }
-    if !pdfcraft_fonts::CRAFT_FONTS.iter().any(|f| f.family == "BIZ UDPGothic" && f.style == "Bold") {
+    if !simplypdf_fonts::CRAFT_FONTS.iter().any(|f| f.family == "BIZ UDPGothic" && f.style == "Bold") {
         eprintln!("skipping: no bold Gothic face");
         return;
     }
     let mut doc = text_page("BT /F1 12 Tf 72 700 Td (alpha ) Tj /F2 12 Tf (beta ) Tj ET");
-    let source = doc.get(pdfcraft_cos::ObjRef::new(5, 0)).as_dict().unwrap().clone();
+    let source = doc.get(simplypdf_cos::ObjRef::new(5, 0)).as_dict().unwrap().clone();
     for (object, weight) in [(5, 400), (6, 700)] {
         let mut font = source.clone();
         // The same BaseFont can have different descriptor weights. Changing a
@@ -1966,7 +1966,7 @@ fn styled_fallback_same_base_font_and_character_keep_both_weights() {
         descriptor.set(b"FontName".to_vec(), Object::name("NeutralFace"));
         descriptor.set(b"FontWeight".to_vec(), Object::Int(weight));
         font.set(b"FontDescriptor".to_vec(), Object::Dict(descriptor));
-        doc.set(pdfcraft_cos::ObjRef::new(object, 0), Object::Dict(font));
+        doc.set(simplypdf_cos::ObjRef::new(object, 0), Object::Dict(font));
     }
     let lines = text::text_lines(&doc, 0).unwrap();
     assert_eq!(lines.len(), 2);
@@ -1984,7 +1984,7 @@ fn styled_fallback_same_base_font_and_character_keep_both_weights() {
     text::replace_block(&mut doc, 0, 0, "alpha ш beta ш").unwrap();
     let doc = reopen(&doc);
     let fonts = fallback_fonts(&doc);
-    let mut names: Vec<_> = fonts.iter().map(|(_, f)| pdfcraft_fonts::pdf::Metrics::from_dict(&doc, f).base_font).collect();
+    let mut names: Vec<_> = fonts.iter().map(|(_, f)| simplypdf_fonts::pdf::Metrics::from_dict(&doc, f).base_font).collect();
     names.sort();
     assert_eq!(names, ["BIZUDPGothic-Bold", "BIZUDPGothic-Regular"]);
     let outlines: Vec<_> = fonts
@@ -2034,10 +2034,10 @@ fn japanese_replacement_missing_a_glyph_after_240_changes_nothing() {
         return;
     }
     // The first CJK character that no face draws: the 242nd unique character, in a second font.
-    let faces = pdfcraft_fonts::document_japanese_fonts_for_style(false, false);
+    let faces = simplypdf_fonts::document_japanese_fonts_for_style(false, false);
     let missing = (0x4E00u32..0x9FFF)
         .filter_map(char::from_u32)
-        .find(|ch| faces.iter().all(|face| pdfcraft_fonts::japanese_glyph_from(face, *ch).is_err()))
+        .find(|ch| faces.iter().all(|face| simplypdf_fonts::japanese_glyph_from(face, *ch).is_err()))
         .expect("some CJK character is outside every face");
     let replacement = format!("{}{missing}", covered_japanese_chars(241));
     let mut doc = text_page("BT /F2 12 Tf 72 700 Td (ab) Tj ET");
@@ -2202,7 +2202,7 @@ fn cyrillic_replacement_in_a_serif_line_uses_a_face_with_the_letters() {
 
 /// The `/Widths` of the page's Type 3 fallback font, for its Cyrillic letters.
 fn fallback_widths(doc: &Document) -> Vec<f64> {
-    let p = pdfcraft_model::pages(doc).swap_remove(0);
+    let p = simplypdf_model::pages(doc).swap_remove(0);
     let res = doc.resolve(p.dict.get(b"Resources").unwrap());
     let fonts = doc.resolve(res.as_dict().unwrap().get(b"Font").unwrap());
     let font = doc.resolve(fonts.as_dict().unwrap().get(b"PCJp").unwrap());
@@ -2240,7 +2240,7 @@ fn japanese_edit_without_craft_fonts_is_a_clear_error() {
     let before = page_content_bytes(&doc, 0);
     let line = text::replace_line(&mut doc, 0, 0, "日本語の文字");
     let block = text::replace_block(&mut doc, 0, 0, "日本語の文字");
-    if pdfcraft_fonts::document_japanese_font().is_some() {
+    if simplypdf_fonts::document_japanese_font().is_some() {
         eprintln!("built with craft-fonts: the Japanese edits succeed (checked by the tests above)");
         assert!(line.is_ok() && block.is_ok());
         return;
@@ -2339,7 +2339,7 @@ fn skia_subset_page() -> Document {
         (b"DescendantFonts".to_vec(), Object::Array(vec![Object::Dict(cid_font)])),
         (b"ToUnicode".to_vec(), Object::Ref(unicode)),
     ]);
-    let p = pdfcraft_model::pages(&doc)[0].obj;
+    let p = simplypdf_model::pages(&doc)[0].obj;
     let fonts = Dict::from_iter([(b"F3".to_vec(), Object::Dict(font))]);
     doc.update_dict(p, |d| d.set(b"Resources".to_vec(), Object::Dict(Dict::from_iter([(b"Font".to_vec(), Object::Dict(fonts))])))).unwrap();
     doc
@@ -2389,7 +2389,7 @@ fn a_long_draft_in_a_font_without_a_space_works_out_the_space_width_once() {
         (b"DescendantFonts".to_vec(), Object::Array(vec![Object::Dict(cid_font)])),
         (b"ToUnicode".to_vec(), Object::Ref(unicode)),
     ]);
-    let p = pdfcraft_model::pages(&doc)[0].obj;
+    let p = simplypdf_model::pages(&doc)[0].obj;
     let fonts = Dict::from_iter([(b"F3".to_vec(), Object::Dict(font))]);
     doc.update_dict(p, |d| d.set(b"Resources".to_vec(), Object::Dict(Dict::from_iter([(b"Font".to_vec(), Object::Dict(fonts))])))).unwrap();
     let blocks = text::text_blocks(&doc, 0).unwrap();
@@ -2654,7 +2654,7 @@ fn assert_split_tokens_kept(doc: &Document, new_text: &str) {
     let joined = streams(doc, 0).join("\n");
     assert!(joined.contains(new_text) && !joined.contains("Target"), "{joined}");
     assert!(joined.contains("[(After) -20 (wards)]"), "the text after the line is gone: {joined}");
-    for op in pdfcraft_content::parse(joined.as_bytes()).ops {
+    for op in simplypdf_content::parse(joined.as_bytes()).ops {
         let want = match op.op.as_slice() {
             b"BDC" => 2,
             b"TJ" => 1,
@@ -2681,9 +2681,9 @@ fn editing_text_keeps_the_tokens_a_stream_shares_with_its_neighbours() {
 }
 
 /// The operators of the page's pieces joined back into one stream, each checked for operands.
-fn joined_ops(doc: &Document) -> (String, Vec<pdfcraft_content::Op>) {
+fn joined_ops(doc: &Document) -> (String, Vec<simplypdf_content::Op>) {
     let joined = streams(doc, 0).join("\n");
-    let ops = pdfcraft_content::parse(joined.as_bytes());
+    let ops = simplypdf_content::parse(joined.as_bytes());
     assert_eq!(ops.skipped, 0, "stray tokens: {joined}");
     (joined, ops.ops)
 }
@@ -3323,7 +3323,7 @@ fn narrowing_then_widening_keeps_a_typed_double_space() {
 /// them. Checked on both the single-style rewrite path and the row-editor (mixed-style) path.
 #[test]
 fn narrowing_then_widening_a_japanese_word_adds_no_space() {
-    if pdfcraft_fonts::document_japanese_font().is_none() {
+    if simplypdf_fonts::document_japanese_font().is_none() {
         eprintln!("skipping narrowing_then_widening_a_japanese_word_adds_no_space: built without craft-fonts (set CRAFT_FONTS_DIR)");
         return;
     }
@@ -3442,7 +3442,7 @@ fn paragraphs_are_found_and_rewrapped() {
     assert_eq!(blocks[0].lines, [0, 1, 2]);
     let width = blocks[0].rect[2] - blocks[0].rect[0];
     let next = blocks[1].rect;
-    let long = "PdfCraft rewraps a paragraph to its own width when its text changes, keeping the font, size, colour and line spacing.";
+    let long = "SimplyPDF rewraps a paragraph to its own width when its text changes, keeping the font, size, colour and line spacing.";
     assert_eq!(text::replace_block(&mut doc, 0, 0, long).unwrap().substituted, None);
     let doc = reopen(&doc);
     let lines = text::text_lines(&doc, 0).unwrap();
@@ -3499,14 +3499,14 @@ fn a_wrapped_list_item_keeps_its_continuation_and_the_items_after_it() {
 }
 
 fn page_content_bytes(doc: &Document, page: usize) -> Vec<u8> {
-    let p = pdfcraft_model::pages(doc).swap_remove(page);
+    let p = simplypdf_model::pages(doc).swap_remove(page);
     let c = p.dict.get(b"Contents").unwrap();
     match &*doc.resolve(c) {
-        pdfcraft_cos::Object::Stream(s) => s.decoded().unwrap(),
-        pdfcraft_cos::Object::Array(a) => a
+        simplypdf_cos::Object::Stream(s) => s.decoded().unwrap(),
+        simplypdf_cos::Object::Array(a) => a
             .iter()
             .flat_map(|x| match &*doc.resolve(x) {
-                pdfcraft_cos::Object::Stream(s) => s.decoded().unwrap(),
+                simplypdf_cos::Object::Stream(s) => s.decoded().unwrap(),
                 _ => Vec::new(),
             })
             .collect(),
@@ -3628,10 +3628,10 @@ fn image_scan_skips_a_path_segment_before_any_m() {
 
 /// The box of the first `re` on the page in user space, after the `cm`s before it.
 fn first_rect_in_user_space(doc: &Document) -> [f64; 4] {
-    let mut ctm = pdfcraft_content::Matrix::IDENTITY;
-    for op in pdfcraft_content::parse(&page_content_bytes(doc, 0)).ops {
+    let mut ctm = simplypdf_content::Matrix::IDENTITY;
+    for op in simplypdf_content::parse(&page_content_bytes(doc, 0)).ops {
         if op.is("cm") {
-            ctm = pdfcraft_content::Matrix(op.nums::<6>().unwrap()).then(&ctm);
+            ctm = simplypdf_content::Matrix(op.nums::<6>().unwrap()).then(&ctm);
         } else if op.is("re") {
             let [x, y, w, h] = op.nums::<4>().unwrap();
             return ctm.bbox([x, y, x + w, y + h]);
@@ -3677,7 +3677,7 @@ fn close(a: [f64; 4], b: [f64; 4]) -> bool {
 fn q_depth(doc: &Document) -> usize {
     let mut depth = 0_usize;
     let mut deepest = 0;
-    for op in pdfcraft_content::parse(&page_content_bytes(doc, 0)).ops {
+    for op in simplypdf_content::parse(&page_content_bytes(doc, 0)).ops {
         if op.is("q") {
             depth += 1;
             deepest = deepest.max(depth);
@@ -3732,7 +3732,7 @@ fn repeated_image_edits_change_one_transform_instead_of_nesting() {
 fn repeated_group_moves_of_a_cropped_image_change_one_clip_transform() {
     // The crop is smaller than the image, so a clip left behind would shrink `visible_rect`.
     let mut doc = image_page_with("q 150 120 100 50 re W n 200 0 0 100 100 100 cm /Im0 Do Q BT /F1 12 Tf 72 700 Td (Caption) Tj ET");
-    let operators = |doc: &Document| pdfcraft_content::parse(&page_content_bytes(doc, 0)).ops.len();
+    let operators = |doc: &Document| simplypdf_content::parse(&page_content_bytes(doc, 0)).ops.len();
     let start = images::page_images(&doc, 0).unwrap()[0].clone();
     let mut first = 0;
     for i in 0..20 {
@@ -3775,16 +3775,16 @@ fn page_images_move_turn_replace_and_delete() {
     // The text after it is untouched.
     assert_eq!(text::text_lines(&doc, 0).unwrap()[0].text, "Caption");
     // Replace with another image object, in the same place.
-    let mut d = pdfcraft_cos::Dict::new();
+    let mut d = simplypdf_cos::Dict::new();
     for (k, v) in [
-        (&b"Type"[..], pdfcraft_cos::Object::name("XObject")),
-        (b"Subtype", pdfcraft_cos::Object::name("Image")),
-        (b"Width", pdfcraft_cos::Object::Int(1)),
-        (b"Height", pdfcraft_cos::Object::Int(1)),
+        (&b"Type"[..], simplypdf_cos::Object::name("XObject")),
+        (b"Subtype", simplypdf_cos::Object::name("Image")),
+        (b"Width", simplypdf_cos::Object::Int(1)),
+        (b"Height", simplypdf_cos::Object::Int(1)),
     ] {
         d.set(k.to_vec(), v);
     }
-    let other = doc.add(pdfcraft_cos::Object::Stream(pdfcraft_cos::Stream::from_raw(d, vec![0])));
+    let other = doc.add(simplypdf_cos::Object::Stream(simplypdf_cos::Stream::from_raw(d, vec![0])));
     images::change_image(&mut doc, 0, 0, &images::ImageChange::Replace(other)).unwrap();
     let imgs = images::page_images(&doc, 0).unwrap();
     assert_eq!((imgs[0].object, imgs[0].width), (Some(other), 1));
@@ -4000,7 +4000,7 @@ fn arrange_image_in_shared_tagged_block_refuses_or_keeps_tagged() {
         Ok(()) => {
             let doc = reopen(&doc);
             let bytes = page_content_bytes(&doc, 0);
-            let ops = pdfcraft_content::parse(&bytes).ops;
+            let ops = simplypdf_content::parse(&bytes).ops;
             let mut mc_depth = 0usize;
             for op in ops {
                 if op.is("BDC") || op.is("BMC") {
@@ -4293,22 +4293,22 @@ fn unwrapped_image_moves_successfully() {
 #[test]
 fn test_arrange_unwrapped_image_extraction() {
     let content = b"100 0 0 100 100 100 cm /Im0 Do /Im1 Do";
-    let ops = pdfcraft_content::parse(content).ops;
+    let ops = simplypdf_content::parse(content).ops;
     let target = ops.iter().position(|op| op.is("Do") && op.name(0) == Some(b"Im0")).expect("target /Im0 not found");
 
     // Scope start for unwrapped image matches target because content_units isolates Do
     let scope_start = target;
 
     // Accumulate effective CTM prior to the image operation
-    let mut initial_ctm = pdfcraft_content::Matrix::IDENTITY;
+    let mut initial_ctm = simplypdf_content::Matrix::IDENTITY;
     for op in &ops[..target] {
         if op.is("cm")
             && let Some(m) = op.nums::<6>()
         {
-            initial_ctm = pdfcraft_content::Matrix(m).then(&initial_ctm);
+            initial_ctm = simplypdf_content::Matrix(m).then(&initial_ctm);
         }
     }
-    assert_eq!(initial_ctm, pdfcraft_content::Matrix([100.0, 0.0, 0.0, 100.0, 100.0, 100.0]));
+    assert_eq!(initial_ctm, simplypdf_content::Matrix([100.0, 0.0, 0.0, 100.0, 100.0, 100.0]));
 
     let extracted = images::extract_scope_state(&ops, scope_start, target, initial_ctm)
         .expect("extraction must not return Err")
@@ -4533,9 +4533,9 @@ fn nested_soft_masks_replay_in_correct_order_and_effective_mask_is_rendered() {
 
     // 3. Rendered-pixel assertion: render output and verify Mask B (left 50x100) is effective, not Mask A (bottom 100x50)
     let pdf_bytes = write_incremental(&doc, &SaveOptions::default()).unwrap();
-    let mut renderer = pdfcraft_render::PageRenderer::new(Arc::new(pdf_bytes), pdfcraft_render::RenderConfig::default());
+    let mut renderer = simplypdf_render::PageRenderer::new(Arc::new(pdf_bytes), simplypdf_render::RenderConfig::default());
     let page =
-        renderer.render(pdfcraft_render::RenderRequest { page: 0, kind: pdfcraft_render::RequestKind::Pixels, scale: 1.0, ..Default::default() });
+        renderer.render(simplypdf_render::RenderRequest { page: 0, kind: simplypdf_render::RequestKind::Pixels, scale: 1.0, ..Default::default() });
     let px = |x: u32, y: u32| {
         let idx = ((y * page.width + x) * 4) as usize;
         page.rgba[idx..idx + 4].to_vec()
@@ -4605,10 +4605,10 @@ fn non_identity_cm_before_gs_preserves_mask_coordinates_and_rendering() {
 
     // Render baseline before reordering
     let pdf_bytes_before = write_incremental(&doc, &SaveOptions::default()).unwrap();
-    let mut renderer_before = pdfcraft_render::PageRenderer::new(Arc::new(pdf_bytes_before), pdfcraft_render::RenderConfig::default());
-    let page_before = renderer_before.render(pdfcraft_render::RenderRequest {
+    let mut renderer_before = simplypdf_render::PageRenderer::new(Arc::new(pdf_bytes_before), simplypdf_render::RenderConfig::default());
+    let page_before = renderer_before.render(simplypdf_render::RenderRequest {
         page: 0,
-        kind: pdfcraft_render::RequestKind::Pixels,
+        kind: simplypdf_render::RequestKind::Pixels,
         scale: 1.0,
         ..Default::default()
     });
@@ -4643,10 +4643,10 @@ fn non_identity_cm_before_gs_preserves_mask_coordinates_and_rendering() {
 
     // 3. Render reopened document and assert non-overlapping pixels remain unchanged
     let pdf_bytes_after = write_incremental(&reopened_doc, &SaveOptions::default()).unwrap();
-    let mut renderer_after = pdfcraft_render::PageRenderer::new(Arc::new(pdf_bytes_after), pdfcraft_render::RenderConfig::default());
-    let page_after = renderer_after.render(pdfcraft_render::RenderRequest {
+    let mut renderer_after = simplypdf_render::PageRenderer::new(Arc::new(pdf_bytes_after), simplypdf_render::RenderConfig::default());
+    let page_after = renderer_after.render(simplypdf_render::RenderRequest {
         page: 0,
-        kind: pdfcraft_render::RequestKind::Pixels,
+        kind: simplypdf_render::RequestKind::Pixels,
         scale: 1.0,
         ..Default::default()
     });
@@ -4677,14 +4677,14 @@ fn form_artwork_edits_only_the_selected_placement() {
     form.set(b"BBox".to_vec(), Object::Array([10, 20, 110, 70].map(Object::Int).to_vec()));
     form.set(b"Matrix".to_vec(), Object::Array([2, 0, 0, 3, -20, -60].map(Object::Int).to_vec()));
     let artwork = doc.add(Object::Stream(Stream::flate(form, b"1 0 0 rg 10 20 100 50 re f")));
-    doc.update_dict(pdfcraft_cos::ObjRef::new(6, 0), |d| {
+    doc.update_dict(simplypdf_cos::ObjRef::new(6, 0), |d| {
         let mut xo = Dict::new();
         xo.set(b"Figure".to_vec(), Object::Ref(artwork));
         d.set(b"XObject".to_vec(), Object::Dict(xo));
     })
     .unwrap();
     let content = b"q 1 0 0 1 40 80 cm /Figure Do Q q 1 0 0 1 300 400 cm /Figure Do Q BT /F1 9 Tf (Caption) Tj ET";
-    doc.set(pdfcraft_cos::ObjRef::new(7, 0), Object::Stream(Stream::flate(Dict::new(), content)));
+    doc.set(simplypdf_cos::ObjRef::new(7, 0), Object::Stream(Stream::flate(Dict::new(), content)));
     let mut doc = reopen(&doc);
     let original = doc.get(artwork);
     let imgs = images::page_images(&doc, 0).unwrap();
@@ -4797,13 +4797,13 @@ fn a_new_paragraph_colour_does_not_spill_into_the_text_after_it() {
     text::rewrite_block(&mut doc, 0, 0, None, &style).unwrap();
     let doc = reopen(&doc);
     // The fill colour in force where the second paragraph is shown (q/Q nest it).
-    let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+    let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
     let (mut fill, mut stack) = (String::from("0 g"), Vec::new());
     for op in &ops {
         match op.op.as_slice() {
             b"q" => stack.push(fill.clone()),
             b"Q" => fill = stack.pop().unwrap_or_default(),
-            b"g" | b"rg" | b"k" => fill = String::from_utf8_lossy(&pdfcraft_content::serialize_ops(std::slice::from_ref(op))).trim().to_string(),
+            b"g" | b"rg" | b"k" => fill = String::from_utf8_lossy(&simplypdf_content::serialize_ops(std::slice::from_ref(op))).trim().to_string(),
             b"Tj" if op.operands.first().and_then(|o| o.as_string()).is_some_and(|s| s.to_text() == "Second paragraph") => break,
             _ => {}
         }
@@ -4840,7 +4840,7 @@ fn recolouring_a_paragraph_in_a_shared_text_object_keeps_order_and_nesting() {
     let doc = reopen(&doc);
     let texts: Vec<String> = text::text_blocks(&doc, 0).unwrap().into_iter().map(|b| b.text).collect();
     assert_eq!(texts, ["First paragraph", "Second paragraph", "Third paragraph"]);
-    let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+    let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
     let (mut in_text, mut depth, mut red) = (false, 0usize, Vec::new());
     for op in &ops {
         match op.op.as_slice() {
@@ -5277,7 +5277,7 @@ fn justified_text_in_the_type3_fallback_stretches_its_spaces() {
     let typed = "日本語の 文章を 書きます 東京 大阪 京都 名古屋 札幌 福岡 神戸 横浜 仙台 広島 千葉 新潟 静岡 熊本 岡山 金沢";
     let style = text::BlockStyle { align: Some(added::Align::Justify), ..Default::default() };
     let rewritten = text::rewrite_block(&mut doc, 0, 0, Some(typed), &style);
-    if pdfcraft_fonts::document_japanese_font().is_none() {
+    if simplypdf_fonts::document_japanese_font().is_none() {
         assert!(rewritten.is_err());
         eprintln!("built without a craft-fonts Japanese face: the Type 3 path is checked with CRAFT_FONTS_DIR");
         return;
@@ -5288,7 +5288,7 @@ fn justified_text_in_the_type3_fallback_stretches_its_spaces() {
     for l in &lines[..lines.len() - 1] {
         assert!((l.rect[2] - rect[2]).abs() < 1.0, "{:?} spans {:?}, not {rect:?}", l.text, l.rect);
     }
-    let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+    let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
     assert!(ops.iter().any(|o| o.is("TJ")), "{ops:?}");
     assert!(ops.iter().filter(|o| o.is("Tw")).all(|o| o.operands.first().and_then(|n| n.as_f64()) == Some(0.0)), "{ops:?}");
 }
@@ -5307,7 +5307,7 @@ fn hebrew_letters_the_page_font_lacks_use_the_hebrew_face() {
     // ע and ה aren't in the page's font.
     let typed = "שלום עולם, עמוד 12 (PDF)";
     let line = text::replace_line(&mut doc, 0, 0, typed);
-    if pdfcraft_fonts::document_hebrew_font(false).is_none() {
+    if simplypdf_fonts::document_hebrew_font(false).is_none() {
         let Err(EditError::Invalid(msg)) = line else { panic!("expected a clear error, got {line:?}") };
         assert!(msg.contains("Hebrew fallback font") && msg.contains("CRAFT_FONTS_DIR"), "{msg}");
         assert_eq!(page_content_bytes(&doc, 0), before);
@@ -5320,7 +5320,7 @@ fn hebrew_letters_the_page_font_lacks_use_the_hebrew_face() {
     let reopened = reopen(&doc);
     assert_eq!(text::text_lines(&reopened, 0).unwrap()[0].text, typed);
     // Every glyph has an outline, so nothing is drawn as a box.
-    let p = pdfcraft_model::pages(&reopened).swap_remove(0);
+    let p = simplypdf_model::pages(&reopened).swap_remove(0);
     let res = reopened.resolve(p.dict.get(b"Resources").unwrap());
     let fonts = reopened.resolve(res.as_dict().unwrap().get(b"Font").unwrap());
     let font = reopened.resolve(fonts.as_dict().unwrap().get(b"PCHe").unwrap());
@@ -5328,7 +5328,7 @@ fn hebrew_letters_the_page_font_lacks_use_the_hebrew_face() {
     let procs = procs.as_dict().unwrap();
     assert_eq!(procs.iter().count(), typed.chars().collect::<std::collections::HashSet<_>>().len());
     for (_, glyph) in procs.iter() {
-        let pdfcraft_cos::Object::Stream(s) = &*reopened.resolve(glyph) else { panic!("glyph stream") };
+        let simplypdf_cos::Object::Stream(s) = &*reopened.resolve(glyph) else { panic!("glyph stream") };
         let path = String::from_utf8(s.decoded().unwrap()).unwrap();
         assert!(path.starts_with(|c: char| c.is_ascii_digit()) && path.contains(" d1"), "{path}");
     }
@@ -5412,7 +5412,7 @@ fn page_text_the_standard_fonts_cant_draw_is_refused() {
     // U+061C is in the Arabic block but is a direction mark that's dropped, not shaped: it never
     // makes text drawable, nor (with the face) undrawable.
     assert!(add_content(&mut doc, 0, &Content::Text(arabic("\u{061C}中"))).is_err());
-    if pdfcraft_fonts::arabic_has('م') {
+    if simplypdf_fonts::arabic_has('م') {
         add_content(&mut doc, 0, &Content::Text(arabic("مرحبا Hello"))).unwrap();
         add_content(&mut doc, 0, &Content::Text(arabic("\u{061C}Hello"))).unwrap();
         for text in ["مرحبا 中", "\u{061C}中"] {
@@ -5434,22 +5434,22 @@ fn page_text_the_standard_fonts_cant_draw_is_refused() {
     }
 }
 
-fn xobject(doc: &Document, page: usize, name: &[u8]) -> Option<pdfcraft_cos::ObjRef> {
-    let p = &pdfcraft_model::pages(doc)[page];
+fn xobject(doc: &Document, page: usize, name: &[u8]) -> Option<simplypdf_cos::ObjRef> {
+    let p = &simplypdf_model::pages(doc)[page];
     let res = doc.resolve(p.dict.get(b"Resources")?);
     let xo = doc.resolve(res.as_dict()?.get(b"XObject")?);
     xo.as_dict()?.get(name).and_then(Object::as_ref)
 }
 
-fn annot_at(doc: &Document, page: usize, index: usize) -> pdfcraft_cos::ObjRef {
-    let p = &pdfcraft_model::pages(doc)[page];
+fn annot_at(doc: &Document, page: usize, index: usize) -> simplypdf_cos::ObjRef {
+    let p = &simplypdf_model::pages(doc)[page];
     let list = doc.resolve(p.dict.get(b"Annots").unwrap());
     list.as_array().unwrap()[index].as_ref().unwrap()
 }
 
 #[test]
 fn fill_sign_flatten_bakes_marks_keeps_other_comments_and_does_not_reuse_pcfl0() {
-    use pdfcraft_annot::{FillMark, Markup, Meta, NewAnnotation, Shape, Style, add_annotation, summaries};
+    use simplypdf_annot::{FillMark, Markup, Meta, NewAnnotation, Shape, Style, add_annotation, summaries};
     let mut doc = fixture();
     assert_eq!(flatten_fill_sign(&mut doc, &[0]).unwrap(), 0);
     assert!(!doc.is_modified(), "nothing to flatten leaves the file alone");
@@ -5470,7 +5470,7 @@ fn fill_sign_flatten_bakes_marks_keeps_other_comments_and_does_not_reuse_pcfl0()
     .unwrap();
     add(&mut doc, Shape::Mark { rect: [100.0, 100.0, 120.0, 120.0], mark: FillMark::Check }, "");
     add(&mut doc, Shape::Signature { strokes: vec![vec![[10.0, 50.0], [40.0, 80.0], [70.0, 50.0]]] }, "");
-    doc.update_dict(annot_at(&doc, 0, 2), |d| d.set(b"Subj".to_vec(), pdfcraft_cos::PdfString::text("Pencil"))).unwrap();
+    doc.update_dict(annot_at(&doc, 0, 2), |d| d.set(b"Subj".to_vec(), simplypdf_cos::PdfString::text("Pencil"))).unwrap();
     add(&mut doc, Shape::TypedSignature { rect: [20.0, 40.0, 90.0, 70.0], contours: vec![vec![[0.1, 0.2], [0.5, 0.9], [0.9, 0.2]]] }, "");
     add(&mut doc, Shape::TextMarkup { kind: Markup::Highlight, quads: vec![[20.0, 400.0, 80.0, 400.0, 20.0, 390.0, 80.0, 390.0]] }, "keep");
     add(&mut doc, Shape::TextBox { rect: [20.0, 300.0, 140.0, 340.0], font_size: 12.0 }, "Note");
@@ -5572,7 +5572,7 @@ fn reading_follows_form_xobjects() {
     // a page image.
     let own = images::page_images(&doc, 0).unwrap();
     assert_eq!(own.len(), 1, "{own:?}");
-    assert!(own[0].is_form && own[0].object == Some(pdfcraft_cos::ObjRef::new(6, 0)), "{own:?}");
+    assert!(own[0].is_form && own[0].object == Some(simplypdf_cos::ObjRef::new(6, 0)), "{own:?}");
 }
 
 /// A page's `/XObject` and a form's `/Resources` are read wherever they are stored, and a form with
@@ -5765,7 +5765,7 @@ fn added_thai_text_wraps_clusters_and_survives_reopen() {
     let t = AddedText {
         rect: [20.0, 100.0, 250.0, 300.0], text: "สวัสดี น้ำ ผู้ใช้ ปู่ ๑๒๓ Hello 123".into(), size: 16.0, ..AddedText::default()
     };
-    if pdfcraft_fonts::document_thai_font().is_none() {
+    if simplypdf_fonts::document_thai_font().is_none() {
         assert_eq!(first_undrawable(&t), Some('ส'));
         let before = list_added(&doc);
         let err = add_content(&mut doc, 0, &Content::Text(t)).unwrap_err().to_string();
@@ -5805,7 +5805,7 @@ fn group_moves_preserve_glyph_bytes_and_unselected_text_state() {
         let index = blocks.iter().position(|b| b.text.contains("Quoted")).unwrap_or(0);
         let selected: Vec<_> = blocks[index].lines.iter().map(|i| before[*i].text.clone()).collect();
         let glyph_bytes = |doc: &Document| {
-            pdfcraft_content::parse(&page_content_bytes(doc, 0))
+            simplypdf_content::parse(&page_content_bytes(doc, 0))
                 .ops
                 .iter()
                 .flat_map(|op| {
@@ -5846,7 +5846,7 @@ fn group_moves_preserve_glyph_bytes_and_unselected_text_state() {
 #[test]
 fn group_moves_preserve_small_offsets_under_large_transforms() {
     let mut doc = image_page();
-    let page = pdfcraft_model::pages(&doc)[0].obj;
+    let page = simplypdf_model::pages(&doc)[0].obj;
     let content = doc.add(Object::Stream(Stream::flate(
         Dict::new(),
         b"q 100000 0 0 100000 100 100 cm /Im0 Do Q q 10000 0 0 10000 0 0 cm BT /F1 0.00123456789 Tf 0.02 0.06 Td (Small) Tj 1 0 0 rg (Neighbour) Tj ET Q",
@@ -5903,7 +5903,7 @@ fn mixed_object_inventory_does_not_select_added_content_twice() {
 fn group_move_refusals_leave_the_object_graph_untouched() {
     let mut doc = image_page();
     let target = editable_objects(&doc, 0).unwrap()[0].target;
-    let original = pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap();
+    let original = simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap();
     for (targets, offset) in [
         (vec![], [1.0, 2.0]),
         (vec![target, target], [1.0, 2.0]),
@@ -5915,20 +5915,20 @@ fn group_move_refusals_leave_the_object_graph_untouched() {
         (vec![target; MAX_MOVE_OBJECTS + 1], [1.0, 2.0]),
     ] {
         assert!(move_objects(&mut doc, 0, &targets, offset).is_err());
-        assert_eq!(pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap(), original);
+        assert_eq!(simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap(), original);
     }
     let mut clipped = text_page("BT /F1 12 Tf 50 600 Td (Ordinary) Tj ET BT /F1 12 Tf 4 Tr 50 400 Td (Clipping) Tj ET");
     let targets = editable_objects(&clipped, 0).unwrap().iter().map(|o| o.target).collect::<Vec<_>>();
-    let original = pdfcraft_cos::write_full(&clipped, &SaveOptions::default()).unwrap();
+    let original = simplypdf_cos::write_full(&clipped, &SaveOptions::default()).unwrap();
     assert!(move_objects(&mut clipped, 0, &targets, [10.0, 5.0]).unwrap_err().to_string().contains("clipping"));
-    assert_eq!(pdfcraft_cos::write_full(&clipped, &SaveOptions::default()).unwrap(), original);
+    assert_eq!(simplypdf_cos::write_full(&clipped, &SaveOptions::default()).unwrap(), original);
 }
 
 #[test]
 fn added_and_native_objects_move_together_on_cropped_rotated_user_unit_pages() {
     for rotation in [0, 90, 180, 270] {
         let mut doc = image_page();
-        let page = pdfcraft_model::pages(&doc)[0].obj;
+        let page = simplypdf_model::pages(&doc)[0].obj;
         doc.update_dict(page, |d| {
             d.set(b"CropBox".to_vec(), Object::Array([10, 20, 500, 750].map(Object::Int).to_vec()));
             d.set(b"Rotate".to_vec(), Object::Int(rotation));
@@ -5965,7 +5965,7 @@ fn group_moves_keep_split_stream_tokens_and_shared_form_resources() {
         assert!(close(b.rect, [a.rect[0] + 30.0, a.rect[1] - 20.0, a.rect[2] + 30.0, a.rect[3] - 20.0]));
     }
     let joined = page_content_bytes(&doc, 0);
-    let ops = pdfcraft_content::parse(&joined).ops;
+    let ops = simplypdf_content::parse(&joined).ops;
     assert_eq!(ops.iter().find(|o| o.is("BDC")).unwrap().operands.len(), 2);
     assert!(ops.iter().any(|o| o.is("EMC")));
     // Two pages share a content stream and a Form; only one placement on one page moves.
@@ -5973,16 +5973,16 @@ fn group_moves_keep_split_stream_tokens_and_shared_form_resources() {
     let mut form = Dict::new();
     form.set(b"Subtype".to_vec(), Object::name("Form"));
     form.set(b"BBox".to_vec(), Object::Array([0, 0, 60, 30].map(Object::Int).to_vec()));
-    form.set(b"PrivateData".to_vec(), Object::String(pdfcraft_cos::PdfString::literal(b"retain this".to_vec())));
+    form.set(b"PrivateData".to_vec(), Object::String(simplypdf_cos::PdfString::literal(b"retain this".to_vec())));
     let artwork = doc.add(Object::Stream(Stream::flate(form, b"1 0 0 rg 0 0 60 30 re f")));
-    doc.update_dict(pdfcraft_cos::ObjRef::new(6, 0), |d| {
+    doc.update_dict(simplypdf_cos::ObjRef::new(6, 0), |d| {
         let mut xo = Dict::new();
         xo.set(b"Figure".to_vec(), Object::Ref(artwork));
         d.set(b"XObject".to_vec(), Object::Dict(xo));
     })
     .unwrap();
     doc.set(
-        pdfcraft_cos::ObjRef::new(7, 0),
+        simplypdf_cos::ObjRef::new(7, 0),
         Object::Stream(Stream::flate(
             Dict::new(),
             b"q 1 0 0 1 40 80 cm /Figure Do Q q 1 0 0 1 300 400 cm /Figure Do Q BT /F1 9 Tf 40 160 Td (Caption) Tj ET",
@@ -6034,7 +6034,7 @@ fn justified_text_in_a_composite_font_fills_each_row_with_adjustments_after_its_
             ]))]),
         ),
     ]);
-    let p = pdfcraft_model::pages(&doc)[0].obj;
+    let p = simplypdf_model::pages(&doc)[0].obj;
     let resources = Dict::from_iter([(b"Font".to_vec(), Object::Dict(Dict::from_iter([(b"F1".to_vec(), Object::Dict(font))])))]);
     doc.update_dict(p, |d| d.set(b"Resources".to_vec(), Object::Dict(resources))).unwrap();
     let before = text::text_blocks(&doc, 0).unwrap()[0].clone();
@@ -6048,7 +6048,7 @@ fn justified_text_in_a_composite_font_fills_each_row_with_adjustments_after_its_
     // The source font shows the text, with its spaces, and the text reads as before, rewrapped.
     let flat = |s: &str| s.replace('\n', " ");
     assert_eq!(flat(&text::text_blocks(&doc, 0).unwrap()[0].editor_text), flat(&before.editor_text));
-    let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+    let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
     assert!(ops.iter().all(|o| !o.is("Tf") || o.operands.first().and_then(|n| n.as_name()) == Some(b"F1".as_slice())), "{ops:?}");
     assert!(ops.iter().any(|o| o.is("TJ")), "{ops:?}");
     assert!(ops.iter().filter(|o| o.is("Tw")).all(|o| o.operands.first().and_then(|n| n.as_f64()) == Some(0.0)), "{ops:?}");
@@ -6073,7 +6073,7 @@ fn group_moves_preserve_encoded_glyphs_and_refuse_vertical_cmaps() {
         Object::Array(vec![Object::Dict(Dict::from_iter([(b"Subtype".to_vec(), Object::name("CIDFontType2")), (b"DW".to_vec(), Object::Int(600))]))]),
     );
     // No external font asset: this synthetic font is enough to exercise raw CID bytes.
-    let p = pdfcraft_model::pages(&doc)[0].obj;
+    let p = simplypdf_model::pages(&doc)[0].obj;
     let mut resources = Dict::new();
     let mut fonts = Dict::new();
     fonts.set(b"F1".to_vec(), Object::Dict(font.clone()));
@@ -6083,7 +6083,7 @@ fn group_moves_preserve_encoded_glyphs_and_refuse_vertical_cmaps() {
     assert!(!original.is_empty());
     move_objects(&mut doc, 0, &[ObjectTarget { kind: ObjectKind::Text, index: 0 }], [25.0, 15.0]).unwrap();
     let encoded =
-        |doc: &Document| pdfcraft_content::parse(&page_content_bytes(doc, 0)).ops.into_iter().find(|o| o.is("Tj")).unwrap().operands[0].clone();
+        |doc: &Document| simplypdf_content::parse(&page_content_bytes(doc, 0)).ops.into_iter().find(|o| o.is("Tj")).unwrap().operands[0].clone();
     assert_eq!(encoded(&doc).as_string().unwrap().bytes, [0, 65, 0, 66, 0, 67]);
     let after = text::text_lines(&doc, 0).unwrap();
     assert_eq!(original[0].text, after[0].text);
@@ -6098,9 +6098,9 @@ fn group_moves_preserve_encoded_glyphs_and_refuse_vertical_cmaps() {
         fonts.set(b"F1".to_vec(), Object::Dict(f));
         resources.set(b"Font".to_vec(), Object::Dict(fonts));
         doc.update_dict(p, |d| d.set(b"Resources".to_vec(), Object::Dict(resources.clone()))).unwrap();
-        let before = pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap();
+        let before = simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap();
         assert!(move_objects(&mut doc, 0, &[ObjectTarget { kind: ObjectKind::Text, index: 0 }], [5.0, 5.0]).is_err());
-        assert_eq!(pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap(), before);
+        assert_eq!(simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap(), before);
     }
 }
 
@@ -6113,12 +6113,12 @@ fn moving_added_content_after_page_rotation_preserves_streams_and_resources() {
         &Content::Text(added::AddedText { text: "Added label".into(), rect: [50.0, 300.0, 200.0, 330.0], ..Default::default() }),
     )
     .unwrap();
-    let p = pdfcraft_model::pages(&doc)[0].obj;
-    let resources = pdfcraft_model::pages(&doc)[0].dict.get(b"Resources").cloned();
+    let p = simplypdf_model::pages(&doc)[0].obj;
+    let resources = simplypdf_model::pages(&doc)[0].dict.get(b"Resources").cloned();
     let item = added::list_added(&doc)[0].clone();
     let source = stream_bytes(&doc, &Object::Ref(item.obj)).unwrap();
     let content_after_cm = |bytes: &[u8]| {
-        let ops = pdfcraft_content::parse(bytes).ops;
+        let ops = simplypdf_content::parse(bytes).ops;
         bytes[ops[1].span.end..].to_vec()
     };
     for rotation in [90, 180, 270, 0] {
@@ -6144,7 +6144,7 @@ fn moving_added_content_after_page_rotation_preserves_streams_and_resources() {
         let current = added::list_added(&doc)[0].clone();
         let bytes = stream_bytes(&doc, &Object::Ref(current.obj)).unwrap();
         assert_eq!(content_after_cm(&bytes), content_after_cm(&source), "all drawing bytes after the placement, including glyphs, remain identical");
-        assert_eq!(pdfcraft_model::pages(&doc)[0].dict.get(b"Resources").cloned(), resources);
+        assert_eq!(simplypdf_model::pages(&doc)[0].dict.get(b"Resources").cloned(), resources);
         doc = reopen(&doc);
     }
 }
@@ -6158,7 +6158,7 @@ fn group_moves_of_shared_added_streams_change_only_the_selected_page() {
         &Content::Text(added::AddedText { text: "Shared added label".into(), rect: [40.0, 400.0, 240.0, 420.0], ..Default::default() }),
     )
     .unwrap();
-    let pages = pdfcraft_model::pages(&doc);
+    let pages = simplypdf_model::pages(&doc);
     let contents = pages[0].dict.get(b"Contents").cloned().unwrap();
     doc.update_dict(pages[1].obj, |d| d.set(b"Contents".to_vec(), contents)).unwrap();
     let doc = reopen(&doc);
@@ -6197,14 +6197,14 @@ fn group_selection_refuses_incomplete_content_and_resource_budget_overruns() {
         format!("{} BT /F1 12 Tf 40 400 Td (Target) Tj ET", "n ".repeat(100001)),
     ] {
         let mut doc = text_page(&data);
-        let before = pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap();
+        let before = simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap();
         assert!(editable_objects(&doc, 0).is_err());
         assert!(move_objects(&mut doc, 0, &[ObjectTarget { kind: ObjectKind::Text, index: 0 }], [10.0, 10.0]).is_err());
-        assert_eq!(pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap(), before);
+        assert_eq!(simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap(), before);
     }
     let mut doc = text_page("BT /F1 12 Tf 40 400 Td (Target) Tj ET");
-    let page = pdfcraft_model::pages(&doc)[0].obj;
-    doc.update_dict(page, |d| d.set(b"Contents".to_vec(), Object::Ref(pdfcraft_cos::ObjRef::new(999999, 0)))).unwrap();
+    let page = simplypdf_model::pages(&doc)[0].obj;
+    doc.update_dict(page, |d| d.set(b"Contents".to_vec(), Object::Ref(simplypdf_cos::ObjRef::new(999999, 0)))).unwrap();
     assert!(editable_objects(&doc, 0).is_err(), "a missing stream cannot produce a partial inventory");
     let mut filter = Dict::new();
     filter.set(b"Filter".to_vec(), Object::name("NotAFilter"));
@@ -6220,7 +6220,7 @@ fn group_selection_refuses_incomplete_content_and_resource_budget_overruns() {
 fn revealed_text_moves_on_top_only_when_painted_over() {
     let on_top_of = |doc: Document| {
         let block = text::text_blocks(&doc, 0).unwrap().remove(0);
-        let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+        let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
         let at = ops.iter().position(|o| o.is("BT")).unwrap();
         revealed_under_paint(&doc, 0, block.invisible, block.rect, &ops, at)
     };
@@ -6294,11 +6294,11 @@ fn an_ocr_rewrite_goes_on_top_of_paint_over_where_it_lands() {
     for (content, edit, style, scan) in cases {
         let mut doc = image_page_with(&format!("{content} {scan}"));
         let before = text::text_blocks(&doc, 0).unwrap().remove(0);
-        let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+        let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
         let at = ops.iter().position(|o| o.is("BT")).unwrap();
         assert!(!revealed_under_paint(&doc, 0, true, before.rect, &ops, at), "{edit:?}: the old box alone is clear of the scan");
         text::rewrite_block(&mut doc, 0, 0, Some(edit), style).unwrap();
-        let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+        let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
         let scan_at = ops.iter().position(|o| o.is("Do")).unwrap();
         let shows = ["Tj", "TJ", "'", "\""];
         assert!(ops.iter().skip(scan_at).any(|o| shows.iter().any(|s| o.is(s))), "{edit:?}: the rewrite is drawn over the scan");
@@ -6336,19 +6336,19 @@ fn an_ocr_rewrite_refused_on_top_leaves_the_document_as_it_was() {
 #[test]
 fn group_move_budget_refusals_keep_the_original_page_selectable() {
     let text = text_page(&format!("{} BT /F1 12 Tf 40 400 Td (Target) Tj ET", "n ".repeat(99_995)));
-    assert_eq!(pdfcraft_content::parse(&page_content_bytes(&text, 0)).ops.len(), 100_000);
+    assert_eq!(simplypdf_content::parse(&page_content_bytes(&text, 0)).ops.len(), 100_000);
     let mut image = image_page();
-    let page = pdfcraft_model::pages(&image)[0].obj;
+    let page = simplypdf_model::pages(&image)[0].obj;
     let bytes = format!("{} /Im0 Do {}", "q ".repeat(1024), "Q ".repeat(1024));
     let content = image.add(Object::Stream(Stream::flate(Dict::new(), bytes.as_bytes())));
     image.update_dict(page, |d| d.set(b"Contents".to_vec(), Object::Ref(content))).unwrap();
     for mut doc in [text, image] {
         let objects = editable_objects(&doc, 0).unwrap();
         assert_eq!(objects.len(), 1);
-        let before = pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap();
+        let before = simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap();
         let error = move_objects(&mut doc, 0, &[objects[0].target], [10.0, 5.0]).unwrap_err();
         assert!(error.to_string().contains("too many content operations") || error.to_string().contains("nested too deeply"), "{error}");
-        assert_eq!(pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap(), before);
+        assert_eq!(simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap(), before);
         assert_eq!(editable_objects(&doc, 0).unwrap(), objects, "refusal retains a usable inventory");
     }
 }
@@ -6547,7 +6547,7 @@ fn mixed_region_page() -> Document {
         f.set(b"Subtype".to_vec(), Object::name("Type1"));
         f.set(b"BaseFont".to_vec(), Object::name(base));
         f.set(b"Encoding".to_vec(), Object::name("WinAnsiEncoding"));
-        doc.set(pdfcraft_cos::ObjRef::new(obj, 0), Object::Dict(f));
+        doc.set(simplypdf_cos::ObjRef::new(obj, 0), Object::Dict(f));
     }
     let mut f = Dict::new();
     f.set(b"Type".to_vec(), Object::name("Font"));
@@ -6555,7 +6555,7 @@ fn mixed_region_page() -> Document {
     f.set(b"BaseFont".to_vec(), Object::name("Courier-Oblique"));
     f.set(b"Encoding".to_vec(), Object::name("WinAnsiEncoding"));
     let font = doc.add(Object::Dict(f));
-    let page = pdfcraft_model::pages(&doc)[0].clone();
+    let page = simplypdf_model::pages(&doc)[0].clone();
     let mut resources = doc.resolve(page.dict.get(b"Resources").unwrap()).as_dict().unwrap().clone();
     let mut fonts = doc.resolve(resources.get(b"Font").unwrap()).as_dict().unwrap().clone();
     fonts.set(b"F3".to_vec(), Object::Ref(font));
@@ -6580,7 +6580,7 @@ fn mixed_styles_and_matrix_sizes_form_visual_regions_without_merging_columns() {
 #[test]
 fn a_single_row_with_mixed_styles_grows_before_wrapping() {
     let mut doc = text_page("BT /F1 10 Tf 72 582 Td (Plain ) Tj /F2 10 Tf (bold) Tj /F1 10 Tf ( text.) Tj ET");
-    doc.update_dict(pdfcraft_cos::ObjRef::new(6, 0), |f| {
+    doc.update_dict(simplypdf_cos::ObjRef::new(6, 0), |f| {
         *f = Dict::new();
         f.set(b"Type".to_vec(), Object::name("Font"));
         f.set(b"Subtype".to_vec(), Object::name("Type1"));
@@ -6716,7 +6716,7 @@ fn disjoint_style_ranges_preserve_unselected_runs_and_validate_utf8_atomically()
         let after = lines.iter().find(|l| l.text == word).unwrap();
         assert_eq!((after.size, after.color, &after.font, after.baseline()), (prior.size, prior.color, &prior.font, prior.baseline()));
     }
-    let before = pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap();
+    let before = simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap();
     let invalid = BlockStyle {
         ranges: vec![RangeStyle {
             range: 1..2,
@@ -6731,7 +6731,7 @@ fn disjoint_style_ranges_preserve_unselected_runs_and_validate_utf8_atomically()
         ..Default::default()
     };
     assert!(text::rewrite_block(&mut doc, 0, 1, Some("é bad"), &invalid).is_err());
-    assert_eq!(pdfcraft_cos::write_full(&doc, &SaveOptions::default()).unwrap(), before);
+    assert_eq!(simplypdf_cos::write_full(&doc, &SaveOptions::default()).unwrap(), before);
 }
 
 #[test]
@@ -6753,7 +6753,7 @@ fn centered_mixed_size_title_keeps_three_rows_when_changed() {
 #[test]
 fn image_selection_bounds_respect_clips_and_restore_graphics_state() {
     let mut doc = image_page();
-    let page = pdfcraft_model::pages(&doc)[0].clone();
+    let page = simplypdf_model::pages(&doc)[0].clone();
     let content = b"q 1 0 0 1 10 20 cm 20 30 100 80 re W* n q 1200 0 0 1400 -500 -600 cm /Im0 Do Q Q q 200 0 0 100 100 100 cm /Im0 Do Q q 0 0 10 10 re W n 100 0 0 100 200 200 cm /Im0 Do Q";
     let stream = doc.add(Object::Stream(Stream::flate(Dict::new(), content)));
     doc.update_dict(page.obj, |d| d.set(b"Contents".to_vec(), Object::Ref(stream))).unwrap();
@@ -6766,7 +6766,7 @@ fn image_selection_bounds_respect_clips_and_restore_graphics_state() {
     assert_eq!(objects.len(), 2, "hidden images cannot intercept selection");
     assert_eq!(objects[0].rect, before[0].visible_rect.unwrap());
     let offset = [12.0, 14.0];
-    images::change_image(&mut doc, 0, 0, &images::ImageChange::Transform(pdfcraft_content::Matrix::translate(offset[0], offset[1]).0)).unwrap();
+    images::change_image(&mut doc, 0, 0, &images::ImageChange::Transform(simplypdf_content::Matrix::translate(offset[0], offset[1]).0)).unwrap();
     let reopened = reopen(&doc);
     let after = images::page_images(&reopened, 0).unwrap();
     assert_eq!(after[0].visible_rect, Some([42.0, 64.0, 142.0, 144.0]), "an exclusive crop moves with the image even across nested graphics states");
@@ -6782,7 +6782,7 @@ fn image_selection_bounds_respect_clips_and_restore_graphics_state() {
 #[test]
 fn image_clip_path_and_graphics_state_continue_across_content_streams() {
     let mut doc = image_page();
-    let page = pdfcraft_model::pages(&doc)[0].clone();
+    let page = simplypdf_model::pages(&doc)[0].clone();
     let pieces: [&[u8]; 3] = [b"q 20 30 40 50 re W", b"n 1000 0 0 1000 -300 -400 cm /Im0 Do", b"Q q 50 0 0 50 100 200 cm /Im0 Do Q"];
     let refs: Vec<_> = pieces.into_iter().map(|b| Object::Ref(doc.add(Object::Stream(Stream::flate(Dict::new(), b))))).collect();
     doc.update_dict(page.obj, |d| d.set(b"Contents".to_vec(), Object::Array(refs))).unwrap();
@@ -6804,7 +6804,7 @@ fn image_clip_path_and_graphics_state_continue_across_content_streams() {
 #[test]
 fn cropped_image_resizing_moves_private_clips_and_keeps_shared_ones() {
     let mut doc = image_page();
-    let page = pdfcraft_model::pages(&doc)[0].clone();
+    let page = simplypdf_model::pages(&doc)[0].clone();
     let stream = doc.add(Object::Stream(Stream::flate(
         Dict::new(),
         b"q 30 170 130 80 re W* n 800 0 0 900 -300 -400 cm /Im0 Do Q BT /F1 12 Tf 30 130 Td (Caption) Tj ET",
@@ -6819,11 +6819,11 @@ fn cropped_image_resizing_moves_private_clips_and_keeps_shared_ones() {
         // The moved clip's `cm` is written with the content stream's number precision.
         let near = |a: [f64; 4], b: [f64; 4]| a.iter().zip(b).all(|(x, y)| (x - y).abs() < 0.05);
         assert!(near(after.visible_rect.unwrap(), target), "{:?} vs {target:?}", after.visible_rect);
-        assert!(near(after.rect, pdfcraft_content::Matrix(transform).bbox(before.rect)), "full pixels use the same crop transform");
+        assert!(near(after.rect, simplypdf_content::Matrix(transform).bbox(before.rect)), "full pixels use the same crop transform");
         assert_eq!(after.object, before.object, "pixels are never resampled or replaced");
         assert_eq!(text::text_lines(&doc, 0).unwrap()[0].baseline(), [30.0, 130.0]);
     }
-    let page = pdfcraft_model::pages(&doc)[0].clone();
+    let page = simplypdf_model::pages(&doc)[0].clone();
     let stream = doc.add(Object::Stream(Stream::flate(
         Dict::new(),
         b"q 30 170 130 80 re W n q 800 0 0 900 -300 -400 cm /Im0 Do Q BT /F1 12 Tf 40 200 Td (Shared caption) Tj ET Q",
@@ -6887,7 +6887,7 @@ fn private_image_crop_with_intervening_state_resizes_across_streams() {
     ];
     for pieces in variants {
         let mut doc = image_page();
-        let page = pdfcraft_model::pages(&doc)[0].obj;
+        let page = simplypdf_model::pages(&doc)[0].obj;
         let refs = pieces.iter().map(|b| Object::Ref(doc.add(Object::Stream(Stream::flate(Dict::new(), b))))).collect();
         doc.update_dict(page, |d| d.set(b"Contents".to_vec(), Object::Array(refs))).unwrap();
         let caption = text::text_lines(&doc, 0).unwrap();
@@ -6898,7 +6898,7 @@ fn private_image_crop_with_intervening_state_resizes_across_streams() {
             doc = reopen(&doc);
             let after = images::page_images(&doc, 0).unwrap()[0].clone();
             assert!(close(after.visible_rect.unwrap(), target), "the private crop follows the image without a literal operator pattern");
-            assert!(close(after.rect, pdfcraft_content::Matrix(transform).bbox(before.rect)));
+            assert!(close(after.rect, simplypdf_content::Matrix(transform).bbox(before.rect)));
             assert_eq!(after.object, before.object);
             assert_eq!(
                 text::text_lines(&doc, 0).unwrap().iter().map(|l| (&l.text, l.rect, l.baseline())).collect::<Vec<_>>(),
@@ -6911,13 +6911,13 @@ fn private_image_crop_with_intervening_state_resizes_across_streams() {
 /// [`image_page`] with `pieces` as its `/Contents` array and a Form /Fm0 drawing 72,500–172,600.
 fn split_image_page(pieces: &[&[u8]]) -> Document {
     let mut doc = image_page();
-    let page = pdfcraft_model::pages(&doc)[0].obj;
+    let page = simplypdf_model::pages(&doc)[0].obj;
     let mut form = Dict::new();
     form.set(b"Type".to_vec(), Object::name("XObject"));
     form.set(b"Subtype".to_vec(), Object::name("Form"));
     form.set(b"BBox".to_vec(), Object::Array([72, 500, 172, 600].map(Object::Int).to_vec()));
     let form = doc.add(Object::Stream(Stream::flate(form, b"0.5 g 72 500 100 100 re f")));
-    let image = doc.get(pdfcraft_model::pages(&doc)[0].obj);
+    let image = doc.get(simplypdf_model::pages(&doc)[0].obj);
     let mut res = image.as_dict().and_then(|d| d.get(b"Resources")).and_then(|r| r.as_dict().cloned()).unwrap();
     let mut xo = res.get(b"XObject").and_then(|x| x.as_dict().cloned()).unwrap();
     xo.set(b"Fm0".to_vec(), Object::Ref(form));
@@ -6979,7 +6979,7 @@ fn an_image_whose_operator_starts_the_next_stream_can_be_selected_moved_and_dele
 #[test]
 fn curved_image_clips_have_analytic_bounds_and_holes_do_not_capture_points() {
     let mut doc = image_page();
-    let page = pdfcraft_model::pages(&doc)[0].obj;
+    let page = simplypdf_model::pages(&doc)[0].obj;
     let bytes =
         b"q 0 0 m 0 200 100 200 100 0 c h W n 300 0 0 300 0 0 cm /Im0 Do Q q 100 100 100 100 re 125 125 50 50 re W* n 400 0 0 400 0 0 cm /Im0 Do Q";
     let content = doc.add(Object::Stream(Stream::flate(Dict::new(), bytes)));
@@ -7002,7 +7002,7 @@ fn marked_paragraph_boundaries_and_cross_stream_transforms_survive_rewrite() {
     let mut doc =
         text_page("/P << /MCID 0 >> BDC BT /F1 12 Tf 40 500 Td (One) Tj ET EMC /P << /MCID 1 >> BDC BT /F1 12 Tf 40 482 Td (Two) Tj ET EMC");
     assert_eq!(text::text_blocks(&doc, 0).unwrap().len(), 2, "distinct explicit paragraphs win over nearby geometry");
-    let page = pdfcraft_model::pages(&doc)[0].obj;
+    let page = simplypdf_model::pages(&doc)[0].obj;
     let parts: [&[u8]; 2] =
         [b"/P << /MCID 2 >> BDC BT /F1 12 Tf 40 500 Td (First row) Tj ET", b"q 1 0 0 1 10 12 cm BT /F1 12 Tf 30 470 Td (Second row) Tj ET Q EMC"];
     let refs = parts.iter().map(|p| Object::Ref(doc.add(Object::Stream(Stream::flate(Dict::new(), p))))).collect();
@@ -7213,7 +7213,7 @@ fn default_width_subset_paragraph_keeps_its_rows_when_a_word_is_added() {
     font.set(b"DescendantFonts".to_vec(), Object::Array(vec![Object::Dict(cid)]));
     font.set(b"ToUnicode".to_vec(), Object::Ref(to_unicode));
     let font = doc.add(Object::Dict(font));
-    let page = pdfcraft_model::pages(&doc)[0].clone();
+    let page = simplypdf_model::pages(&doc)[0].clone();
     let mut resources = doc.resolve(page.dict.get(b"Resources").unwrap()).as_dict().unwrap().clone();
     let mut fonts = doc.resolve(resources.get(b"Font").unwrap()).as_dict().unwrap().clone();
     fonts.set(b"F3".to_vec(), Object::Ref(font));
@@ -7331,7 +7331,7 @@ fn an_items_measured_face_is_the_face_it_is_written_as() {
 fn page_marks_and_added_content_preserve_fractional_user_unit_matrices() {
     for rotation in [0, 90] {
         let mut doc = fixture();
-        let page = pdfcraft_model::pages(&doc)[2].obj;
+        let page = simplypdf_model::pages(&doc)[2].obj;
         doc.update_dict(page, |d| {
             let bounds = Object::Array([0.0, 0.0, 0.1, 0.1].into_iter().map(Object::Real).collect());
             d.set(b"MediaBox".to_vec(), bounds.clone());
@@ -7351,7 +7351,7 @@ fn page_marks_and_added_content_preserve_fractional_user_unit_matrices() {
             let matching: Vec<_> = contents.iter().filter(|s| s.contains(marker)).collect();
             assert_eq!(matching.len(), 1, "{contents:?}");
             let stream = matching[0];
-            let parsed = pdfcraft_content::parse(stream.as_bytes());
+            let parsed = simplypdf_content::parse(stream.as_bytes());
             assert_eq!(parsed.skipped, 0);
             let cm = parsed.ops.iter().find(|op| op.is("cm")).unwrap();
             assert_eq!(cm.operands.len(), 6);
@@ -7486,19 +7486,19 @@ fn embedded_program_page(content: &str, base_font: &str) -> Document {
     font.set(b"LastChar".to_vec(), Object::Int(126));
     font.set(b"Widths".to_vec(), Object::Array((32..=126).map(|_| Object::Int(560)).collect()));
     font.set(b"FontDescriptor".to_vec(), Object::Dict(descriptor));
-    doc.set(pdfcraft_cos::ObjRef::new(5, 0), Object::Dict(font));
+    doc.set(simplypdf_cos::ObjRef::new(5, 0), Object::Dict(font));
     reopen(&doc)
 }
 
 /// The font programs and subtypes of the page's font resources.
 fn page_font_programs(doc: &Document) -> Vec<(Vec<u8>, Option<Vec<u8>>)> {
-    let page = pdfcraft_model::pages(doc).remove(0);
+    let page = simplypdf_model::pages(doc).remove(0);
     let resources = page.dict.get(b"Resources").and_then(|r| doc.resolve(r).as_dict().cloned()).unwrap_or_default();
     let fonts = resources.get(b"Font").and_then(|f| doc.resolve(f).as_dict().cloned()).unwrap_or_default();
     fonts
         .iter()
         .filter_map(|(_, f)| doc.resolve(f).as_dict().cloned())
-        .map(|f| (f.name(b"Subtype").unwrap_or_default().to_vec(), pdfcraft_fonts::pdf::embedded_sfnt(doc, &f)))
+        .map(|f| (f.name(b"Subtype").unwrap_or_default().to_vec(), simplypdf_fonts::pdf::embedded_sfnt(doc, &f)))
         .collect()
 }
 
@@ -7537,7 +7537,7 @@ fn a_shaped_run_is_one_text_object_with_each_glyph_where_shaping_put_it() {
     let style = text::BlockStyle { width: Some(400.0), resource: Some(resource), ..Default::default() };
     text::rewrite_block(&mut doc, 0, 0, Some(typed), &style).unwrap();
     assert_eq!(text::text_blocks(&reopen(&doc), 0).unwrap()[0].editor_text, typed);
-    let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+    let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
     let start = ops.iter().position(|o| o.is("BDC")).unwrap();
     let end = start + ops[start..].iter().position(|o| o.is("EMC")).unwrap();
     let run = &ops[start..end];
@@ -7546,10 +7546,10 @@ fn a_shaped_run_is_one_text_object_with_each_glyph_where_shaping_put_it() {
     // Each glyph's origin, read back with the text-space displacements of ISO 32000-1 §9.4.4.
     let font = run.iter().find(|o| o.is("Tf")).unwrap();
     let (resource, size) = (font.operands[0].as_name().unwrap().to_vec(), font.operands[1].as_f64().unwrap());
-    let page = pdfcraft_model::pages(&doc).remove(0);
+    let page = simplypdf_model::pages(&doc).remove(0);
     let resources = doc.resolve(page.dict.get(b"Resources").unwrap()).as_dict().unwrap().clone();
     let fonts = doc.resolve(resources.get(b"Font").unwrap()).as_dict().unwrap().clone();
-    let metrics = pdfcraft_fonts::pdf::Metrics::from_dict(&doc, doc.resolve(fonts.get(&resource).unwrap()).as_dict().unwrap());
+    let metrics = simplypdf_fonts::pdf::Metrics::from_dict(&doc, doc.resolve(fonts.get(&resource).unwrap()).as_dict().unwrap());
     let (mut x, mut rise, mut drawn) = (0.0, 0.0, Vec::new());
     for op in run {
         match op.op.as_slice() {
@@ -7572,7 +7572,7 @@ fn a_shaped_run_is_one_text_object_with_each_glyph_where_shaping_put_it() {
             _ => {}
         }
     }
-    let shaped = pdfcraft_fonts::source_shaping::shape(inter, typed).unwrap();
+    let shaped = simplypdf_fonts::source_shaping::shape(inter, typed).unwrap();
     assert_eq!(drawn.len(), shaped.glyphs.len());
     assert!(shaped.glyphs.iter().any(|g| g.position[1] != 0.0), "a mark is raised");
     for (glyph, (x, y)) in shaped.glyphs.iter().zip(&drawn) {
@@ -7588,7 +7588,7 @@ fn a_subset_program_is_not_trusted_for_new_characters_and_the_error_names_the_ch
     // generated font instead (the subset may map a code whose outline was dropped). The Japanese
     // sans face leads the fallbacks when built with craft-fonts; the bundled Inter face otherwise.
     let edit = text::rewrite_block(&mut doc, 0, 0, Some("Stable tőxt"), &text::BlockStyle::default()).unwrap();
-    let face = pdfcraft_fonts::document_japanese_font_for_style(false, false).map_or("Inter", |f| f.family);
+    let face = simplypdf_fonts::document_japanese_font_for_style(false, false).map_or("Inter", |f| f.family);
     assert_eq!(edit.substituted, Some(format!("{face} Type3")));
     assert_eq!(text::text_blocks(&reopen(&doc), 0).unwrap()[0].editor_text, "Stable tőxt");
     // A character no fallback face has is refused, named, and left as it was.
@@ -7631,7 +7631,7 @@ fn draft_layout_matches_the_paragraph_an_applied_edit_draws() {
 
 #[test]
 fn japanese_paragraphs_wrap_between_characters_without_closing_marks_at_a_row_start() {
-    if pdfcraft_fonts::document_japanese_font().is_none() {
+    if simplypdf_fonts::document_japanese_font().is_none() {
         eprintln!("skipping the Japanese wrapping checks: built without craft-fonts (set CRAFT_FONTS_DIR)");
         return;
     }
@@ -7659,7 +7659,7 @@ fn rewritten_paragraph_is_drawn_after_backgrounds_between_its_rows() {
                 0 0.45 0.25 rg 60 668 240 24 re f BT /F1 16 Tf 1 1 1 rg 64 674 Td (Dalla teoria alla pratica:) Tj ET \
                 0 0.45 0.25 rg 60 632 240 32 re f BT /F1 24 Tf 1 1 1 rg 64 640 Td (gestire con metodo) Tj ET \
                 0 0.45 0.25 rg 60 596 240 32 re f BT /F1 24 Tf 1 1 1 rg 64 604 Td (un progetto complesso) Tj ET";
-    let shown_at = |ops: &[pdfcraft_content::Op], needle: &str| {
+    let shown_at = |ops: &[simplypdf_content::Op], needle: &str| {
         ops.iter()
             .position(|op| {
                 matches!(op.op.as_slice(), b"Tj" | b"TJ")
@@ -7675,7 +7675,7 @@ fn rewritten_paragraph_is_drawn_after_backgrounds_between_its_rows() {
     text::rewrite_block(&mut doc, 0, 0, Some(edited), &text::BlockStyle::default()).unwrap();
     let doc = reopen(&doc);
     assert_eq!(text::text_blocks(&doc, 0).unwrap()[0].editor_text, edited);
-    let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+    let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
     let fills: Vec<usize> = ops.iter().enumerate().filter_map(|(i, op)| op.is("f").then_some(i)).collect();
     assert_eq!(fills.len(), 4);
     assert!(
@@ -7690,7 +7690,7 @@ fn rewritten_paragraph_is_drawn_after_backgrounds_between_its_rows() {
     text::rewrite_block(&mut doc, 0, 0, Some(partial), &text::BlockStyle::default()).unwrap();
     let doc = reopen(&doc);
     assert_eq!(text::text_blocks(&doc, 0).unwrap()[0].editor_text, partial);
-    let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+    let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
     let fills: Vec<usize> = ops.iter().enumerate().filter_map(|(i, op)| op.is("f").then_some(i)).collect();
     assert!(
         shown_at(&ops, "WORKSHOP") > fills[2]
@@ -7706,7 +7706,7 @@ fn rewritten_paragraph_is_drawn_after_backgrounds_between_its_rows() {
     let wrapped_edit = "SEMINARIO ONLINE\nDalla teoria alla pratica:\ngestire con criterio e metodo approfondito\nun progetto complesso";
     text::rewrite_block(&mut doc, 0, 0, Some(wrapped_edit), &text::BlockStyle::default()).unwrap();
     let doc = reopen(&doc);
-    let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+    let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
     let last_fill = ops.iter().rposition(|op| op.is("f")).unwrap();
     assert!(
         shown_at(&ops, "approfondito") > last_fill && shown_at(&ops, "complesso") > last_fill,
@@ -7730,7 +7730,7 @@ fn rewritten_paragraph_is_drawn_after_backgrounds_between_its_rows() {
     )
     .unwrap();
     let doc = reopen(&doc);
-    let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+    let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
     let last_fill = ops.iter().rposition(|op| op.is("f")).unwrap();
     assert!(
         shown_at(&ops, "Updated first") > last_fill && shown_at(&ops, "Side footer") > shown_at(&ops, "Updated first"),
@@ -7755,7 +7755,7 @@ fn rewritten_paragraph_is_drawn_after_backgrounds_between_its_rows() {
 /// have been restored when a probe XObject would draw. No external assets are involved.
 fn probe_states(doc: &Document) -> Vec<std::collections::BTreeMap<Vec<u8>, Vec<Object>>> {
     let bytes = streams(doc, 0);
-    let joined = pdfcraft_content::Pieces::join(&bytes);
+    let joined = simplypdf_content::Pieces::join(&bytes);
     let mut state = std::collections::BTreeMap::new();
     let mut stack = Vec::new();
     let mut probes = Vec::new();
@@ -7830,7 +7830,7 @@ fn new_marks_close_wrapper_after_an_unterminated_comment() {
     // Check literal concatenation too: a separator must exist in the saved stream itself,
     // not just in the inspection parser, or the comment can swallow the closing Q.
     let bytes = streams(&doc, 0).concat();
-    let parsed = pdfcraft_content::parse(bytes.as_bytes());
+    let parsed = simplypdf_content::parse(bytes.as_bytes());
     assert_eq!(parsed.ops.iter().filter(|op| op.is("Q")).count(), 2);
     assert!(probe_states(&doc).last().unwrap().is_empty());
 }
@@ -7856,7 +7856,7 @@ fn new_marks_wrap_unbalanced_graphics_state_whole_without_changing_it() {
 /// [`probe_states`] for unbalanced content: a `Q` with nothing saved leaves the state as is,
 /// as renderers do.
 fn probe_states_lenient(doc: &Document) -> Vec<std::collections::BTreeMap<Vec<u8>, Vec<Object>>> {
-    let joined = pdfcraft_content::Pieces::join(&streams(doc, 0));
+    let joined = simplypdf_content::Pieces::join(&streams(doc, 0));
     let mut state = std::collections::BTreeMap::new();
     let mut stack = Vec::new();
     let mut probes = Vec::new();
@@ -7911,7 +7911,7 @@ fn new_marks_do_not_reveal_cross_stream_comments() {
     let mut doc = isolation_fixture(&[("", "q 50 Tz % comment continues"), ("", "Q 20 Tc\nQ 5 Tw")]);
     stamp(&mut doc, 0, "Probe", b"q /PCProbe Do Q\n".to_vec()).unwrap();
     assert!(probe_states(&doc).last().unwrap().is_empty());
-    let joined = pdfcraft_content::Pieces::join(&streams(&doc, 0));
+    let joined = simplypdf_content::Pieces::join(&streams(&doc, 0));
     assert!(!joined.parse().ops.iter().any(|op| op.is("Tc")), "commented content must remain inert");
 }
 
@@ -7997,7 +7997,7 @@ fn flattening_comments_keeps_annotations_that_are_not_comments() {
     let mut objs: Vec<&str> = vec!["<< /Type /Catalog /Pages 2 0 R >>", "<< /Type /Pages /Kids [3 0 R] /Count 1 >>", &page, form, &content];
     objs.extend(annots.iter().map(String::as_str));
     let left = |doc: &Document| -> Vec<String> {
-        let p = &pdfcraft_model::pages(doc)[0];
+        let p = &simplypdf_model::pages(doc)[0];
         let Some(a) = p.dict.get(b"Annots").map(|a| doc.resolve(a)) else { return Vec::new() };
         a.as_array()
             .unwrap()
@@ -8131,15 +8131,15 @@ fn a_text_session_commits_what_a_rewrite_writes_whatever_it_laid_out_before() {
     let mut by_rewrite = text_page(page);
     text::rewrite_block(&mut by_rewrite, 0, 0, Some(text), style).unwrap();
     assert_eq!(
-        pdfcraft_cos::write_full(&by_session, &SaveOptions::default()).unwrap(),
-        pdfcraft_cos::write_full(&by_rewrite, &SaveOptions::default()).unwrap(),
+        simplypdf_cos::write_full(&by_session, &SaveOptions::default()).unwrap(),
+        simplypdf_cos::write_full(&by_rewrite, &SaveOptions::default()).unwrap(),
         "the commit writes what a rewrite writes"
     );
     // A document changed since the session opened isn't written to.
-    let before = pdfcraft_cos::write_full(&by_session, &SaveOptions::default()).unwrap();
+    let before = simplypdf_cos::write_full(&by_session, &SaveOptions::default()).unwrap();
     let refused = session.commit(&mut by_session, Some("Again"), &BlockStyle::default());
     assert!(matches!(&refused, Err(EditError::Invalid(m)) if m.contains("changed while it was being edited")), "{refused:?}");
-    assert_eq!(pdfcraft_cos::write_full(&by_session, &SaveOptions::default()).unwrap(), before);
+    assert_eq!(simplypdf_cos::write_full(&by_session, &SaveOptions::default()).unwrap(), before);
     assert!(session.is_current(&doc) && !session.is_current(&by_session));
 }
 
@@ -8176,7 +8176,7 @@ fn shown_states(doc: &Document) -> Vec<(String, bool, bool, f64)> {
     let (mut oc, mut marks) = (0usize, Vec::new());
     let (mut gs, mut tz, mut stack) = (false, 100.0, Vec::new());
     let mut out = Vec::new();
-    for op in pdfcraft_content::parse(joined.as_bytes()).ops {
+    for op in simplypdf_content::parse(joined.as_bytes()).ops {
         match op.op.as_slice() {
             b"BDC" | b"BMC" => {
                 let layer = op.name(0) == Some(b"OC".as_slice());
@@ -8279,7 +8279,7 @@ fn vertical_page(content: &str) -> Document {
             (b"DW".to_vec(), Object::Int(1000)),
         ]))]),
     );
-    let p = pdfcraft_model::pages(&doc)[0].obj;
+    let p = simplypdf_model::pages(&doc)[0].obj;
     let helvetica = Dict::from_iter([
         (b"Type".to_vec(), Object::name("Font")),
         (b"Subtype".to_vec(), Object::name("Type1")),
@@ -8331,7 +8331,7 @@ fn make_cmap_cyclic(doc: &mut Document) {
             b"1 begincodespacerange <0000> <ffff> endcodespacerange",
         )),
     );
-    let p = pdfcraft_model::pages(doc)[0].obj;
+    let p = simplypdf_model::pages(doc)[0].obj;
     doc.update_dict(p, |d| {
         if let Some(Object::Dict(res)) = d.get_mut(b"Resources")
             && let Some(Object::Dict(fonts)) = res.get_mut(b"Font")
@@ -8650,7 +8650,7 @@ mod proptests {
 
         #[test]
         fn prop_is_entire_page_wrapped_arbitrary_bytes(bytes in proptest::collection::vec(any::<u8>(), 0..2048)) {
-            let pieces = pdfcraft_content::Pieces::join(&[&bytes]);
+            let pieces = simplypdf_content::Pieces::join(&[&bytes]);
             let ops = pieces.parse().ops;
             let _ = images::is_entire_page_wrapped(&ops);
         }
@@ -8661,7 +8661,7 @@ mod proptests {
             start in 0usize..50,
             end in 0usize..50,
         ) {
-            let pieces = pdfcraft_content::Pieces::join(&[&bytes]);
+            let pieces = simplypdf_content::Pieces::join(&[&bytes]);
             let ops = pieces.parse().ops;
             let scan_start = start.min(ops.len());
             let scan_end = end.min(ops.len()).max(scan_start);
@@ -8911,7 +8911,7 @@ fn a_field_reached_again_by_a_shorter_path_is_pruned_there() {
     let objs: Vec<&str> = objs.iter().map(String::as_str).collect();
     let mut doc = build(&objs);
     assert_eq!(flatten(&mut doc, &[0], false, true).unwrap(), 1);
-    let shared_ref = pdfcraft_cos::ObjRef::new(u32::try_from(shared).unwrap(), 0);
+    let shared_ref = simplypdf_cos::ObjRef::new(u32::try_from(shared).unwrap(), 0);
     let kids = doc.resolve(doc.get(shared_ref).as_dict().unwrap().get(b"Kids").unwrap()).as_array().unwrap().len();
     assert_eq!(kids, 0, "the off-page widget is pruned along the short path");
 }
@@ -8996,7 +8996,7 @@ fn reading_images_stops_at_the_page_record_limit() {
         .collect();
         let mut inner = doc.add(Stream::from_raw(image, vec![0]));
         let draws = "/X Do ".repeat(20);
-        let resources = |inner: pdfcraft_cos::ObjRef| -> Dict {
+        let resources = |inner: simplypdf_cos::ObjRef| -> Dict {
             let xobjects: Dict = [(b"X".to_vec(), Object::Ref(inner))].into_iter().collect();
             [(b"XObject".to_vec(), Object::Dict(xobjects))].into_iter().collect()
         };
@@ -9047,7 +9047,7 @@ fn a_flatten_refused_on_a_later_page_changes_nothing() {
         "<< /Type /Annot /Subtype /Square /Rect [10 10 50 50] /F 4 /AP << /N 9 0 R >> >>",
         "<< /Type /XObject /Subtype /Form /BBox [0 0 40 40] /Length 0 >>\nstream\n\nendstream",
     ]);
-    let first = pdfcraft_cos::ObjRef::new(3, 0);
+    let first = simplypdf_cos::ObjRef::new(3, 0);
     let before = (*doc.get(first)).clone();
     assert!(matches!(flatten(&mut doc, &[0, 1], true, false), Err(EditError::Invalid(_))));
     assert_eq!((*doc.get(first)).clone(), before, "the first page keeps its comment and content");
@@ -9091,9 +9091,9 @@ fn arrange_preserves_leaked_color_and_text_state() {
 
     // Pixel test: 0 0 10 10 re f still fills red [255, 0, 0] after arrange
     let pdf_bytes = write_incremental(&doc, &SaveOptions::default()).unwrap();
-    let mut renderer = pdfcraft_render::PageRenderer::new(Arc::new(pdf_bytes), pdfcraft_render::RenderConfig::default());
+    let mut renderer = simplypdf_render::PageRenderer::new(Arc::new(pdf_bytes), simplypdf_render::RenderConfig::default());
     let page =
-        renderer.render(pdfcraft_render::RenderRequest { page: 0, kind: pdfcraft_render::RequestKind::Pixels, scale: 1.0, ..Default::default() });
+        renderer.render(simplypdf_render::RenderRequest { page: 0, kind: simplypdf_render::RequestKind::Pixels, scale: 1.0, ..Default::default() });
     let idx = (((page.height - 5) * page.width + 5) * 4) as usize;
     assert_eq!(page.rgba[idx..idx + 3], [255, 0, 0], "point (5, 5 from bottom) inside 10x10 rect fills red");
 }
@@ -9108,10 +9108,10 @@ fn arrange_preserves_inherited_drawing_state_for_stencil_and_form() {
 
     // Render before move:
     let pdf_before = write_incremental(&doc, &SaveOptions::default()).unwrap();
-    let mut renderer_before = pdfcraft_render::PageRenderer::new(Arc::new(pdf_before), pdfcraft_render::RenderConfig::default());
-    let page_before = renderer_before.render(pdfcraft_render::RenderRequest {
+    let mut renderer_before = simplypdf_render::PageRenderer::new(Arc::new(pdf_before), simplypdf_render::RenderConfig::default());
+    let page_before = renderer_before.render(simplypdf_render::RenderRequest {
         page: 0,
-        kind: pdfcraft_render::RequestKind::Pixels,
+        kind: simplypdf_render::RequestKind::Pixels,
         scale: 1.0,
         ..Default::default()
     });
@@ -9131,10 +9131,10 @@ fn arrange_preserves_inherited_drawing_state_for_stencil_and_form() {
 
     // Render after reopen and verify stencil remains red:
     let pdf_after = write_incremental(&doc, &SaveOptions::default()).unwrap();
-    let mut renderer_after = pdfcraft_render::PageRenderer::new(Arc::new(pdf_after), pdfcraft_render::RenderConfig::default());
-    let page_after = renderer_after.render(pdfcraft_render::RenderRequest {
+    let mut renderer_after = simplypdf_render::PageRenderer::new(Arc::new(pdf_after), simplypdf_render::RenderConfig::default());
+    let page_after = renderer_after.render(simplypdf_render::RenderRequest {
         page: 0,
-        kind: pdfcraft_render::RequestKind::Pixels,
+        kind: simplypdf_render::RequestKind::Pixels,
         scale: 1.0,
         ..Default::default()
     });
@@ -9146,10 +9146,10 @@ fn arrange_preserves_inherited_drawing_state_for_stencil_and_form() {
     let mut form_doc = form_page_with(form_content);
 
     let form_pdf_before = write_incremental(&form_doc, &SaveOptions::default()).unwrap();
-    let mut form_renderer_before = pdfcraft_render::PageRenderer::new(Arc::new(form_pdf_before), pdfcraft_render::RenderConfig::default());
-    let form_page_before = form_renderer_before.render(pdfcraft_render::RenderRequest {
+    let mut form_renderer_before = simplypdf_render::PageRenderer::new(Arc::new(form_pdf_before), simplypdf_render::RenderConfig::default());
+    let form_page_before = form_renderer_before.render(simplypdf_render::RenderRequest {
         page: 0,
-        kind: pdfcraft_render::RequestKind::Pixels,
+        kind: simplypdf_render::RequestKind::Pixels,
         scale: 1.0,
         ..Default::default()
     });
@@ -9160,10 +9160,10 @@ fn arrange_preserves_inherited_drawing_state_for_stencil_and_form() {
     let form_doc = reopen(&form_doc);
 
     let form_pdf_after = write_incremental(&form_doc, &SaveOptions::default()).unwrap();
-    let mut form_renderer_after = pdfcraft_render::PageRenderer::new(Arc::new(form_pdf_after), pdfcraft_render::RenderConfig::default());
-    let form_page_after = form_renderer_after.render(pdfcraft_render::RenderRequest {
+    let mut form_renderer_after = simplypdf_render::PageRenderer::new(Arc::new(form_pdf_after), simplypdf_render::RenderConfig::default());
+    let form_page_after = form_renderer_after.render(simplypdf_render::RenderRequest {
         page: 0,
-        kind: pdfcraft_render::RequestKind::Pixels,
+        kind: simplypdf_render::RequestKind::Pixels,
         scale: 1.0,
         ..Default::default()
     });
@@ -9509,13 +9509,13 @@ struct Painted {
 
 fn painted_shows(doc: &Document) -> Vec<Painted> {
     let (_, ops) = joined_ops(doc);
-    let p = &pdfcraft_model::pages(doc)[0];
+    let p = &simplypdf_model::pages(doc)[0];
     let res = doc.resolve(p.dict.get(b"Resources").unwrap());
     let ext = res.as_dict().unwrap().get(b"ExtGState").map(|g| doc.resolve(g).as_dict().cloned().unwrap()).unwrap_or_default();
     let mut state = Painted { text: String::new(), render_mode: 0, stroke: Vec::new(), line_width: 1.0, gs: Vec::new() };
     let mut stack = Vec::new();
     let mut out = Vec::new();
-    let show = |op: &pdfcraft_content::Op| String::from_utf8_lossy(&pdfcraft_content::serialize_ops(std::slice::from_ref(op))).trim().to_string();
+    let show = |op: &simplypdf_content::Op| String::from_utf8_lossy(&simplypdf_content::serialize_ops(std::slice::from_ref(op))).trim().to_string();
     for op in ops {
         match op.op.as_slice() {
             b"q" => stack.push(state.clone()),
@@ -9927,7 +9927,7 @@ fn image_exclusive_scope_resets_path_on_scope_exit() {
 fn content_units_does_not_swallow_subsequent_units_on_standalone_gs() {
     // /GS0 gs followed by Q and subsequent images must isolate each Do unit properly
     let content = "q /GS0 gs Q q 200 0 0 100 100 100 cm /Im0 Do Q q 10 0 0 10 300 300 cm /Im0 Do Q";
-    let pieces = pdfcraft_content::Pieces::join(&[content.as_bytes()]);
+    let pieces = simplypdf_content::Pieces::join(&[content.as_bytes()]);
     let ops = pieces.parse().ops;
     let units = images::content_units(&ops, 0, ops.len());
     assert_eq!(units.len(), 2);
@@ -9943,7 +9943,7 @@ fn inline_image(data: char) -> String {
 /// XObject moved out of its `q`/`Q` wrapper shows as a bare `Do `.
 fn painted(doc: &Document) -> Vec<String> {
     let mut at = vec![String::new()];
-    pdfcraft_content::parse(&page_content_bytes(doc, 0))
+    simplypdf_content::parse(&page_content_bytes(doc, 0))
         .ops
         .iter()
         .filter_map(|op| match op.op.as_slice() {
@@ -9984,7 +9984,7 @@ fn content_units_keep_each_top_level_inline_image_to_itself() {
         inline_image('c'),
         inline_image('d')
     );
-    let ops = pdfcraft_content::parse(content.as_bytes()).ops;
+    let ops = simplypdf_content::parse(content.as_bytes()).ops;
     let units = images::content_units(&ops, 0, ops.len());
     assert_eq!(units, [0..1, 1..5, 5..6, 6..7, 7..11, 11..12]);
 }
@@ -9993,7 +9993,7 @@ fn content_units_keep_each_top_level_inline_image_to_itself() {
 fn content_units_keep_a_nested_inline_image_inside_its_enclosing_unit() {
     // A `BI` inside `q`/`Q` or a marked-content sequence stays part of that sequence's unit.
     let content = format!("q {} Q /Span << /MCID 0 >> BDC {} EMC {}", inline_image('a'), inline_image('b'), inline_image('c'));
-    let ops = pdfcraft_content::parse(content.as_bytes()).ops;
+    let ops = simplypdf_content::parse(content.as_bytes()).ops;
     let units = images::content_units(&ops, 0, ops.len());
     assert_eq!(units, [0..3, 3..6, 6..7]);
 }
@@ -10074,10 +10074,10 @@ fn different_inline_soft_masks_have_distinct_identities() {
     dict2.set(b"SMask".to_vec(), Object::Dict(mask2));
 
     let mut state1 = images::EffectiveGState::default();
-    state1.merge_dict(&dict1, &doc, pdfcraft_content::Matrix::IDENTITY);
+    state1.merge_dict(&dict1, &doc, simplypdf_content::Matrix::IDENTITY);
 
     let mut state2 = images::EffectiveGState::default();
-    state2.merge_dict(&dict2, &doc, pdfcraft_content::Matrix::IDENTITY);
+    state2.merge_dict(&dict2, &doc, simplypdf_content::Matrix::IDENTITY);
 
     assert!(state1.visually_differs(&state2), "two different inline soft masks must visually differ");
 }
@@ -10085,12 +10085,12 @@ fn different_inline_soft_masks_have_distinct_identities() {
 #[test]
 fn is_entire_page_wrapped_with_nested_scopes() {
     let wrapped = "q 1 0 0 1 0 0 cm q 0 0 10 10 re f Q 200 0 0 100 100 100 cm /Im0 Do Q";
-    let pieces = pdfcraft_content::Pieces::join(&[wrapped.as_bytes()]);
+    let pieces = simplypdf_content::Pieces::join(&[wrapped.as_bytes()]);
     let ops = pieces.parse().ops;
     assert!(images::is_entire_page_wrapped(&ops), "page wrapped in outer q...Q with inner nested q...Q is wrapped");
 
     let unwrapped = "q 1 0 0 1 0 0 cm Q q 200 0 0 100 100 100 cm /Im0 Do Q";
-    let pieces2 = pdfcraft_content::Pieces::join(&[unwrapped.as_bytes()]);
+    let pieces2 = simplypdf_content::Pieces::join(&[unwrapped.as_bytes()]);
     let ops2 = pieces2.parse().ops;
     assert!(!images::is_entire_page_wrapped(&ops2), "page with two separate top-level q...Q scopes is not wrapped");
 }
@@ -10145,7 +10145,7 @@ fn remove_crop_preserves_cm_before_extgstate() {
     let bytes = page_content_bytes(&doc, 0);
     let s = String::from_utf8_lossy(&bytes);
     assert!(s.contains("W n"), "the author clipping path must remain: {s}");
-    assert!(!s.contains("PdfCraftImageCrop"), "the editor crop must be removed: {s}");
+    assert!(!s.contains("SimplyPDFImageCrop"), "the editor crop must be removed: {s}");
     // Verify that the initial cm appears before /GS0 gs
     let cm_pos = s.find("2 0 0 2 0 0 cm").expect("cm must be preserved");
     let gs_pos = s.find("/GS0 gs").expect("gs must be preserved");
@@ -10280,7 +10280,7 @@ fn arrange_refuses_unrestorable_extended_print_state() {
         ("HT", Object::name("Default")),
     ] {
         let mut doc = image_page_with("q 100 0 0 100 50 50 cm /Im0 Do Q /Print gs BT /F1 12 Tf 20 700 Td (Text) Tj ET");
-        let page = pdfcraft_model::pages(&doc)[0].clone();
+        let page = simplypdf_model::pages(&doc)[0].clone();
         let mut resources = doc.resolve(page.dict.get(b"Resources").unwrap()).as_dict().unwrap().clone();
         resources.set(
             b"ExtGState".to_vec(),
@@ -10312,7 +10312,7 @@ fn arrange_keeps_implicit_device_spaces_before_sc_and_scn() {
                 arrange(&mut doc, 0, 0, images::ArrangeOrder::BringToFront).unwrap();
                 let doc = reopen(&doc);
                 let bytes = page_content_bytes(&doc, 0);
-                let ops = pdfcraft_content::parse(&bytes).ops;
+                let ops = simplypdf_content::parse(&bytes).ops;
                 let do_index = ops.iter().rposition(|op| op.is("Do")).unwrap();
                 let start = ops[..do_index].iter().rposition(|op| op.is("q")).unwrap();
                 let relocated = &ops[start..do_index];
@@ -10334,7 +10334,7 @@ fn arrange_keeps_implicit_device_spaces_before_sc_and_scn() {
 fn arrange_restores_initial_rendering_intent_from_ri_and_gs() {
     for selection in ["/Saturation ri", "/Print gs"] {
         let mut doc = image_page_with(&format!("q 100 0 0 100 50 50 cm /Im0 Do Q {selection} BT /F1 12 Tf 20 700 Td (Text) Tj ET"));
-        let page = pdfcraft_model::pages(&doc)[0].clone();
+        let page = simplypdf_model::pages(&doc)[0].clone();
         let mut resources = doc.resolve(page.dict.get(b"Resources").unwrap()).as_dict().unwrap().clone();
         resources.set(
             b"ExtGState".to_vec(),
@@ -10361,7 +10361,7 @@ fn editor_crop_moves_with_repeated_group_translation() {
     let mut count = 0;
     for iteration in 0..20 {
         images::translate_images(&mut doc, 0, &[0], [1.0, -2.0]).unwrap();
-        let ops = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops;
+        let ops = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops;
         if iteration == 0 {
             count = ops.len();
         }
@@ -10436,7 +10436,7 @@ fn editor_crop_group_move_keeps_an_outer_author_clip_fixed() {
     let mut operators = 0;
     for i in 0..20 {
         images::translate_images(&mut doc, 0, &[0], [1.0, -2.0]).unwrap();
-        let count = pdfcraft_content::parse(&page_content_bytes(&doc, 0)).ops.len();
+        let count = simplypdf_content::parse(&page_content_bytes(&doc, 0)).ops.len();
         if i == 0 {
             operators = count;
         }
@@ -10457,8 +10457,8 @@ fn editor_crop_group_move_keeps_an_outer_author_clip_fixed() {
 
 fn review_state_raster(doc: &Document) -> Vec<u8> {
     let bytes = write_full(doc, &SaveOptions::default()).unwrap();
-    let mut renderer = pdfcraft_render::PageRenderer::new(Arc::new(bytes), Default::default());
-    renderer.render(pdfcraft_render::RenderRequest { page: 0, scale: 1.0, ..Default::default() }).rgba.to_vec()
+    let mut renderer = simplypdf_render::PageRenderer::new(Arc::new(bytes), Default::default());
+    renderer.render(simplypdf_render::RenderRequest { page: 0, scale: 1.0, ..Default::default() }).rgba.to_vec()
 }
 
 #[test]
@@ -10468,9 +10468,9 @@ fn review_arrange_form_keeps_inherited_text_spacing() {
         let later = if later_spacing { "BT 12 Tc ET" } else { "" };
         let content = format!("q {initial} q 1 0 0 1 20 20 cm /Fm0 Do Q Q {later} q 0 0 1 rg 200 200 5 5 re f Q");
         let mut doc = form_page_with(&content);
-        let form = pdfcraft_cos::ObjRef::new(6, 0);
+        let form = simplypdf_cos::ObjRef::new(6, 0);
         let dict = doc.get(form).as_dict().unwrap().clone();
-        doc.set(form, Object::Stream(pdfcraft_cos::Stream::from_raw(dict, b"BT /F1 20 Tf 0 15 Td (ABC) Tj ET".to_vec())));
+        doc.set(form, Object::Stream(simplypdf_cos::Stream::from_raw(dict, b"BT /F1 20 Tf 0 15 Td (ABC) Tj ET".to_vec())));
         let doc_before = reopen(&doc);
         let before = review_state_raster(&doc_before);
         assert!(before.as_chunks::<4>().0.iter().any(|p| p[0] == 0 && p[1] == 0 && p[2] == 0), "the Form actually paints text");
@@ -10533,13 +10533,13 @@ fn review_soft_masks_sharing_a_group_keep_distinct_configurations() {
     let mask = |subtype: &str| {
         Dict::from_iter([(
             b"SMask".to_vec(),
-            Object::Dict(Dict::from_iter([(b"S".to_vec(), Object::name(subtype)), (b"G".to_vec(), Object::Ref(pdfcraft_cos::ObjRef::new(8, 0)))])),
+            Object::Dict(Dict::from_iter([(b"S".to_vec(), Object::name(subtype)), (b"G".to_vec(), Object::Ref(simplypdf_cos::ObjRef::new(8, 0)))])),
         )])
     };
     let mut alpha = images::EffectiveGState::default();
     let mut luminosity = images::EffectiveGState::default();
-    alpha.merge_dict(&mask("Alpha"), &doc, pdfcraft_content::Matrix::IDENTITY);
-    luminosity.merge_dict(&mask("Luminosity"), &doc, pdfcraft_content::Matrix::IDENTITY);
+    alpha.merge_dict(&mask("Alpha"), &doc, simplypdf_content::Matrix::IDENTITY);
+    luminosity.merge_dict(&mask("Luminosity"), &doc, simplypdf_content::Matrix::IDENTITY);
     assert!(alpha.visually_differs(&luminosity), "a shared group does not make Alpha and Luminosity the same mask");
     for (key, value) in [
         (b"BC".to_vec(), Object::Array(vec![Object::Real(0.5)])),
@@ -10556,7 +10556,7 @@ fn review_soft_masks_sharing_a_group_keep_distinct_configurations() {
         let Object::Dict(definition) = changed.get_mut(b"SMask").unwrap() else { panic!("mask dictionary") };
         definition.set(key, value);
         let mut state = images::EffectiveGState::default();
-        state.merge_dict(&changed, &doc, pdfcraft_content::Matrix::IDENTITY);
+        state.merge_dict(&changed, &doc, simplypdf_content::Matrix::IDENTITY);
         assert!(state.visually_differs(&luminosity), "mask backdrop and transfer function belong to its definition");
     }
 }

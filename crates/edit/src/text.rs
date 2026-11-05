@@ -13,10 +13,10 @@
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use pdfcraft_content::{Matrix, Op, Pieces, parse, serialize_ops};
-use pdfcraft_cos::{DecodeBudget, Dict, Document, Object, PdfString, Stream};
-use pdfcraft_fonts::pdf::Metrics;
-use pdfcraft_fonts::{CraftFont, GlyphError, japanese_glyph_from};
+use simplypdf_content::{Matrix, Op, Pieces, parse, serialize_ops};
+use simplypdf_cos::{DecodeBudget, Dict, Document, Object, PdfString, Stream};
+use simplypdf_fonts::pdf::Metrics;
+use simplypdf_fonts::{CraftFont, GlyphError, japanese_glyph_from};
 
 use crate::EditError;
 

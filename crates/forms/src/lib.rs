@@ -1,4 +1,4 @@
-//! pdfcraft-forms — interactive forms (AcroForm, ISO 32000-2 §12.7), execution plan M6.1–M6.2.
+//! simplypdf-forms — interactive forms (AcroForm, ISO 32000-2 §12.7), execution plan M6.1–M6.2.
 //!
 //! - [`fields`]: the field tree flattened to terminal fields, each with its widgets (page,
 //!   rectangle, on-state), inherited attributes (`/FT`, `/Ff`, `/V`, `/DV`, `/DA`, `/Q`,
@@ -14,7 +14,7 @@
 
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
-use pdfcraft_cos::{DecodeBudget, Dict, Document, ObjRef, Object, PdfString};
+use simplypdf_cos::{DecodeBudget, Dict, Document, ObjRef, Object, PdfString};
 
 mod actions;
 pub mod af;
@@ -74,7 +74,7 @@ pub enum FormError {
     #[error("{0}")]
     Format(String),
     #[error("{0}")]
-    Cos(#[from] pdfcraft_cos::CosError),
+    Cos(#[from] simplypdf_cos::CosError),
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

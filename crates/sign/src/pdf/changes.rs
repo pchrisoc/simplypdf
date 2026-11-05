@@ -7,7 +7,7 @@ pub(super) fn classify_changes(doc: &Document, old: Option<Document>, p: Option<
     let Some(old) = old else {
         return Modification::Disallowed(vec![kind::UNREADABLE]);
     };
-    let old_content: HashSet<ObjRef> = pdfcraft_annot::page_refs(&old)
+    let old_content: HashSet<ObjRef> = simplypdf_annot::page_refs(&old)
         .unwrap_or_default()
         .into_iter()
         .flat_map(|pg| {
@@ -30,7 +30,7 @@ pub(super) fn classify_changes(doc: &Document, old: Option<Document>, p: Option<
     // object is judged by the role it held when signed, never by the labels or keys its new,
     // attacker-written version carries (relabelling a signed page /Type /Sig, or dropping its
     // /Type and adding /ModDate, must not reclassify it away from page content).
-    let signed_pages: HashSet<ObjRef> = pdfcraft_annot::page_refs(&old).unwrap_or_default().into_iter().collect();
+    let signed_pages: HashSet<ObjRef> = simplypdf_annot::page_refs(&old).unwrap_or_default().into_iter().collect();
     // The signed pages' /Annots arrays that are objects of their own. Adding an annotation updates
     // such an array in place (the page dictionary does not change), so it is judged like a
     // page's inline /Annots: by the annotations it gained.
@@ -43,7 +43,7 @@ pub(super) fn classify_changes(doc: &Document, old: Option<Document>, p: Option<
     let dss = dss_parts(doc, &old);
     // Stored at the same place in both (and not edited since): the same bytes, unchanged.
     let same_place = |num: u32| -> bool {
-        use pdfcraft_cos::XrefEntry;
+        use simplypdf_cos::XrefEntry;
         if doc.is_edited(num) {
             return false;
         }
@@ -216,7 +216,7 @@ impl ChangedObjectClassifier<'_> {
         }
     }
 
-    fn stream_change(&self, r: ObjRef, stream: &pdfcraft_cos::Stream, before: Option<&Object>) -> Option<&'static str> {
+    fn stream_change(&self, r: ObjRef, stream: &simplypdf_cos::Stream, before: Option<&Object>) -> Option<&'static str> {
         // File plumbing is the stream's role when signed; a later /Type label cannot change it.
         let was_plumbing = matches!(before, Some(Object::Stream(previous)) if matches!(previous.dict.name(b"Type"), Some(b"XRef" | b"ObjStm")));
         if self.old_content.contains(&r) {

@@ -1,9 +1,9 @@
 //! Accessibility tools: the full check, the accessibility report, and the automatic fixes.
 
-use pdfcraft_engine::DocId;
-use pdfcraft_engine::a11y::{Category, Options, Report, Rule, Status};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha256};
+use simplypdf_engine::DocId;
+use simplypdf_engine::a11y::{Category, Options, Report, Rule, Status};
 use std::collections::BTreeSet;
 
 use crate::{Args, Automation, Result, ToolError, child, failed, unused, write_atomic};
@@ -213,7 +213,7 @@ const MAX_TAG_PAGE: usize = 1000;
 impl Automation {
     pub(crate) fn accessibility_autotag_apply(&mut self, a: &Args) -> Result<Value> {
         let id = self.doc(a)?.id;
-        self.session.apply(id, pdfcraft_engine::Edit::AutoTagText).map_err(failed)?;
+        self.session.apply(id, simplypdf_engine::Edit::AutoTagText).map_err(failed)?;
         let tags = self.accessibility_tags(a)?;
         Ok(json!({
             "tags": tags["tags"], "count": tags["count"],
@@ -223,7 +223,7 @@ impl Automation {
 
     pub(crate) fn accessibility_autotag_form_fields(&mut self, a: &Args) -> Result<Value> {
         let id = self.doc(a)?.id;
-        self.session.apply(id, pdfcraft_engine::Edit::AutoTagFormFields).map_err(failed)?;
+        self.session.apply(id, simplypdf_engine::Edit::AutoTagFormFields).map_err(failed)?;
         let report = self
             .doc(a)?
             .accessibility_check(&Options { rules: [Rule::TaggedFormFields].into(), pages: None })
@@ -305,8 +305,8 @@ impl Automation {
         let path = self.resolve(a.str("path")?, true)?;
         let (y, m, d) = self.session.today();
         // A script's report is in English, like the rest of what the tools say and answer with.
-        let words = pdfcraft_engine::a11y::in_english;
-        let html = pdfcraft_engine::a11y::report_html(&r, &doc.name, &format!("{y}-{m:02}-{d:02}"), "en", &words);
+        let words = simplypdf_engine::a11y::in_english;
+        let html = simplypdf_engine::a11y::report_html(&r, &doc.name, &format!("{y}-{m:02}-{d:02}"), "en", &words);
         write_atomic(&path, html.as_bytes())?;
         let mut out = report_json(&r);
         out["path"] = json!(path.to_string_lossy());
@@ -461,9 +461,9 @@ impl Automation {
         let figure = u32::try_from(a.int("figure")?)
             .map_err(|_| ToolError::InvalidArgs("figure must be a figure number from accessibility_figures".into()))?;
         let edit = if a.opt_bool("decorative")?.unwrap_or(false) {
-            pdfcraft_engine::Edit::MarkDecorative { figure }
+            simplypdf_engine::Edit::MarkDecorative { figure }
         } else {
-            pdfcraft_engine::Edit::SetAltText { figure, alt: a.opt_str("alt")?.map(str::to_owned) }
+            simplypdf_engine::Edit::SetAltText { figure, alt: a.opt_str("alt")?.map(str::to_owned) }
         };
         let id = self.doc(a)?.id;
         self.session.apply(id, edit).map_err(failed)?;
@@ -519,7 +519,7 @@ impl Automation {
         let object = u32::try_from(a.int("object")?).map_err(|_| ToolError::InvalidArgs("object must be a positive tag object number".into()))?;
         let generation =
             u16::try_from(a.int("generation")?).map_err(|_| ToolError::InvalidArgs("generation must be a PDF object generation".into()))?;
-        let content = self.doc(a)?.tag_content(pdfcraft_cos::ObjRef { num: object, generation }).map_err(failed)?;
+        let content = self.doc(a)?.tag_content(simplypdf_cos::ObjRef { num: object, generation }).map_err(failed)?;
         Ok(
             json!({ "count": content.len(), "content": content.into_iter().map(|item| json!({ "page": item.page.map(|p| p + 1), "mcid": item.mcid, "text": item.text })).collect::<Vec<_>>() }),
         )
@@ -533,12 +533,12 @@ impl Automation {
         let generation = u16::try_from(a.int("generation")?)
             .map_err(|_| ToolError::InvalidArgs("generation must be a PDF object generation from accessibility_tags".into()))?;
         let property_id = a.str("property")?;
-        let property = pdfcraft_engine::a11y::TagProperty::from_id(property_id)
+        let property = simplypdf_engine::a11y::TagProperty::from_id(property_id)
             .ok_or_else(|| ToolError::InvalidArgs(format!("unknown tag property {property_id:?}")))?;
         let value = a.opt_str("value")?.map(str::to_owned);
         let id = self.doc(a)?.id;
         self.session
-            .apply(id, pdfcraft_engine::Edit::SetTagProperty { object: pdfcraft_cos::ObjRef::new(object, generation), property, value })
+            .apply(id, simplypdf_engine::Edit::SetTagProperty { object: simplypdf_cos::ObjRef::new(object, generation), property, value })
             .map_err(failed)?;
         self.accessibility_tags(a)
     }
@@ -551,29 +551,29 @@ impl Automation {
         let generation = u16::try_from(a.int("generation")?)
             .map_err(|_| ToolError::InvalidArgs("generation must be a PDF object generation from accessibility_tags".into()))?;
         let id = self.doc(a)?.id;
-        self.session.apply(id, pdfcraft_engine::Edit::MarkTagArtifact { object: pdfcraft_cos::ObjRef::new(object, generation) }).map_err(failed)?;
+        self.session.apply(id, simplypdf_engine::Edit::MarkTagArtifact { object: simplypdf_cos::ObjRef::new(object, generation) }).map_err(failed)?;
         self.accessibility_tags(a)
     }
 
     pub(crate) fn accessibility_move_tag(&mut self, a: &Args) -> Result<Value> {
-        let reference = |number: &str, generation: &str| -> Result<pdfcraft_cos::ObjRef> {
+        let reference = |number: &str, generation: &str| -> Result<simplypdf_cos::ObjRef> {
             let n = u32::try_from(a.int(number)?).map_err(|_| ToolError::InvalidArgs(format!("{number} must be a positive tag object number")))?;
             if n == 0 {
                 return Err(ToolError::InvalidArgs(format!("{number} must be a positive tag object number")));
             }
             let g = u16::try_from(a.int(generation)?)
                 .map_err(|_| ToolError::InvalidArgs(format!("{generation} must be a PDF object generation from accessibility_tags")))?;
-            Ok(pdfcraft_cos::ObjRef::new(n, g))
+            Ok(simplypdf_cos::ObjRef::new(n, g))
         };
         let object = reference("object", "generation")?;
         let anchor = reference("anchor", "anchor_generation")?;
         let placement = match a.str("placement")? {
-            "before" => pdfcraft_engine::a11y::TagPlacement::Before,
-            "after" => pdfcraft_engine::a11y::TagPlacement::After,
+            "before" => simplypdf_engine::a11y::TagPlacement::Before,
+            "after" => simplypdf_engine::a11y::TagPlacement::After,
             other => return Err(ToolError::InvalidArgs(format!("placement must be before or after, not {other:?}"))),
         };
         let id = self.doc(a)?.id;
-        self.session.apply(id, pdfcraft_engine::Edit::MoveTag { object, anchor, placement }).map_err(failed)?;
+        self.session.apply(id, simplypdf_engine::Edit::MoveTag { object, anchor, placement }).map_err(failed)?;
         self.accessibility_tags(a)
     }
 }

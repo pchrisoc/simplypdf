@@ -38,7 +38,7 @@ pub(super) fn retained(a: &Annotation) -> usize {
 
 impl<'a> Inspector<'a> {
     /// Whether an annotation is a Fill & Sign mark. Keep in step with
-    /// `pdfcraft_annot::is_fill_sign`, which the engine's comment list uses.
+    /// `simplypdf_annot::is_fill_sign`, which the engine's comment list uses.
     fn is_fill_sign(&self, d: &Dictionary, subtype: &str) -> bool {
         let yes = |key: &[u8]| matches!(d.get(key).map(|o| self.resolve(o)), Ok(Object::Boolean(true)));
         if yes(b"PCFillSign") {
@@ -111,7 +111,7 @@ impl<'a> Inspector<'a> {
             }
             // Not comments: form widgets, pop-ups and non-markup annotations such as the
             // Screen annotation that drives a LaTeX `animate` player (keep in step with
-            // `pdfcraft_annot::is_comment_subtype`).
+            // `simplypdf_annot::is_comment_subtype`).
             if matches!(subtype.as_str(), "Widget" | "Popup" | "Screen" | "Movie" | "RichMedia" | "3D" | "PrinterMark" | "TrapNet" | "Watermark") {
                 continue;
             }
@@ -148,7 +148,7 @@ impl<'a> Inspector<'a> {
             let in_reply_to = d.get(b"IRT").ok().and_then(|o| self.dict(o)).and_then(|p| self.text(p, b"NM"));
             let parent = d.get(b"IRT").ok().and_then(|o| self.resolved_id(o)).and_then(|r| slots.get(&r).copied());
             let fill_sign = self.is_fill_sign(d, &subtype);
-            // Keep in step with `pdfcraft_annot::summaries`.
+            // Keep in step with `simplypdf_annot::summaries`.
             let key: &[u8] = if subtype == "Line" { b"L" } else { b"Vertices" };
             let points = match d.get(key).map(|o| self.resolve(o)) {
                 Ok(Object::Array(v)) if matches!(subtype.as_str(), "Line" | "PolyLine" | "Polygon") => {
@@ -163,7 +163,7 @@ impl<'a> Inspector<'a> {
                 subtype,
                 author: self.text(d, b"T"),
                 // Acrobat ends lines with CR, which the interface would draw as nothing (keep
-                // in step with `pdfcraft_annot::summaries`).
+                // in step with `simplypdf_annot::summaries`).
                 contents: self.text(d, b"Contents").map(|s| s.replace("\r\n", "\n").replace('\r', "\n")),
                 modified: self.text(d, b"M").map(|m| pretty_date(&m)),
                 name: self.text(d, b"NM"),

@@ -4,7 +4,7 @@ use super::*;
 
 fn pdf_string(s: &str) -> Vec<u8> {
     let mut v = Vec::new();
-    pdfcraft_cos::serialize(&Object::String(PdfString::text(s)), &mut v);
+    simplypdf_cos::serialize(&Object::String(PdfString::text(s)), &mut v);
     v
 }
 
@@ -183,14 +183,14 @@ impl<'a> FdfCopy<'a> {
             } else {
                 match doc.try_get(source.num) {
                     Ok(value) => value,
-                    Err(pdfcraft_cos::CosError::MissingObject(_)) => std::sync::Arc::new(Object::Null),
+                    Err(simplypdf_cos::CosError::MissingObject(_)) => std::sync::Arc::new(Object::Null),
                     Err(error) => return Err(error.into()),
                 }
             };
             let copied = match &*value {
                 Object::Stream(stream) => {
                     self.charge(stream.raw.len())?;
-                    Object::Stream(pdfcraft_cos::Stream { dict: self.dict(&stream.dict, 0)?, raw: stream.raw.clone() })
+                    Object::Stream(simplypdf_cos::Stream { dict: self.dict(&stream.dict, 0)?, raw: stream.raw.clone() })
                 }
                 other => self.copy(other, 0)?,
             };
@@ -214,7 +214,7 @@ pub fn export_fdf(doc: &Document, comments: bool, fields: bool, file: &str) -> R
     // Comment dictionaries, written after the root as objects 2, 3, …
     if fields {
         body.extend_from_slice(b"/Fields [");
-        for f in pdfcraft_forms::fields(doc) {
+        for f in simplypdf_forms::fields(doc) {
             if matches!(f.kind, FieldKind::PushButton | FieldKind::Signature) {
                 continue;
             }
@@ -232,10 +232,10 @@ pub fn export_fdf(doc: &Document, comments: bool, fields: bool, file: &str) -> R
             match f.kind {
                 FieldKind::CheckBox | FieldKind::Radio => {
                     let v = f.export_values().first().cloned().unwrap_or_else(|| "Off".into());
-                    pdfcraft_cos::serialize(&Object::Name(pdfcraft_forms::name_bytes(&v)), &mut body);
+                    simplypdf_cos::serialize(&Object::Name(simplypdf_forms::name_bytes(&v)), &mut body);
                 }
                 FieldKind::List if f.value.len() > 1 => {
-                    pdfcraft_cos::serialize(&Object::Array(f.value.iter().map(|v| Object::String(PdfString::text(v))).collect()), &mut body);
+                    simplypdf_cos::serialize(&Object::Array(f.value.iter().map(|v| Object::String(PdfString::text(v))).collect()), &mut body);
                 }
                 _ => body.extend(pdf_string(f.value.first().map(String::as_str).unwrap_or(""))),
             }
@@ -246,7 +246,7 @@ pub fn export_fdf(doc: &Document, comments: bool, fields: bool, file: &str) -> R
     if comments {
         // Keep the page/array owners once. Handles retain positions, never annotation
         // bodies: the document cache can evict and reparse even a repeated source reference.
-        let pages = pdfcraft_model::pages(doc);
+        let pages = simplypdf_model::pages(doc);
         let mut arrays = Vec::new();
         let mut picked: Vec<(Option<ObjRef>, usize, usize)> = Vec::new();
         for (pi, page) in pages.iter().enumerate() {
@@ -316,7 +316,7 @@ pub fn export_fdf(doc: &Document, comments: bool, fields: bool, file: &str) -> R
     for (i, object) in copy.objects.into_iter().enumerate() {
         offsets.push(out.len());
         let _ = writeln!(out, "{} 0 obj", i + 2);
-        pdfcraft_cos::serialize(&object, &mut out);
+        simplypdf_cos::serialize(&object, &mut out);
         out.extend_from_slice(b"\nendobj\n");
     }
     let xref = out.len();
@@ -421,7 +421,7 @@ pub(crate) fn walk_fdf(
         if let Some(v) = d.get(b"V").map(|v| fdf.resolve(v)) {
             let vals: Vec<String> = match &*v {
                 Object::String(s) => vec![s.to_text()],
-                Object::Name(n) => vec![pdfcraft_forms::name_text(n)],
+                Object::Name(n) => vec![simplypdf_forms::name_text(n)],
                 Object::Array(a) => {
                     budget.spend(a.len(), 0)?;
                     a.iter().filter_map(|x| fdf.resolve(x).as_string().map(|s| s.to_text())).collect()
@@ -466,7 +466,7 @@ pub(crate) fn import_fdf(doc: &mut Document, bytes: &[u8]) -> Result<Report, Dat
         walk_fdf(&fdf, &list, "", &mut values, 0, &mut Vec::new(), &mut budget)?;
     }
     // Comments: parents first, then replies (whose /IRT needs the parent's new reference).
-    let pages: Vec<ObjRef> = pdfcraft_model::pages(doc).iter().map(|p| p.obj).collect();
+    let pages: Vec<ObjRef> = simplypdf_model::pages(doc).iter().map(|p| p.obj).collect();
     let mut placed: HashMap<ObjRef, ObjRef> = HashMap::new();
     let mut later: HashMap<ObjRef, (Option<ObjRef>, Option<String>)> = HashMap::new();
     for a in body.get(b"Annots").map(|a| fdf.resolve(a)).and_then(|a| a.as_array().cloned()).unwrap_or_default() {

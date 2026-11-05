@@ -176,7 +176,7 @@ impl<'a> Inspector<'a> {
                     descendant.and_then(|d| d.get(b"CIDSystemInfo").ok()).and_then(|o| self.dict(o)).and_then(|c| self.text(c, b"Ordering"));
                 let subset = base.len() > 7 && base.as_bytes()[6] == b'+' && base[..6].bytes().all(|b| b.is_ascii_uppercase());
                 let name = if subset { base[7..].to_string() } else { base };
-                let chosen = pdfcraft_fonts::fallback::substitute(&pdfcraft_fonts::fallback::Request {
+                let chosen = simplypdf_fonts::fallback::substitute(&simplypdf_fonts::fallback::Request {
                     base_font: &name,
                     embedded,
                     flags,
@@ -264,7 +264,7 @@ pub fn attachment_data(bytes: &[u8], password: Option<&str>, att: &Attachment) -
 }
 
 /// An XFA packet's bytes as text: UTF-16 (little- or big-endian, told by a byte order mark or by
-/// how `<` is written) or UTF-8, as `pdfcraft_xfa::packets::decode` reads them. Lossy: only one
+/// how `<` is written) or UTF-8, as `simplypdf_xfa::packets::decode` reads them. Lossy: only one
 /// element is looked for.
 pub(super) fn xfa_packet_text(bytes: &[u8]) -> String {
     let utf16 = |b: &[u8], from: fn([u8; 2]) -> u16| {

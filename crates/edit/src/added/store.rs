@@ -60,7 +60,7 @@ fn with_resolved<T>(doc: &Document, object: &Object, f: impl FnOnce(&Object) -> 
     }
 }
 
-fn for_each_content_entry(doc: &Document, page: &pdfcraft_model::Page, mut visit: impl FnMut(&Object)) {
+fn for_each_content_entry(doc: &Document, page: &simplypdf_model::Page, mut visit: impl FnMut(&Object)) {
     let Some(contents) = page.dict.get(b"Contents") else { return };
     with_resolved(doc, contents, |resolved| match resolved {
         Object::Array(entries) => {
@@ -110,7 +110,7 @@ pub fn scan_markers(doc: &Document) -> MarkerScan {
                             .get(b"UserUnit")
                             .and_then(Object::as_f64)
                             .filter(|u| u.is_finite() && *u >= 1.0)
-                            .map_or(1.0, |u| u.min(pdfcraft_model::MAX_USER_UNIT));
+                            .map_or(1.0, |u| u.min(simplypdf_model::MAX_USER_UNIT));
                         scan.added.push(Added { page: pi, obj, content: content.scaled(page.user_unit(doc) / written) });
                     }
                 });
@@ -141,16 +141,16 @@ fn validate(c: &Content) -> Result<(), EditError> {
             if (r[2] - r[0]).abs() < 1.0 {
                 return Err(EditError::Invalid("the text box is too narrow".into()));
             }
-            if t.text.chars().any(is_thai) && pdfcraft_fonts::document_thai_font().is_none() {
+            if t.text.chars().any(is_thai) && simplypdf_fonts::document_thai_font().is_none() {
                 return Err(thai_error(GlyphError::NoFont, &t.text));
             }
             // Without the Arabic face, `draw` decides for the Arabic letters themselves (#403): a new
             // item is refused with what's missing, and one that already holds Arabic stays movable.
             // Everything else in it is drawn in the standard font, so it still has to fit.
-            let undrawable = if t.text.chars().any(shaped_arabic) && pdfcraft_fonts::document_arabic_font().is_none() {
+            let undrawable = if t.text.chars().any(shaped_arabic) && simplypdf_fonts::document_arabic_font().is_none() {
                 t.text.split('\n').find_map(|line| {
                     line.chars()
-                        .find(|c| !(shaped_arabic(*c) || is_thai(*c) && pdfcraft_fonts::thai_has(*c) || pdfcraft_fonts::win_ansi_encodable(*c)))
+                        .find(|c| !(shaped_arabic(*c) || is_thai(*c) && simplypdf_fonts::thai_has(*c) || simplypdf_fonts::win_ansi_encodable(*c)))
                 })
             } else {
                 first_undrawable(t)

@@ -1,13 +1,13 @@
-//! pdfcraft-create — create PDFs from nothing, images or text (L4). See the README.
+//! simplypdf-create — create PDFs from nothing, images or text (L4). See the README.
 
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
-use pdfcraft_cos::{Dict, Document, ObjRef, Object, PdfString, Stream, serialize};
+use simplypdf_cos::{Dict, Document, ObjRef, Object, PdfString, Stream, serialize};
 
 mod extract;
 mod upright_image;
 pub use extract::{ExtractedImage, ImageExport, extract_images, image_file, image_file_within};
-use pdfcraft_fonts::{literal, win_ansi, wrap};
+use simplypdf_fonts::{literal, win_ansi, wrap};
 
 #[derive(Debug, thiserror::Error, PartialEq)]
 pub enum CreateError {
@@ -70,7 +70,7 @@ impl Pages {
 fn set_title(doc: &mut Document, title: &str) {
     let mut info = Dict::new();
     info.set(b"Title".to_vec(), PdfString::text(title));
-    info.set(b"Producer".to_vec(), PdfString::text("PdfCraft"));
+    info.set(b"Producer".to_vec(), PdfString::text("SimplyPDF"));
     let r = doc.add(info);
     doc.trailer_mut().set(b"Info".to_vec(), Object::Ref(r));
 }
@@ -198,8 +198,8 @@ fn add_image(doc: &mut Document, img: Embedded, profiles: &mut Vec<(Vec<u8>, Obj
         };
         let mut flate_dict = d.clone();
         flate_dict.set(b"Filter".to_vec(), Object::name("FlateDecode"));
-        let flate = pdfcraft_filters::encode_flate(&packed);
-        (d, data) = match pdfcraft_filters::encode_g4(&packed, img.px.0, img.px.1) {
+        let flate = simplypdf_filters::encode_flate(&packed);
+        (d, data) = match simplypdf_filters::encode_g4(&packed, img.px.0, img.px.1) {
             Ok(g4) => {
                 let mut parms = Dict::new();
                 parms.set(b"K".to_vec(), Object::Int(-1));
@@ -652,7 +652,7 @@ fn embed(name: &str, bytes: &[u8], wanted: usize) -> Result<Vec<Embedded>, Creat
     } else if is_tiff(bytes) {
         tiff_pages(name, bytes, wanted)
     } else if bytes.starts_with(b"BM") {
-        Ok(vec![decoded(name, &pdfcraft_xfa::image::bmp_with_pixel_offset(bytes), image::ImageFormat::Bmp)?])
+        Ok(vec![decoded(name, &simplypdf_xfa::image::bmp_with_pixel_offset(bytes), image::ImageFormat::Bmp)?])
     } else if is_gif(bytes) {
         Ok(vec![decoded(name, bytes, image::ImageFormat::Gif)?])
     } else if bytes.starts_with(JP2_SIGNATURE) || bytes.starts_with(&[0xFF, 0x4F, 0xFF, 0x51]) {
@@ -749,11 +749,11 @@ fn turkish_code_page(bytes: &[u8]) -> bool {
 
 /// Plain text set in Helvetica on pages of `page` size with 1-inch margins. Text Helvetica can't
 /// draw (outside Western European) is refused with [`CreateError::Invalid`] naming the line and
-/// the character; text PdfCraft generates goes through [`from_text_escaped`] instead.
+/// the character; text SimplyPDF generates goes through [`from_text_escaped`] instead.
 pub fn from_text(title: &str, text: &str, page: (f64, f64), font_size: f64) -> Result<Document, CreateError> {
     // Helvetica in WinAnsiEncoding: text it can't draw is refused with where it is, not set as `?`.
     if let Some((line, c)) = first_undrawable_line(text) {
-        return Err(CreateError::Invalid(pdfcraft_fonts::undrawable_message(&format!("the text (line {line})"), c)));
+        return Err(CreateError::Invalid(simplypdf_fonts::undrawable_message(&format!("the text (line {line})"), c)));
     }
     set_text(title, text, page, font_size)
 }
@@ -761,14 +761,14 @@ pub fn from_text(title: &str, text: &str, page: (f64, f64), font_size: f64) -> R
 /// The line (1-based) and character of the first one Helvetica can't draw. Line breaks, tabs and
 /// form feeds (new pages) are layout, not drawn.
 fn first_undrawable_line(text: &str) -> Option<(usize, char)> {
-    text.split('\n').enumerate().find_map(|(i, l)| pdfcraft_fonts::first_undrawable(&l.replace('\u{c}', "")).map(|c| (i + 1, c)))
+    text.split('\n').enumerate().find_map(|(i, l)| simplypdf_fonts::first_undrawable(&l.replace('\u{c}', "")).map(|c| (i + 1, c)))
 }
 
-/// What a PDF made from text PdfCraft generated says, in its first line, about characters it
+/// What a PDF made from text SimplyPDF generated says, in its first line, about characters it
 /// wrote as `[U+XXXX]`.
 pub const ESCAPED_NOTE: &str = "Characters Helvetica can't draw are written as [U+XXXX] code points.";
 
-/// [`from_text`] for text PdfCraft generates from documents (a comment summary, a compare
+/// [`from_text`] for text SimplyPDF generates from documents (a comment summary, a compare
 /// report), which may quote any language. Each character Helvetica can't draw is written as
 /// `[U+XXXX]` instead of being refused or set as `?`, so nothing is lost, and the first line says
 /// so ([`ESCAPED_NOTE`]). Returns the document and how many characters were written that way.
@@ -776,7 +776,7 @@ pub fn from_text_escaped(title: &str, text: &str, page: (f64, f64), font_size: f
     let mut escaped = 0usize;
     let mut out = String::with_capacity(text.len());
     for c in text.chars() {
-        if matches!(c, '\n' | '\r' | '\u{c}') || pdfcraft_fonts::first_undrawable(c.encode_utf8(&mut [0; 4])).is_none() {
+        if matches!(c, '\n' | '\r' | '\u{c}') || simplypdf_fonts::first_undrawable(c.encode_utf8(&mut [0; 4])).is_none() {
             out.push(c);
         } else {
             escaped = escaped.saturating_add(1);

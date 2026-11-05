@@ -5,13 +5,13 @@ use std::sync::{Arc, Mutex};
 
 use egui_kittest::Harness;
 use egui_kittest::kittest::Queryable;
-use pdfcraft_render::{PageRenderer, RenderRequest, RequestKind};
-use pdfcraft_ui_egui::PdfCraftApp;
-use pdfcraft_ui_egui::control::{ControlClient, Reply};
 use serde_json::{Value, json};
+use simplypdf_render::{PageRenderer, RenderRequest, RequestKind};
+use simplypdf_ui_egui::SimplyPDFApp;
+use simplypdf_ui_egui::control::{ControlClient, Reply};
 
 /// The text each page shows, in order, as the app's session holds it.
-fn page_texts(app: &PdfCraftApp) -> Vec<String> {
+fn page_texts(app: &SimplyPDFApp) -> Vec<String> {
     let doc = app.session.get(app.views[0].id).unwrap();
     let mut r = PageRenderer::new(doc.bytes.clone(), Default::default());
     (0..r.page_count())
@@ -47,19 +47,19 @@ fn fixture(n: usize) -> Vec<u8> {
     out
 }
 
-fn harness() -> (Harness<'static, PdfCraftApp>, ControlClient) {
+fn harness() -> (Harness<'static, SimplyPDFApp>, ControlClient) {
     harness_pages(5)
 }
 
-fn harness_pages(pages: usize) -> (Harness<'static, PdfCraftApp>, ControlClient) {
+fn harness_pages(pages: usize) -> (Harness<'static, SimplyPDFApp>, ControlClient) {
     harness_pages_at(pages, 1400.0, 1.0)
 }
 
-fn harness_pages_at(pages: usize, width: f32, scale: f32) -> (Harness<'static, PdfCraftApp>, ControlClient) {
+fn harness_pages_at(pages: usize, width: f32, scale: f32) -> (Harness<'static, SimplyPDFApp>, ControlClient) {
     let slot: Arc<Mutex<Option<ControlClient>>> = Arc::default();
     let s = slot.clone();
     let mut h = Harness::builder().with_size(egui::vec2(width, 900.0)).with_pixels_per_point(scale).build_eframe(move |cc| {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.set_option("language", "en").unwrap();
         *s.lock().unwrap() = Some(app.attach_control(&cc.egui_ctx));
         app.open_bytes("doc.pdf", None, fixture(pages)).unwrap();
@@ -71,7 +71,7 @@ fn harness_pages_at(pages: usize, width: f32, scale: f32) -> (Harness<'static, P
 }
 
 /// Send a request and run frames until it is answered.
-fn call(h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient, method: &str, params: Value) -> Reply {
+fn call(h: &mut Harness<'static, SimplyPDFApp>, c: &ControlClient, method: &str, params: Value) -> Reply {
     let rx = c.send(method, params);
     let mut reply = None;
     let answered = crate::support::step_until(h, |_| {
@@ -84,7 +84,7 @@ fn call(h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient, method: &str, 
     }
 }
 
-fn ok(h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient, method: &str, params: Value) -> Value {
+fn ok(h: &mut Harness<'static, SimplyPDFApp>, c: &ControlClient, method: &str, params: Value) -> Value {
     call(h, c, method, params).unwrap_or_else(|e| panic!("{method}: {e}"))
 }
 
@@ -92,7 +92,7 @@ fn ok(h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient, method: &str, pa
 /// opens a modal. `ui.set` answers in the input pass, and a font change discards the pass that
 /// applies it, so the modal's labels are not in the accessibility tree until those frames have
 /// been laid out.
-fn settle(h: &mut Harness<'static, PdfCraftApp>) {
+fn settle(h: &mut Harness<'static, SimplyPDFApp>) {
     h.run_steps(3);
 }
 
@@ -103,7 +103,7 @@ fn comment_pin_is_reported_and_persistent() {
     for pinned in [true, false] {
         ok(&mut h, &c, "ui.set", json!({"key":"comment-tool-pinned","value":pinned}));
         assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["comment_tool_pinned"], pinned);
-        let mut restored = PdfCraftApp::new();
+        let mut restored = SimplyPDFApp::new();
         restored.comment_prefs.pinned = !pinned;
         restored.restore(&h.state().persist());
         assert_eq!(restored.comment_prefs.pinned, pinned);
@@ -216,7 +216,7 @@ fn control_focus_traverses_real_widgets_and_keyboard_activates() {
 /// A frame driven in production order: eframe's raw input hook runs before egui's input hooks, so
 /// the control plugin sees the focus/dialog generation produced by the previous UI pass. The
 /// kittest harness does not call `raw_input_hook`, which otherwise hides focus-change bugs.
-fn production_step(h: &mut Harness<'static, PdfCraftApp>) {
+fn production_step(h: &mut Harness<'static, SimplyPDFApp>) {
     let ctx = h.ctx.clone();
     let mut raw = std::mem::take(h.input_mut());
     h.state_mut().prepare_raw_input(&ctx, &mut raw);
@@ -224,7 +224,7 @@ fn production_step(h: &mut Harness<'static, PdfCraftApp>) {
     h.step();
 }
 
-fn call_production(h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient, method: &str, params: Value) -> Reply {
+fn call_production(h: &mut Harness<'static, SimplyPDFApp>, c: &ControlClient, method: &str, params: Value) -> Reply {
     let rx = c.send(method, params);
     for _ in 0..30 {
         production_step(h);
@@ -249,7 +249,14 @@ fn production_key_release_survives_the_focus_change_its_press_causes() {
 #[test]
 fn production_drag_releases_the_button_after_the_press_moves_focus() {
     let (mut h, c) = harness_pages(2);
-    h.state_mut().apply_edit(pdfcraft_engine::Edit::AddBookmark { parent: vec![], index: 0, title: "Target".into(), page: 0, left: None, top: None });
+    h.state_mut().apply_edit(simplypdf_engine::Edit::AddBookmark {
+        parent: vec![],
+        index: 0,
+        title: "Target".into(),
+        page: 0,
+        left: None,
+        top: None,
+    });
     ok(&mut h, &c, "ui.set", json!({"key": "panel", "value": "bookmarks"}));
     let field = ok(&mut h, &c, "ui.inspect", json!({"query": "Search", "role": "TextInput"}));
     let rect = field["widgets"][0]["rect"].as_array().expect("the search field has a rect");
@@ -281,7 +288,14 @@ fn control_button_focus_preserves_document_undo_redo_shortcuts() {
 #[test]
 fn control_text_focus_retains_text_undo_ownership() {
     let (mut h, c) = harness_pages(2);
-    h.state_mut().apply_edit(pdfcraft_engine::Edit::AddBookmark { parent: vec![], index: 0, title: "Target".into(), page: 0, left: None, top: None });
+    h.state_mut().apply_edit(simplypdf_engine::Edit::AddBookmark {
+        parent: vec![],
+        index: 0,
+        title: "Target".into(),
+        page: 0,
+        left: None,
+        top: None,
+    });
     ok(&mut h, &c, "ui.command", json!({"id": "page.insert_blank"}));
     ok(&mut h, &c, "ui.set", json!({"key": "panel", "value": "bookmarks"}));
     let widgets = ok(&mut h, &c, "ui.inspect", json!({"query": "Search", "role": "TextInput"}));
@@ -325,7 +339,7 @@ fn control_focus_rejects_missing_ambiguous_disabled_and_nonfocusable_targets() {
     assert!(call(&mut h, &c, "ui.focus", json!({"id": disabled["id"]})).is_err());
 }
 
-fn close_requested(h: &Harness<'static, PdfCraftApp>) -> bool {
+fn close_requested(h: &Harness<'static, SimplyPDFApp>) -> bool {
     h.output().viewport_output.values().any(|v| v.commands.iter().any(|c| matches!(c, egui::ViewportCommand::Close)))
 }
 
@@ -355,7 +369,7 @@ fn control_quit_preserves_dirty_documents_and_cancel_keeps_them_open() {
 }
 
 /// Run one frame and return the attention requests it sent to the window.
-fn step_attention(h: &mut Harness<'static, PdfCraftApp>) -> Vec<egui::UserAttentionType> {
+fn step_attention(h: &mut Harness<'static, SimplyPDFApp>) -> Vec<egui::UserAttentionType> {
     h.step();
     let commands = h.output().viewport_output.values().flat_map(|v| v.commands.iter());
     commands.filter_map(|c| if let egui::ViewportCommand::RequestUserAttention(a) = c { Some(*a) } else { None }).collect()
@@ -363,7 +377,7 @@ fn step_attention(h: &mut Harness<'static, PdfCraftApp>) -> Vec<egui::UserAttent
 
 /// Send a request, run frames until it is answered and three more, and collect every attention
 /// request those frames sent.
-fn attention_during(h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient, method: &str, params: Value) -> Vec<egui::UserAttentionType> {
+fn attention_during(h: &mut Harness<'static, SimplyPDFApp>, c: &ControlClient, method: &str, params: Value) -> Vec<egui::UserAttentionType> {
     let rx = c.send(method, params);
     let mut sent = Vec::new();
     for _ in 0..30 {
@@ -377,11 +391,11 @@ fn attention_during(h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient, me
 }
 
 /// Open `name` with an unsaved change, in a tab of its own.
-fn open_unsaved(h: &mut Harness<'static, PdfCraftApp>, name: &str) {
+fn open_unsaved(h: &mut Harness<'static, SimplyPDFApp>, name: &str) {
     let app = h.state_mut();
     app.open_bytes(name, None, fixture(1)).unwrap();
     app.active = Some(app.views.len() - 1);
-    app.apply_edit(pdfcraft_engine::Edit::RotatePages { pages: vec![0], degrees: 90 });
+    app.apply_edit(simplypdf_engine::Edit::RotatePages { pages: vec![0], degrees: 90 });
 }
 
 /// An agent quits while another app is in front, then answers the prompts itself. Quitting asks
@@ -426,7 +440,7 @@ fn control_quit_clean_document_requests_normal_window_close() {
 fn bookmark_titles_can_be_searched_over_control() {
     let (mut h, c) = harness();
     for (index, title, page) in [(0, "Background", 0), (1, "Target chapter", 3)] {
-        h.state_mut().apply_edit(pdfcraft_engine::Edit::AddBookmark { parent: vec![], index, title: title.into(), page, left: None, top: None });
+        h.state_mut().apply_edit(simplypdf_engine::Edit::AddBookmark { parent: vec![], index, title: title.into(), page, left: None, top: None });
     }
     ok(&mut h, &c, "ui.set", json!({ "key": "panel", "value": "bookmarks" }));
     h.run_steps(3);
@@ -440,14 +454,14 @@ fn bookmark_titles_can_be_searched_over_control() {
     assert!(h.query_by_label("Background").is_none());
     ok(&mut h, &c, "ui.click", json!({ "label": "Target chapter" }));
     assert_eq!(h.state().views[0].current, 3);
-    if let Ok(dir) = std::env::var("PDFCRAFT_BOOKMARK_SHOTS") {
+    if let Ok(dir) = std::env::var("SIMPLYPDF_BOOKMARK_SHOTS") {
         let _gpu = crate::gpu();
         h.render().unwrap().save(format!("{dir}/control-filtered-bookmarks.png")).unwrap();
     }
     ok(&mut h, &c, "ui.click", json!({ "label": "Clear" }));
     h.get_by_label("Background");
     h.get_by_label("Target chapter");
-    if let Ok(dir) = std::env::var("PDFCRAFT_BOOKMARK_SHOTS") {
+    if let Ok(dir) = std::env::var("SIMPLYPDF_BOOKMARK_SHOTS") {
         let _gpu = crate::gpu();
         h.render().unwrap().save(format!("{dir}/control-cleared-bookmarks.png")).unwrap();
     }
@@ -524,10 +538,10 @@ fn language_switch_preserves_document_and_command_ids() {
     if crate::support::skip_without_catalogs("language_switch_preserves_document_and_command_ids") {
         return;
     }
-    use pdfcraft_ui_egui::i18n;
+    use simplypdf_ui_egui::i18n;
     let (mut h, c) = harness();
     let doc = h.state().views[0].id;
-    h.state_mut().session.apply(doc, pdfcraft_engine::Edit::RotatePages { pages: vec![0], degrees: 90 }).unwrap();
+    h.state_mut().session.apply(doc, simplypdf_engine::Edit::RotatePages { pages: vec![0], degrees: 90 }).unwrap();
     let documents = ok(&mut h, &c, "ui.state", json!({}))["documents"].clone();
     assert_eq!(documents[0]["dirty"], true);
     let commands = ok(&mut h, &c, "ui.commands", json!({}));
@@ -563,7 +577,7 @@ fn language_switch_preserves_document_and_command_ids() {
 }
 
 #[cfg(target_os = "linux")]
-fn start_autoscroll(h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient) -> egui::Pos2 {
+fn start_autoscroll(h: &mut Harness<'static, SimplyPDFApp>, c: &ControlClient) -> egui::Pos2 {
     let p = h.state().views[0].viewport_rect().center();
     ok(h, c, "ui.click", json!({ "x": p.x, "y": p.y, "button": "middle" }));
     assert!(h.state().views[0].auto_scrolling());
@@ -581,7 +595,7 @@ struct CanvasPosition {
 
 #[cfg(target_os = "linux")]
 impl CanvasPosition {
-    fn new(h: &Harness<'static, PdfCraftApp>) -> Self {
+    fn new(h: &Harness<'static, SimplyPDFApp>) -> Self {
         let grid = h.state().views[0].organize.then(|| {
             let first = h.get_by_label("Page 1").rect().top();
             let (page, next_row) = Self::grid_cells(h).into_iter().find(|(_, top)| *top > first + 1.0).expect("a second grid row");
@@ -590,7 +604,7 @@ impl CanvasPosition {
         Self { grid }
     }
 
-    fn grid_cells(h: &Harness<'static, PdfCraftApp>) -> Vec<(usize, f32)> {
+    fn grid_cells(h: &Harness<'static, SimplyPDFApp>) -> Vec<(usize, f32)> {
         use egui_kittest::kittest::NodeT;
         let mut cells: Vec<_> = h
             .query_all_by_label_contains("Page ")
@@ -603,7 +617,7 @@ impl CanvasPosition {
         cells
     }
 
-    fn top(&self, h: &Harness<'static, PdfCraftApp>) -> f32 {
+    fn top(&self, h: &Harness<'static, SimplyPDFApp>) -> f32 {
         match self.grid {
             Some((columns, row_pitch)) => {
                 let (page, top) = Self::grid_cells(h).into_iter().next().expect("a rendered grid cell");
@@ -659,7 +673,7 @@ fn moving_before_middle_button_release_keeps_scrolling_without_starting_page_too
     h.state_mut().views[0].go_to_page(0);
     h.run_steps(2);
     // A middle drag must not also draw with a selected tool (egui accepts any drag button).
-    h.state_mut().quick_tool = pdfcraft_ui_egui::QuickTool::Crop;
+    h.state_mut().quick_tool = simplypdf_ui_egui::QuickTool::Crop;
     let p = h.state().views[0].viewport_rect().center();
     let top = h.state().views[0].page_screen_rect(0).unwrap().top();
     ok(&mut h, &c, "ui.drag", json!({ "from": [p.x, p.y], "to": [p.x, p.y + 60.0], "steps": 12, "button": "middle" }));
@@ -701,7 +715,7 @@ fn farther_from_the_click_scrolls_faster_in_the_viewer_and_page_grid() {
         h.state_mut().views[0].organize = organize;
         h.run_steps(3);
         let position = CanvasPosition::new(&h);
-        let top = |h: &Harness<'static, PdfCraftApp>| position.top(h);
+        let top = |h: &Harness<'static, SimplyPDFApp>| position.top(h);
         let p = start_autoscroll(&mut h, &c);
         ok(&mut h, &c, "ui.move", json!({ "x": p.x, "y": p.y + 30.0 }));
         let before_near = top(&h);
@@ -734,8 +748,8 @@ fn autoscroll_uses_elapsed_frame_time_and_preserves_fractional_motion_in_both_vi
             h.run_steps(3);
             assert_eq!(h.ctx.pixels_per_point(), scale);
             let position = CanvasPosition::new(&h);
-            let top = |h: &Harness<'static, PdfCraftApp>| position.top(h);
-            let step = |h: &mut Harness<'static, PdfCraftApp>| {
+            let top = |h: &Harness<'static, SimplyPDFApp>| position.top(h);
+            let step = |h: &mut Harness<'static, SimplyPDFApp>| {
                 // Deliberately differ from the harness's predicted frame interval: scrolling
                 // must follow the elapsed time rather than the display's predicted rate.
                 h.input_mut().time = Some(h.ctx.input(|i| i.time) + 1.0 / f64::from(frames));
@@ -839,7 +853,7 @@ fn autoscroll_is_scoped_to_the_active_view_and_cannot_start_under_a_dialog() {
     h.run_steps(2);
     assert!(!h.state().views[0].auto_scrolling(), "returning to the tab must not resume");
     start_autoscroll(&mut h, &c);
-    h.state_mut().dialog = Some(pdfcraft_ui_egui::Dialog::About);
+    h.state_mut().dialog = Some(simplypdf_ui_egui::Dialog::About);
     h.run_steps(2);
     assert!(!h.state().views[0].auto_scrolling());
     ok(&mut h, &c, "ui.click", json!({ "x": p.x, "y": p.y, "button": "middle" }));
@@ -912,7 +926,7 @@ fn middle_button_pans_while_held_outside_linux() {
     h.run_steps(3);
     h.state_mut().views[0].go_to_page(1);
     h.run_steps(2);
-    h.state_mut().quick_tool = pdfcraft_ui_egui::QuickTool::Crop;
+    h.state_mut().quick_tool = simplypdf_ui_egui::QuickTool::Crop;
     let p = h.state().views[0].viewport_rect().center();
     let top = h.state().views[0].page_screen_rect(1).unwrap().top();
     ok(&mut h, &c, "ui.drag", json!({ "from": [p.x, p.y], "to": [p.x, p.y - 60.0], "steps": 12, "button": "middle" }));
@@ -1059,7 +1073,7 @@ fn ukrainian_preferences_and_search_keep_command_ids() {
         assert!(found["count"].as_u64().unwrap() > 0, "{dialog}: {found}");
     }
     ok(&mut h, &c, "ui.set", json!({ "key": "dialog", "value": "none" }));
-    assert!(!h.state_mut().apply_edit(pdfcraft_engine::Edit::DeletePages { pages: vec![0, 1, 2, 3, 4] }));
+    assert!(!h.state_mut().apply_edit(simplypdf_engine::Edit::DeletePages { pages: vec![0, 1, 2, 3, 4] }));
     let state = ok(&mut h, &c, "ui.state", json!({}));
     assert_eq!(state["language"], "uk");
     assert_eq!(state["notice"], "Помилка «Видалити сторінки»: a document must keep at least one page");
@@ -1139,13 +1153,13 @@ fn japanese_dialogs_errors_and_custom_action_names() {
         assert!(found["count"].as_u64().unwrap() > 0, "{dialog}: {found}");
     }
     ok(&mut h, &c, "ui.set", json!({"key": "dialog", "value": "none"}));
-    assert!(!h.state_mut().apply_edit(pdfcraft_engine::Edit::DeletePages { pages: vec![0, 1, 2, 3, 4] }));
+    assert!(!h.state_mut().apply_edit(simplypdf_engine::Edit::DeletePages { pages: vec![0, 1, 2, 3, 4] }));
     let state = ok(&mut h, &c, "ui.state", json!({}));
     // The frame is translated; the engine's own error text is shown as it is.
     assert_eq!(state["notice"], "操作「ページを削除」に失敗しました: a document must keep at least one page");
     assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["documents"][0]["name"], "doc.pdf");
 
-    h.state_mut().custom_actions.push(pdfcraft_engine::actions::Action {
+    h.state_mut().custom_actions.push(simplypdf_engine::actions::Action {
         name: "Save".to_string(),
         description: "Print".to_string(),
         steps: Vec::new(),
@@ -1224,7 +1238,7 @@ fn simplified_chinese_signature_prompts_and_errors_keep_document_state() {
     let drawn = ok(&mut h, &c, "ui.inspect", json!({"query": "请在下方绘制您的签名。"}));
     assert!(drawn["count"].as_u64().unwrap() > 0, "{drawn}");
     ok(&mut h, &c, "ui.click", json!({"label": "取消"}));
-    assert!(!h.state_mut().apply_edit(pdfcraft_engine::Edit::DeletePages { pages: vec![0, 1, 2, 3, 4] }));
+    assert!(!h.state_mut().apply_edit(simplypdf_engine::Edit::DeletePages { pages: vec![0, 1, 2, 3, 4] }));
     let state = ok(&mut h, &c, "ui.state", json!({}));
     assert_eq!(state["notice"], "删除页面失败：a document must keep at least one page");
     assert_eq!(state["documents"], documents, "a language change and failed edit must preserve the document");
@@ -1329,7 +1343,7 @@ fn ctrl_dragging_a_thumbnail_through_the_control_channel_copies_the_page() {
     ok(&mut h, &c, "ui.set", json!({ "key": "tool", "value": "organize" }));
     h.run_steps(3);
     // The grid cell of a page: the node labelled exactly "Page N" (the checkbox says "Select page N").
-    let cell = |h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient, page: usize| -> [f64; 4] {
+    let cell = |h: &mut Harness<'static, SimplyPDFApp>, c: &ControlClient, page: usize| -> [f64; 4] {
         let nodes = ok(h, c, "ui.inspect", json!({ "query": &format!("page {page}") }));
         let want = format!("Page {page}");
         let r = nodes["widgets"]
@@ -1381,7 +1395,7 @@ fn organize_overview_is_reachable_through_the_control_channel() {
 #[test]
 fn saved_signature_can_be_changed_through_the_control_channel() {
     let (mut h, c) = harness();
-    h.state_mut().signature = Some(pdfcraft_ui_egui::fill_sign::SavedSig::Typed("Ada Lovelace".into()));
+    h.state_mut().signature = Some(simplypdf_ui_egui::fill_sign::SavedSig::Typed("Ada Lovelace".into()));
     ok(&mut h, &c, "ui.command", json!({ "id": "sign.fill.signature.change" }));
     h.run_steps(3);
     assert_eq!(h.state().signature_draft.text, "Ada Lovelace");
@@ -1393,11 +1407,11 @@ fn saved_signature_can_be_changed_through_the_control_channel() {
     ok(&mut h, &c, "ui.key", json!({ "key": "A", "modifiers": ["command"] }));
     ok(&mut h, &c, "ui.type", json!({ "text": "Grace Hopper" }));
     ok(&mut h, &c, "ui.click", json!({ "label": "Apply" }));
-    assert_eq!(h.state().signature, Some(pdfcraft_ui_egui::fill_sign::SavedSig::Typed("Grace Hopper".into())));
+    assert_eq!(h.state().signature, Some(simplypdf_ui_egui::fill_sign::SavedSig::Typed("Grace Hopper".into())));
     assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["quick_tool"], "fill-signature");
     ok(&mut h, &c, "ui.command", json!({ "id": "sign.fill.signature.remove" }));
     assert_eq!(h.state().signature, None);
-    h.state_mut().initials = Some(pdfcraft_ui_egui::fill_sign::SavedSig::Typed("GH".into()));
+    h.state_mut().initials = Some(simplypdf_ui_egui::fill_sign::SavedSig::Typed("GH".into()));
     ok(&mut h, &c, "ui.command", json!({ "id": "sign.fill.initials.remove" }));
     assert_eq!(h.state().initials, None);
 }
@@ -1445,7 +1459,7 @@ fn screenshots_of_window_and_region() {
 fn loopback_transport_requires_the_token() {
     use std::io::{BufRead, BufReader, Write};
     let (mut h, c) = harness();
-    let ep = pdfcraft_ui_egui::control::serve(c).unwrap();
+    let ep = simplypdf_ui_egui::control::serve(c).unwrap();
     let talk = |lines: Vec<Value>| {
         let port = ep.port;
         std::thread::spawn(move || {
@@ -1466,7 +1480,7 @@ fn loopback_transport_requires_the_token() {
             out
         })
     };
-    let pump = |h: &mut Harness<'static, PdfCraftApp>, t: std::thread::JoinHandle<Vec<Value>>| {
+    let pump = |h: &mut Harness<'static, SimplyPDFApp>, t: std::thread::JoinHandle<Vec<Value>>| {
         while !t.is_finished() {
             h.step();
         }
@@ -1515,7 +1529,7 @@ fn control_default_workspace_and_session_override() {
 
 #[test]
 fn takeoff_starts_hidden_and_tools_drag_to_quick_access() {
-    use pdfcraft_engine::{
+    use simplypdf_engine::{
         Edit, Style,
         measure::{Kind, NewMeasurement, Scale},
     };
@@ -1533,7 +1547,7 @@ fn takeoff_starts_hidden_and_tools_drag_to_quick_access() {
     h.run_steps(3);
     assert_eq!(h.state().quick_tools, ["command:measure.distance"]);
     let saved = h.state().persist();
-    let mut restored = PdfCraftApp::new();
+    let mut restored = SimplyPDFApp::new();
     restored.restore(&saved);
     assert_eq!(restored.quick_tools, h.state().quick_tools);
     h.get_by_label("Measure distance").click();
@@ -1591,7 +1605,7 @@ fn takeoff_starts_hidden_and_tools_drag_to_quick_access() {
 #[test]
 fn takeoff_workspace_searches_sorts_resizes_and_docks() {
     let _gpu = crate::gpu();
-    use pdfcraft_engine::{
+    use simplypdf_engine::{
         Edit, Style,
         measure::{Kind, NewMeasurement, Scale, hvac},
     };
@@ -1616,12 +1630,13 @@ fn takeoff_workspace_searches_sorts_resizes_and_docks() {
             .unwrap();
     }
     h.run_steps(3);
-    let workspace = |h: &mut Harness<'static, PdfCraftApp>| ok(h, &c, "ui.state", json!({}))["takeoff_workspace"].clone();
+    let workspace = |h: &mut Harness<'static, SimplyPDFApp>| ok(h, &c, "ui.state", json!({}))["takeoff_workspace"].clone();
     let initial = workspace(&mut h);
     assert_eq!(initial["table_location"], "bottom");
     assert_eq!(initial["visible_count"], 2);
     assert_eq!(initial["totals"][0], json!(["ft", 23.0]));
-    if let Ok(dir) = std::env::var("PDFCRAFT_SHOTS") {
+    if let Ok(dir) = std::env::var("SIMPLYPDF_SHOTS") {
+        crate::support::settle(&mut h);
         h.render().unwrap().save(format!("{dir}/takeoff-workspace-initial.png")).unwrap();
     }
     let rect = initial["table_rect"].as_array().unwrap();
@@ -1643,7 +1658,7 @@ fn takeoff_workspace_searches_sorts_resizes_and_docks() {
     h.get_by_label("Value ▼").click_accesskit();
     h.run_steps(3);
     assert_eq!(workspace(&mut h)["visible_rows"][0], 0);
-    h.get_by_label("Small pipe").click();
+    h.get_by_role_and_label(egui::accesskit::Role::Button, "Edit Label 1:1").click();
     h.run_steps(2);
     assert_eq!(h.state().views[0].comments.selected, Some((0, 0)));
 
@@ -1660,31 +1675,27 @@ fn takeoff_workspace_searches_sorts_resizes_and_docks() {
         assert_eq!(workspace(&mut h)["visible_count"], 2);
     }
     ok(&mut h, &c, "ui.set", json!({"key":"takeoff-table","value":"floating"}));
-    if let Ok(dir) = std::env::var("PDFCRAFT_SHOTS") {
+    if let Ok(dir) = std::env::var("SIMPLYPDF_SHOTS") {
         ok(&mut h, &c, "ui.set", json!({"key":"takeoff-table","value":"bottom"}));
-        ok(&mut h, &c, "ui.set", json!({"key":"measurement-settings","value":"right"}));
+        ok(&mut h, &c, "ui.set", json!({"key":"measurement-settings","value":"left"}));
+        ok(&mut h, &c, "ui.set", json!({"key":"tool-rail","value":"expanded"}));
         h.run_steps(4);
+        crate::support::settle(&mut h);
         h.render().unwrap().save(format!("{dir}/takeoff-workspace.png")).unwrap();
         ok(&mut h, &c, "ui.command", json!({"id":"measure.pipe"}));
         ok(&mut h, &c, "ui.set", json!({"key":"theme","value":"dark"}));
         h.run_steps(3);
-        h.event(egui::Event::PointerMoved(egui::pos2(1220.0, 700.0)));
-        h.event(egui::Event::MouseWheel {
-            unit: egui::MouseWheelUnit::Point,
-            delta: egui::vec2(0.0, -550.0),
-            modifiers: egui::Modifiers::NONE,
-            phase: egui::TouchPhase::Move,
-            source: egui::MouseWheelSource::Unknown,
-        });
-        h.run_steps(8);
+        ok(&mut h, &c, "ui.set", json!({"key":"tool-rail","value":"icons"}));
+        h.run_steps(4);
+        crate::support::settle(&mut h);
         h.render().unwrap().save(format!("{dir}/takeoff-hvac-dark.png")).unwrap();
         ok(&mut h, &c, "ui.set", json!({"key":"takeoff-table","value":"floating"}));
         h.run_steps(3);
     }
     let saved = h.state().persist();
-    let mut restored = PdfCraftApp::new();
+    let mut restored = SimplyPDFApp::new();
     restored.restore(&saved);
-    assert_eq!(restored.takeoff_workspace.table_location, pdfcraft_ui_egui::takeoff_workspace::Location::Floating);
+    assert_eq!(restored.takeoff_workspace.table_location, simplypdf_ui_egui::takeoff_workspace::Location::Floating);
 }
 
 #[test]
@@ -1695,14 +1706,14 @@ fn measurement_tools_draw_live_calibrate_save_and_export() {
     ok(&mut h, &c, "ui.command", json!({"id":"measure.scale"}));
     h.run_steps(3);
     h.state_mut().views[0].measure.drawing_points = 10.0;
-    h.state_mut().views[0].measure.page_unit = Some(pdfcraft_engine::measure::PageUnit::Pt);
+    h.state_mut().views[0].measure.page_unit = Some(simplypdf_engine::measure::PageUnit::Pt);
     h.state_mut().views[0].measure.real_distance = 1.0;
     h.state_mut().views[0].measure.unit = "m".into();
     h.get_by_label("Apply scale").click();
     h.run_steps(3);
     let scale = h.state().session.get(doc).unwrap().measurement_scale(0, [20.0, 20.0]).unwrap();
     assert!((scale.x - 0.1).abs() < 1e-10);
-    let click = |h: &mut Harness<'static, PdfCraftApp>, c: &ControlClient, x: f32, y: f32| {
+    let click = |h: &mut Harness<'static, SimplyPDFApp>, c: &ControlClient, x: f32, y: f32| {
         let r = h.state().views[0].page_screen_rect(0).unwrap();
         ok(h, c, "ui.click", json!({"x":r.left()+x*r.width()/200.0,"y":r.top()+y*r.height()/300.0}));
         h.run_steps(2);
@@ -1731,7 +1742,7 @@ fn measurement_tools_draw_live_calibrate_save_and_export() {
     assert_eq!(h.state().session.get(doc).unwrap().measurements().unwrap().measurements.len(), 2);
     ok(&mut h, &c, "ui.command", json!({"id":"edit.redo"}));
     h.run_steps(2);
-    let dir = std::env::temp_dir().join(format!("pdfcraft-measure-ui-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("simplypdf-measure-ui-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     h.state_mut().export_dir_override = Some(dir.to_string_lossy().into());
     ok(&mut h, &c, "ui.command", json!({"id":"measure.export"}));
@@ -1772,7 +1783,7 @@ fn measurement_tools_draw_live_calibrate_save_and_export() {
 fn a_1_to_50_scale_in_millimetres_measures_a_10_mm_line_as_500_mm() {
     // #2752: a plan drawn at 1:50 is "1 mm = 50 mm". The page side of the scale was fixed in
     // points, so this stored 1 pt = 50 mm, 72 / 25.4 = 2.835 times too big.
-    use pdfcraft_engine::measure::{self, Kind};
+    use simplypdf_engine::measure::{self, Kind};
     let (mut h, c) = harness_pages(1);
     let doc = h.state().views[0].id;
     h.state_mut().set_option("zoom", "100").unwrap();
@@ -1784,7 +1795,7 @@ fn a_1_to_50_scale_in_millimetres_measures_a_10_mm_line_as_500_mm() {
     h.run_steps(3);
     let mm = 72.0 / 25.4;
     let line = [[20.0, 30.0], [20.0 + 10.0 * mm, 30.0]];
-    let stored = |h: &Harness<'static, PdfCraftApp>| {
+    let stored = |h: &Harness<'static, SimplyPDFApp>| {
         let scale = h.state().session.get(doc).unwrap().measurement_scale(0, line[0]).unwrap();
         (measure::reading(Kind::Distance, &line, &scale).unwrap().value, scale.ratio)
     };
@@ -1820,7 +1831,7 @@ fn a_1_to_50_scale_in_millimetres_measures_a_10_mm_line_as_500_mm() {
 
 #[test]
 fn a_plan_scale_picked_or_typed_applies_at_once() {
-    use pdfcraft_engine::measure::{self, Kind};
+    use simplypdf_engine::measure::{self, Kind};
     let (mut h, c) = harness_pages(1);
     let doc = h.state().views[0].id;
     ok(&mut h, &c, "ui.command", json!({"id":"measure.scale"}));
@@ -1829,7 +1840,7 @@ fn a_plan_scale_picked_or_typed_applies_at_once() {
     h.run_steps(2);
     // 60 mm of paper.
     let line = [[20.0, 20.0], [20.0 + 60.0 / 25.4 * 72.0, 20.0]];
-    let read = |h: &Harness<'static, PdfCraftApp>| {
+    let read = |h: &Harness<'static, SimplyPDFApp>| {
         let scale = h.state().session.get(doc).unwrap().measurement_scale(0, line[0]).unwrap();
         (measure::reading(Kind::Distance, &line, &scale).unwrap().label, scale.ratio)
     };
@@ -1842,7 +1853,7 @@ fn a_plan_scale_picked_or_typed_applies_at_once() {
     h.get_by_label("Custom scale").click();
     h.run_steps(2);
     // Typed, in the other notations; leaving the field applies.
-    fn field<'a>(h: &'a Harness<'static, PdfCraftApp>) -> egui_kittest::Node<'a> {
+    fn field<'a>(h: &'a Harness<'static, SimplyPDFApp>) -> egui_kittest::Node<'a> {
         h.get_by_role_and_label(egui::accesskit::Role::TextInput, "Scale")
     }
     for (typed, label) in [("1/50", "3.00 m"), ("1:100", "6.00 m")] {
@@ -1977,7 +1988,7 @@ fn home_and_combine_hide_the_side_panel_without_forgetting_it() {
         }
         h.run_steps(4);
         assert!(h.query_by_label("This document has no bookmarks.").is_none());
-        assert_eq!(h.state().right, Some(pdfcraft_ui_egui::RightPanel::Bookmarks));
+        assert_eq!(h.state().right, Some(simplypdf_ui_egui::RightPanel::Bookmarks));
         assert_eq!(ok(&mut h, &c, "ui.state", json!({}))["side_panels"], before);
         h.state_mut().active = Some(0);
         h.state_mut().combine_tab.focused = false;
@@ -1989,10 +2000,10 @@ fn home_and_combine_hide_the_side_panel_without_forgetting_it() {
 
 #[test]
 fn malformed_panel_settings_preserve_other_preferences() {
-    let mut app = PdfCraftApp::new();
+    let mut app = SimplyPDFApp::new();
     app.restore(r#"{"docking":{"layout":{"root":null,"floating":[]},"hidden":[]},"default_mode":"edit","flatten_fill_sign":true}"#);
-    assert_eq!(app.default_mode, pdfcraft_ui_egui::Mode::Edit);
-    assert_eq!(app.side_panels, pdfcraft_ui_egui::side_panels::SidePanels::default());
+    assert_eq!(app.default_mode, simplypdf_ui_egui::Mode::Edit);
+    assert_eq!(app.side_panels, simplypdf_ui_egui::side_panels::SidePanels::default());
     let saved: Value = serde_json::from_str(&app.persist()).unwrap();
     assert_eq!(saved["default_mode"], "edit");
     assert_eq!(saved["flatten_fill_sign"], true);
@@ -2018,7 +2029,7 @@ fn rail_opens_a_panel_then_closes_the_open_one() {
 #[test]
 fn control_quit_retains_inactive_fill_sign_typing_after_cancel() {
     let (mut h, c) = harness();
-    h.state_mut().views[0].fill_text = Some(pdfcraft_ui_egui::fill_sign::TypeBox {
+    h.state_mut().views[0].fill_text = Some(simplypdf_ui_egui::fill_sign::TypeBox {
         page: 0,
         at: [40.0, 200.0],
         text: "Unsaved signature note".into(),
@@ -2066,16 +2077,16 @@ fn read_mode_retains_existing_rail_click_to_close_policy() {
     ok(&mut h, &c, "ui.set", json!({"key":"panel", "value":"bookmarks"}));
     ok(&mut h, &c, "ui.set", json!({"key":"mode", "value":"read"}));
     h.run_steps(3);
-    assert_eq!(h.state().right, Some(pdfcraft_ui_egui::RightPanel::Bookmarks));
+    assert_eq!(h.state().right, Some(simplypdf_ui_egui::RightPanel::Bookmarks));
     h.get_by_role_and_label(egui::accesskit::Role::Button, "Bookmarks").click();
     h.run_steps(3);
     assert_eq!(h.state().right, None);
-    assert_eq!(h.state().mode, pdfcraft_ui_egui::Mode::Read);
+    assert_eq!(h.state().mode, simplypdf_ui_egui::Mode::Read);
 }
 
 #[test]
 fn control_open_of_an_already_open_file_replies_ok_and_focuses_its_tab() {
-    let dir = std::env::temp_dir().join(format!("pdfcraft-ui-open-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("simplypdf-ui-open-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let a = dir.join("a.pdf").to_string_lossy().into_owned();
     let b = dir.join("b.pdf").to_string_lossy().into_owned();
@@ -2084,7 +2095,7 @@ fn control_open_of_an_already_open_file_replies_ok_and_focuses_its_tab() {
     let slot: Arc<Mutex<Option<ControlClient>>> = Arc::default();
     let s = slot.clone();
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(move |cc| {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.set_option("language", "en").unwrap();
         // Inline opens: this test pins the synchronous open contract (focus vs open vs
         // failure). Live apps schedule the worker instead and reply `pending` (#1620).
@@ -2116,14 +2127,14 @@ fn control_open_of_an_already_open_file_replies_ok_and_focuses_its_tab() {
 /// the open completes, and opening the file again then focuses that tab.
 #[test]
 fn control_open_replies_pending_while_the_worker_opens_and_focuses_once_it_has() {
-    let dir = std::env::temp_dir().join(format!("pdfcraft-ui-open-pending-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("simplypdf-ui-open-pending-{}", std::process::id()));
     std::fs::create_dir_all(&dir).unwrap();
     let a = dir.join("pending.pdf").to_string_lossy().into_owned();
     std::fs::write(&a, fixture(2)).unwrap();
     let slot: Arc<Mutex<Option<ControlClient>>> = Arc::default();
     let s = slot.clone();
     let mut h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(move |cc| {
-        let mut app = PdfCraftApp::new();
+        let mut app = SimplyPDFApp::new();
         app.set_option("language", "en").unwrap();
         *s.lock().unwrap() = Some(app.attach_control(&cc.egui_ctx));
         app
@@ -2155,12 +2166,12 @@ fn control_open_replies_pending_while_the_worker_opens_and_focuses_once_it_has()
     let _ = std::fs::remove_dir_all(&dir);
 }
 
-fn navigation_frame(h: &mut Harness<'static, PdfCraftApp>, events: Vec<egui::Event>) {
+fn navigation_frame(h: &mut Harness<'static, SimplyPDFApp>, events: Vec<egui::Event>) {
     h.input_mut().events.extend(events);
     h.step();
 }
 
-fn navigation_wheel(h: &mut Harness<'static, PdfCraftApp>, pos: egui::Pos2, delta: f32, ctrl: bool) {
+fn navigation_wheel(h: &mut Harness<'static, SimplyPDFApp>, pos: egui::Pos2, delta: f32, ctrl: bool) {
     let modifiers = egui::Modifiers { ctrl, command: ctrl, ..egui::Modifiers::NONE };
     navigation_frame(
         h,
@@ -2232,7 +2243,7 @@ fn wheel_zoom_is_scoped_to_the_viewport_and_respects_existing_limits() {
 fn initial_zoom_option_is_applied_before_the_first_viewport_layout() {
     for percent in [50, 100, 200, 400] {
         let h = Harness::builder().with_size(egui::vec2(1400.0, 900.0)).build_eframe(move |_cc| {
-            let mut app = PdfCraftApp::new();
+            let mut app = SimplyPDFApp::new();
             app.open_bytes("initial-zoom.pdf", None, fixture(3)).unwrap();
             app.set_option("zoom", &percent.to_string()).unwrap();
             assert_eq!(app.views[0].zoom, percent as f32 / 100.0, "initial options must work before the viewport exists");
@@ -2272,7 +2283,7 @@ fn click_and_drag_refuse_coordinates_that_overflow_like_move() {
 fn page_size_shows_while_the_pointer_is_in_the_bottom_left_quadrant() {
     let (mut h, _c) = harness();
     let area = h.state().views[0].viewport_rect();
-    let shown = |h: &Harness<'static, PdfCraftApp>| {
+    let shown = |h: &Harness<'static, SimplyPDFApp>| {
         let layer = egui::LayerId::new(egui::Order::Foreground, egui::Id::unique("page-size-hint"));
         h.ctx.memory(|m| m.areas().visible_last_frame(&layer))
     };
@@ -2283,7 +2294,7 @@ fn page_size_shows_while_the_pointer_is_in_the_bottom_left_quadrant() {
     h.event(egui::Event::PointerMoved(area.left_bottom() + egui::vec2(80.0, -80.0)));
     h.run_steps(3);
     assert!(shown(&h), "bottom-left: shown");
-    if let Ok(dir) = std::env::var("PDFCRAFT_SHOT_DIR") {
+    if let Ok(dir) = std::env::var("SIMPLYPDF_SHOT_DIR") {
         let _gpu = crate::gpu();
         h.render().unwrap().save(format!("{dir}/page-size-hint.png")).unwrap();
     }
@@ -2367,7 +2378,7 @@ fn accessible_labels_on_format_text_and_pin_dialog() {
     let (mut h, c) = harness();
 
     // 1. Check Dialog::PinTool accessibility labels
-    h.state_mut().dialog = Some(pdfcraft_ui_egui::Dialog::PinTool);
+    h.state_mut().dialog = Some(simplypdf_ui_egui::Dialog::PinTool);
     h.run_steps(3);
 
     let search = ok(&mut h, &c, "ui.inspect", json!({"role": "TextInput", "query": "Search tools…"}));
@@ -2400,4 +2411,85 @@ fn accessible_labels_on_format_text_and_pin_dialog() {
 
     let char_spin = ok(&mut h, &c, "ui.inspect", json!({"query": "Character spacing", "role": "SpinButton"}));
     assert!(char_spin["count"].as_u64().unwrap() >= 1, "character spacing spin button has accessible label: {char_spin}");
+}
+
+#[test]
+fn takeoff_edits_and_category_visibility_work_with_collapsed_table() {
+    let _gpu = crate::gpu();
+    use simplypdf_engine::{
+        Edit, Style,
+        measure::{Kind, NewMeasurement, Scale, hvac},
+    };
+    let (mut h, c) = harness_pages(1);
+    let doc = h.state().views[0].id;
+    h.state_mut()
+        .session
+        .apply(
+            doc,
+            Edit::AddMeasurement(NewMeasurement {
+                page: 0,
+                kind: Kind::Perimeter,
+                points: vec![[20.0, 20.0], [50.0, 20.0]],
+                scale: Scale::new(1.0, "ft", 2).unwrap(),
+                style: Style::default(),
+                label: "Riser".into(),
+                author: "Estimator".into(),
+                hvac: Some(hvac::Takeoff::pipe()),
+            }),
+        )
+        .unwrap();
+    h.run_steps(3);
+    h.get_by_role_and_label(egui::accesskit::Role::Button, "Edit Value 1:1").click();
+    h.run_steps(3);
+    let field = h.get_by_role_and_label(egui::accesskit::Role::TextInput, "Edit Value 1:1");
+    field.click();
+    h.run_steps(1);
+    h.key_press_modifiers(egui::Modifiers::COMMAND, egui::Key::A);
+    h.get_by_role_and_label(egui::accesskit::Role::TextInput, "Edit Value 1:1").type_text("12.5");
+    h.run_steps(2);
+    h.key_press(egui::Key::Enter);
+    h.run_steps(3);
+    assert_eq!(h.state().session.get(doc).unwrap().measurements().unwrap().measurements[0].reading.value, 12.5);
+    h.get_by_label("Expand or collapse takeoffs").click();
+    h.run_steps(2);
+    h.get_by_label("Visibility").click();
+    h.run_steps(2);
+    h.get_by_label("Copper").click();
+    h.run_steps(3);
+    assert!(!h.state().session.get(doc).unwrap().measurements().unwrap().measurements[0].visible);
+    if let Ok(dir) = std::env::var("SIMPLYPDF_SHOTS") {
+        h.render().unwrap().save(format!("{dir}/simplypdf-takeoff-edit.png")).unwrap();
+    }
+    ok(&mut h, &c, "ui.command", json!({"id":"edit.undo"}));
+    h.run_steps(2);
+    assert!(h.state().session.get(doc).unwrap().measurements().unwrap().measurements[0].visible);
+}
+
+#[test]
+fn takeoff_navigator_and_settings_collapse_independently() {
+    let (mut h, c) = harness_pages(1);
+    ok(&mut h, &c, "ui.set", json!({"key":"tool","value":"measure"}));
+    h.run_steps(2);
+    h.state_mut().pin_tool("measure");
+    ok(&mut h, &c, "ui.set", json!({"key":"tool","value":"edit"}));
+    h.run_steps(2);
+    h.get_by_label("Expand tool navigator").click();
+    h.run_steps(2);
+    assert!(!h.state().tool_rail_collapsed);
+    h.get_by_role_and_label(egui::accesskit::Role::Button, "Measure objects").click();
+    h.run_steps(2);
+    assert!(h.state().left_open);
+    assert_eq!(h.state().left, simplypdf_ui_egui::LeftPanel::Tool("measure"));
+    h.get_by_label("Toggle tool settings").click();
+    h.run_steps(2);
+    assert!(!h.state().left_open);
+    assert!(!h.state().tool_rail_collapsed);
+    h.get_by_role_and_label(egui::accesskit::Role::Button, "Measure objects").click();
+    h.run_steps(2);
+    assert!(h.state().left_open);
+    h.get_by_label("Collapse tool navigator").click();
+    h.run_steps(2);
+    assert!(h.state().tool_rail_collapsed);
+    assert!(h.state().left_open);
+    assert_eq!(h.get_all_by_role_and_label(egui::accesskit::Role::Button, "Measure objects").count(), 1);
 }

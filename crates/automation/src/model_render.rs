@@ -1,8 +1,8 @@
 //! `model_render`: a page's 3D model (ISO 32000-2 §13.6) drawn to a PNG, without a viewer.
 
-use pdfcraft_engine::model3d::Model3dKind;
-use pdfcraft_prc::PrcFile;
-use pdfcraft_prc_render::{Camera, RenderOptions, assemble, render};
+use simplypdf_engine::model3d::Model3dKind;
+use simplypdf_prc::PrcFile;
+use simplypdf_prc_render::{Camera, RenderOptions, assemble, render};
 
 use super::Automation;
 use super::dispatch::Content;

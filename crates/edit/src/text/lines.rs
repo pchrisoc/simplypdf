@@ -142,8 +142,8 @@ pub(crate) fn rewritten_contents(doc: &mut Document, streams: &[(Object, Vec<u8>
     }
 }
 
-pub(crate) fn page_dict(doc: &Document, page: usize) -> Result<pdfcraft_model::Page, EditError> {
-    pdfcraft_model::pages(doc).into_iter().nth(page).ok_or(EditError::NoSuchPage(page))
+pub(crate) fn page_dict(doc: &Document, page: usize) -> Result<simplypdf_model::Page, EditError> {
+    simplypdf_model::pages(doc).into_iter().nth(page).ok_or(EditError::NoSuchPage(page))
 }
 
 fn fill_color(fill: &[Op]) -> [f64; 3] {
@@ -189,12 +189,12 @@ pub fn text_lines(doc: &Document, page: usize) -> Result<Vec<TextLine>, EditErro
 /// page draws, not what its marked-content metadata says the glyphs mean. For checks that must
 /// not trust that metadata (the redaction audit). Takes the page itself, so a caller going
 /// through every page doesn't walk the page tree again for each.
-pub fn glyph_text_lines(doc: &Document, page: &pdfcraft_model::Page) -> Result<Vec<TextLine>, EditError> {
+pub fn glyph_text_lines(doc: &Document, page: &simplypdf_model::Page) -> Result<Vec<TextLine>, EditError> {
     text_lines_in(doc, page, false)
 }
 
 /// [`text_lines`] of `p`; with `actual_text`, `/ActualText` replaces the glyphs it spans.
-fn text_lines_in(doc: &Document, p: &pdfcraft_model::Page, actual_text: bool) -> Result<Vec<TextLine>, EditError> {
+fn text_lines_in(doc: &Document, p: &simplypdf_model::Page, actual_text: bool) -> Result<Vec<TextLine>, EditError> {
     let res = p.dict.get(b"Resources").map(|r| doc.resolve(r)).and_then(|r| r.as_dict().cloned()).unwrap_or_default();
     let mut cache = HashMap::new();
     let mut lines: Vec<TextLine> = Vec::new();
@@ -452,7 +452,7 @@ impl FormBudget {
 /// A form XObject a page draws: its object, content, resources and its matrix composed with the
 /// CTM at the `Do`.
 pub(crate) struct FormCall {
-    pub(crate) obj: Option<pdfcraft_cos::ObjRef>,
+    pub(crate) obj: Option<simplypdf_cos::ObjRef>,
     pub(crate) data: Vec<u8>,
     /// The form, and its `/Resources` when they are an object of their own, which is what
     /// [`FormCall::resources`] reads.
@@ -497,7 +497,7 @@ pub(crate) fn form_call(
     resources: &Dict,
     name: &[u8],
     ctm: Matrix,
-    path: &[pdfcraft_cos::ObjRef],
+    path: &[simplypdf_cos::ObjRef],
     budget: &mut FormBudget,
 ) -> Option<FormCall> {
     let limited = path.len() >= MAX_FORM_DEPTH || budget.visits >= MAX_FORM_VISITS || budget.decode.remaining() == 0;
@@ -549,7 +549,7 @@ pub(super) fn reading_lines(doc: &Document, page: usize) -> Result<(Vec<TextLine
         doc: &'a Document,
         lines: Vec<TextLine>,
         next_stream: usize,
-        path: Vec<pdfcraft_cos::ObjRef>,
+        path: Vec<simplypdf_cos::ObjRef>,
         budget: FormBudget,
     }
     /// `stream` gives the stream number of the operator at an index of `ops`.

@@ -292,3 +292,14 @@ navigation-history tool; use the opt-in UI control channel to navigate the displ
 (`#RRGGBB`, default black) for `text` and `date`. The colour is saved in the
 FreeText appearance and survives reopening. Other mark/signature types reject
 `color`; their appearance controls are separate.
+
+## SimplyPDF takeoff edits
+
+`takeoff_pipe` defaults to Copper, 3 in, HHW Supply. `takeoff_duct` defaults to
+Galvanized, 4 in, SA. Pipe systems are HHW/CHW Supply/Return; duct systems are
+SA, R and EA. Duct materials are Galvanized, Stainless steel and Aluminum.
+`measure_update` patches quantity, unit, label, author, visibility or the complete
+HVAC specification using one-based page and annotation index from `measure_list`.
+Edits preserve route geometry and support undo/redo and PDF save/reopen.
+To toggle a category, filter the listing by profile, material or service and apply
+`visible` patches to its members.

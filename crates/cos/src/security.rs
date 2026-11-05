@@ -1,4 +1,4 @@
-//! Bridging the COS object model and `pdfcraft-crypt`: reading `/Encrypt` dictionaries and
+//! Bridging the COS object model and `simplypdf-crypt`: reading `/Encrypt` dictionaries and
 //! decrypting / encrypting the strings and streams of an object (§7.6.2).
 //!
 //! Not encrypted, per the spec: the `/Encrypt` dictionary itself, cross-reference streams, the
@@ -9,8 +9,8 @@
 
 use std::cell::Cell;
 
-use pdfcraft_crypt::{EncryptDict, Method, SecurityHandler, StreamKind};
-use pdfcraft_filters::MAX_CHAIN;
+use simplypdf_crypt::{EncryptDict, Method, SecurityHandler, StreamKind};
+use simplypdf_filters::MAX_CHAIN;
 
 use crate::document::Held;
 use crate::{Dict, Document, Object, PdfString, Stream};

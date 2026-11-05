@@ -1,9 +1,9 @@
 //! Measure objects: page-space clicks, live readings and persistent drawing scales.
 #[cfg(not(target_arch = "wasm32"))]
 use crate::file_filter::AddFilterAnyCase as _;
-use crate::{LeftPanel, PdfCraftApp, QuickTool, canvas::DocView, page_cursor::Layer, theme::Tokens, widgets};
+use crate::{LeftPanel, QuickTool, SimplyPDFApp, canvas::DocView, page_cursor::Layer, theme::Tokens, widgets};
 use egui::{Color32, Pos2, Stroke};
-use pdfcraft_engine::{
+use simplypdf_engine::{
     Document, Edit, Style,
     measure::{self, Kind, NewMeasurement, PageUnit, Point, Reading, Scale},
 };
@@ -350,7 +350,7 @@ pub(crate) fn page_input(
             }
         }
         let positions: Vec<Pos2> = points.iter().map(|&p| screen(p)).collect();
-        let stroke = Stroke::new(1.5, Color32::from_rgb(0, 120, 214));
+        let stroke = Stroke::new(1.5, state.hvac.as_ref().map_or(Color32::from_rgb(0, 120, 214), crate::hvac_ui::color));
         for pair in positions.windows(2) {
             if let [a, b] = pair {
                 ui.painter().line_segment([*a, *b], stroke);
@@ -431,7 +431,7 @@ fn finish(state: &mut MeasureView, pending: &mut Option<Edit>, doc: &Document, p
         state.cancel();
     }
 }
-pub(crate) fn panel(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
+pub(crate) fn panel(app: &mut SimplyPDFApp, ui: &mut egui::Ui, t: &Tokens) {
     crate::takeoff_workspace::settings_header(app, ui);
     egui::ScrollArea::vertical().id_salt("measure-panel").show(ui, |ui| panel_body(app, ui, t));
 }
@@ -446,7 +446,7 @@ fn measurement_row(ui: &mut egui::Ui, t: &Tokens, icon: &str, label: &str, activ
 }
 
 /// Draw the measurement panel: tool selection, scale calibration, snapping and the current reading.
-fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
+fn panel_body(app: &mut SimplyPDFApp, ui: &mut egui::Ui, t: &Tokens) {
     let Some((index, id)) = app.active_ids() else {
         ui.label(tl!("Open a PDF to measure it."));
         return;
@@ -506,6 +506,11 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
     {
         state.hvac = Some(measure::hvac::Takeoff::duct());
         tool = Some(Tool::Perimeter);
+    }
+
+    if let Some(hvac) = &mut state.hvac {
+        widgets::section_title(ui, tl!("HVAC specifications"));
+        crate::hvac_ui::fields(ui, hvac);
     }
 
     widgets::section_title(ui, tl!("Drawing scale"));
@@ -616,55 +621,6 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
         ui.add(egui::Slider::new(&mut state.sensitivity, 1.0..=20.0).text(tl!("Sensitivity")));
     });
 
-    if let Some(hvac) = &mut state.hvac {
-        widgets::section_title(ui, tl!("HVAC specifications"));
-        let previous = hvac.profile.clone();
-        for (name, value, choices) in [
-            ("Profile", &mut hvac.profile, &["pipe", "round duct", "rectangular duct"][..]),
-            (
-                "Material",
-                &mut hvac.material,
-                &["Copper", "Carbon steel", "Stainless steel", "PVC", "CPVC", "PEX", "Galvanized steel", "Aluminum"][..],
-            ),
-            (
-                "System",
-                &mut hvac.service,
-                &["Supply", "Return", "Exhaust", "Outside air", "Hydronic supply", "Hydronic return", "Refrigerant", "Condensate"][..],
-            ),
-        ] {
-            ui.label(egui::RichText::new(tl!(name)).small().color(t.text_muted));
-            craft_ui::ComboBox::from_id_salt(("hvac", name)).selected_text(value.as_str()).width(ui.available_width()).show_ui(ui, |ui| {
-                for choice in choices {
-                    ui.selectable_value(value, (*choice).into(), *choice);
-                }
-            });
-            ui.add_space(5.0);
-        }
-        if previous != hvac.profile {
-            hvac.size = match hvac.profile.as_str() {
-                "pipe" => "1 in",
-                "round duct" => "12 in",
-                _ => "12 x 12 in",
-            }
-            .into();
-        }
-        ui.label(egui::RichText::new(tl!("Nominal size")).small().color(t.text_muted));
-        let sizes = match hvac.profile.as_str() {
-            "pipe" => measure::hvac::PIPE_SIZES,
-            "round duct" => measure::hvac::ROUND_DUCT_SIZES,
-            _ => measure::hvac::RECTANGULAR_DUCT_SIZES,
-        };
-        craft_ui::ComboBox::from_id_salt("hvac-nominal-size").selected_text(&hvac.size).width(ui.available_width()).show_ui(ui, |ui| {
-            for size in sizes {
-                ui.selectable_value(&mut hvac.size, (*size).into(), *size);
-            }
-        });
-        egui::CollapsingHeader::new(tl!("Custom size")).show(ui, |ui| {
-            widgets::begin_dialog(ui);
-            ui.label(tl!("Diameter or width × height, with units"));
-            ui.add(widgets::line(&mut hvac.size).desired_width(ui.available_width()).char_limit(64));
-        });
-    }
     widgets::section_title(ui, tl!("Markup"));
     let label = ui.label(tl!("Label"));
     widgets::begin_dialog(ui);
@@ -725,7 +681,7 @@ fn panel_body(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-pub(crate) fn export_workbook(app: &mut PdfCraftApp) {
+pub(crate) fn export_workbook(app: &mut SimplyPDFApp) {
     let Some((_, id)) = app.active_ids() else { return };
     let Some(doc) = app.session.get(id) else { return };
     if !doc.allows_copying() {
@@ -738,7 +694,7 @@ pub(crate) fn export_workbook(app: &mut PdfCraftApp) {
             return;
         }
     };
-    let write = move |app: &mut PdfCraftApp, mut path: std::path::PathBuf| {
+    let write = move |app: &mut SimplyPDFApp, mut path: std::path::PathBuf| {
         if !path.extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("xlsx")) {
             path.set_extension("xlsx");
         }
@@ -758,7 +714,7 @@ pub(crate) fn export_workbook(app: &mut PdfCraftApp) {
     }
 }
 
-pub(crate) fn command(app: &mut PdfCraftApp, id: &str) {
+pub(crate) fn command(app: &mut SimplyPDFApp, id: &str) {
     app.left = LeftPanel::Tool("measure");
     app.left_open = true;
     if let Some((index, _)) = app.active_ids()
@@ -781,7 +737,7 @@ pub(crate) fn command(app: &mut PdfCraftApp, id: &str) {
         export_csv(app);
     }
 }
-pub(crate) fn export_csv(app: &mut PdfCraftApp) {
+pub(crate) fn export_csv(app: &mut SimplyPDFApp) {
     let Some((_, id)) = app.active_ids() else { return };
     let result = app.session.get(id).ok_or_else(|| "no such document".to_string()).and_then(|d| d.measurements());
     match result {
@@ -796,7 +752,7 @@ pub(crate) fn export_csv(app: &mut PdfCraftApp) {
             }
             #[cfg(not(target_arch = "wasm32"))]
             {
-                let write = move |app: &mut PdfCraftApp, path: std::path::PathBuf| match crate::editing::write_atomically(
+                let write = move |app: &mut SimplyPDFApp, path: std::path::PathBuf| match crate::editing::write_atomically(
                     &path.to_string_lossy(),
                     csv.as_bytes(),
                 ) {

@@ -1,10 +1,10 @@
 //! Measurement tools share the engine's PDF user-space geometry and scale semantics.
 use crate::{Args, Automation, Result, ToolError, failed};
-use pdfcraft_engine::{
+use serde_json::{Value, json};
+use simplypdf_engine::{
     Edit, Style,
     measure::{self, Kind, NewMeasurement, PageUnit, Scale},
 };
-use serde_json::{Value, json};
 use std::path::Path;
 
 impl Automation {
@@ -62,6 +62,13 @@ impl Automation {
         let scale = self.doc(a)?.measurement_scale(page, at).map_err(failed)?;
         let reading = measure::reading(kind, &points, &scale).map_err(failed)?;
         Ok(json!({"reading":reading,"scale":scale}))
+    }
+    pub(crate) fn measurement_update(&mut self, a: &Args) -> Result<Value> {
+        let page = self.page(a)?;
+        let index =
+            a.opt_int("index")?.filter(|n| *n > 0).and_then(|n| usize::try_from(n - 1).ok()).ok_or_else(|| failed("index must be positive"))?;
+        let patch = serde_json::from_value(a.get("patch").cloned().ok_or_else(|| failed("patch is required"))?).map_err(failed)?;
+        self.apply(a, Edit::UpdateMeasurement { page, index, patch })
     }
     pub(crate) fn measurement_list(&self, a: &Args) -> Result<Value> {
         let doc = self.doc(a)?;

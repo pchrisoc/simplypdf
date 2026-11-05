@@ -8,8 +8,8 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use egui::{Color32, CornerRadius, FontFamily, FontId, Pos2, Rect, Stroke, pos2};
-use pdfcraft_engine::{Edit, ObjectKind, ObjectTarget};
-use pdfcraft_render::DocInfo;
+use simplypdf_engine::{Edit, ObjectKind, ObjectTarget};
+use simplypdf_render::DocInfo;
 
 use crate::canvas::{DocView, PageToolContext, PageXform};
 use crate::page_cursor::Layer;
@@ -48,13 +48,17 @@ enum TextTarget {
 pub(crate) const MAX_OUTLINES: usize = 250;
 
 /// Format text ▸ Superscript or Subscript on `text`: on the `selection` (bytes of `text`), or all
-/// of it without one ([`pdfcraft_engine::text_script::toggle`]). A selection follows the
+/// of it without one ([`simplypdf_engine::text_script::toggle`]). A selection follows the
 /// converted characters. Whether the text changed.
-pub(crate) fn toggle_script(text: &mut String, selection: &mut Option<std::ops::Range<usize>>, script: pdfcraft_engine::text_script::Script) -> bool {
+pub(crate) fn toggle_script(
+    text: &mut String,
+    selection: &mut Option<std::ops::Range<usize>>,
+    script: simplypdf_engine::text_script::Script,
+) -> bool {
     if selection.as_ref().is_some_and(|r| r.is_empty()) {
         *selection = None;
     }
-    let Some((toggled, range)) = pdfcraft_engine::text_script::toggle(text, selection.as_ref(), script) else { return false };
+    let Some((toggled, range)) = simplypdf_engine::text_script::toggle(text, selection.as_ref(), script) else { return false };
     *text = toggled;
     if selection.is_some() {
         *selection = Some(range);
@@ -76,7 +80,7 @@ pub struct LineEditor {
     /// stays attached while the page is zoomed, scrolled, or rotated.
     source_rect: [f32; 4],
     multiline: bool,
-    source: Option<(pdfcraft_engine::TextBlock, Vec<pdfcraft_engine::TextLine>)>,
+    source: Option<(simplypdf_engine::TextBlock, Vec<simplypdf_engine::TextLine>)>,
     pub(crate) fonts: BTreeMap<String, String>,
     /// The draft extends outside the source container; its frame follows the live draft bounds.
     pub overflow: bool,
@@ -90,8 +94,8 @@ pub struct LineEditor {
     /// ([`lost_focus_once`]).
     had_focus: bool,
     /// The Format text panel's values, and what the paragraph had (to send only changes).
-    pub look: pdfcraft_engine::AddedText,
-    look0: pdfcraft_engine::AddedText,
+    pub look: simplypdf_engine::AddedText,
+    look0: simplypdf_engine::AddedText,
     /// A standard family was picked from the font list. The family guessed from a PDF font name
     /// (Calibri reads as Helvetica) can be the one picked, so comparing `look` with `look0` alone
     /// would miss the choice.
@@ -121,13 +125,13 @@ pub(crate) fn input_id() -> egui::Id {
 /// caret) aside, and gets it back on its return, so its typing can still be undone there. Each
 /// box claims the text box when it is drawn, and Undo and Redo from the menu claim it first too,
 /// since they can run before the box is drawn again after a tab switch.
-pub(crate) fn forget_typing_before(ctx: &egui::Context, id: egui::Id, doc: pdfcraft_engine::DocId, from: &mut Option<String>, text: &str) {
+pub(crate) fn forget_typing_before(ctx: &egui::Context, id: egui::Id, doc: simplypdf_engine::DocId, from: &mut Option<String>, text: &str) {
     let owner = id.with("typing-doc");
-    let last = ctx.data(|d| d.get_temp::<pdfcraft_engine::DocId>(owner));
+    let last = ctx.data(|d| d.get_temp::<simplypdf_engine::DocId>(owner));
     if from.as_deref() == Some(text) && last == Some(doc) {
         return;
     }
-    let aside = |doc: pdfcraft_engine::DocId| id.with(("typing-aside", doc));
+    let aside = |doc: simplypdf_engine::DocId| id.with(("typing-aside", doc));
     let aligns = id.with(ALIGN_HISTORY);
     if let Some(left) = last.filter(|l| *l != doc)
         && let Some(state) = egui::TextEdit::load_state(ctx, id)
@@ -158,7 +162,7 @@ pub(crate) fn forget_typing_before(ctx: &egui::Context, id: egui::Id, doc: pdfcr
 
 /// Each text a page box has shown through its own typing, with its rows' alignments then, oldest
 /// last: egui's history keeps only the text and the caret.
-type AlignHistory = Vec<(String, Vec<Vec<Option<pdfcraft_engine::TextAlign>>>)>;
+type AlignHistory = Vec<(String, Vec<Vec<Option<simplypdf_engine::TextAlign>>>)>;
 const ALIGN_HISTORY: &str = "aligns-by-text";
 /// As many texts as egui's own history keeps.
 const ALIGN_HISTORY_LEN: usize = 100;
@@ -166,14 +170,14 @@ const ALIGN_HISTORY_LEN: usize = 100;
 /// The page text box `id` went from `before` to `after` through its own typing (typing, Undo or
 /// Redo), and each list of row alignments in `aligns` follows. A text the box showed before gets
 /// back the alignments it had then, so Undo bringing back a deleted row brings back its
-/// alignment; a new text follows the edit ([`pdfcraft_engine::paragraph_align::remap`]). An
+/// alignment; a new text follows the edit ([`simplypdf_engine::paragraph_align::remap`]). An
 /// alignment picked since makes the older texts' alignments stale, and they are dropped.
 pub(crate) fn follow_typing(
     ctx: &egui::Context,
     id: egui::Id,
     before: &str,
     after: &str,
-    aligns: &mut [&mut Vec<Option<pdfcraft_engine::TextAlign>>],
+    aligns: &mut [&mut Vec<Option<simplypdf_engine::TextAlign>>],
 ) {
     let now: Vec<Vec<_>> = aligns.iter().map(|a| a.to_vec()).collect();
     // Where the edit left the caret, as a byte of `after`: it says which of two same rows changed.
@@ -188,7 +192,7 @@ pub(crate) fn follow_typing(
         remember(seen, before, now.clone());
         let next = match seen.iter().rev().find(|(text, _)| text == after) {
             Some((_, was)) if was.len() == now.len() => was.clone(),
-            _ => now.iter().map(|a| pdfcraft_engine::paragraph_align::remap_at(before, after, a, caret)).collect(),
+            _ => now.iter().map(|a| simplypdf_engine::paragraph_align::remap_at(before, after, a, caret)).collect(),
         };
         remember(seen, after, next.clone());
         next
@@ -198,7 +202,7 @@ pub(crate) fn follow_typing(
     }
 }
 
-fn remember(seen: &mut AlignHistory, text: &str, aligns: Vec<Vec<Option<pdfcraft_engine::TextAlign>>>) {
+fn remember(seen: &mut AlignHistory, text: &str, aligns: Vec<Vec<Option<simplypdf_engine::TextAlign>>>) {
     seen.retain(|(t, _)| t != text);
     seen.push((text.to_owned(), aligns));
     if seen.len() > ALIGN_HISTORY_LEN {
@@ -245,7 +249,7 @@ impl LineEditor {
         }
         let base = self.source.as_ref().map(|(block, _)| block.base_font.as_str()).unwrap_or_default();
         // "ABCDEF+Calibri" is a subset of Calibri.
-        let name = pdfcraft_engine::strip_subset_tag(base);
+        let name = simplypdf_engine::strip_subset_tag(base);
         if name.is_empty() { tl!("Keep source fonts").to_string() } else { name.to_string() }
     }
 
@@ -258,7 +262,7 @@ impl LineEditor {
 
     /// A standard family picked from the font list, replacing the paragraph's font even when it
     /// is the family the paragraph's font name reads as.
-    pub(crate) fn choose_family(&mut self, family: pdfcraft_engine::FontFamily) {
+    pub(crate) fn choose_family(&mut self, family: simplypdf_engine::FontFamily) {
         self.font_resource = None;
         self.look.family = family;
         self.family_chosen = true;
@@ -284,9 +288,9 @@ impl LineEditor {
     }
 
     /// The formatting the panel changed.
-    pub fn style(&self) -> pdfcraft_engine::BlockStyle {
+    pub fn style(&self) -> simplypdf_engine::BlockStyle {
         let (l, o) = (&self.look, &self.look0);
-        let mut style = pdfcraft_engine::BlockStyle {
+        let mut style = simplypdf_engine::BlockStyle {
             resource: self.font_resource.clone(),
             family: (l.family != o.family || self.family_chosen || l.bold != o.bold || l.italic != o.italic).then_some((l.family, l.bold, l.italic)),
             size: (self.size_chosen || l.size != o.size).then_some(l.size),
@@ -304,7 +308,7 @@ impl LineEditor {
         // Rows aligned on their own, sent with every rewrite of the paragraph while it is open
         // (a colour or size change too): nothing in the page records them, so a rewrite without
         // them would undo them. Alone, they are sent only when they changed.
-        if l.aligns != o.aligns || self.text != self.original || style != pdfcraft_engine::BlockStyle::default() {
+        if l.aligns != o.aligns || self.text != self.original || style != simplypdf_engine::BlockStyle::default() {
             style.aligns = l.aligns.clone();
         }
         if let Some(range) = &self.selection
@@ -316,7 +320,7 @@ impl LineEditor {
                 || style.char_spacing.is_some()
                 || style.scale.is_some())
         {
-            style.ranges.push(pdfcraft_engine::RangeStyle {
+            style.ranges.push(simplypdf_engine::RangeStyle {
                 range: range.clone(),
                 family: style.family.take(),
                 resource: style.resource.take(),
@@ -354,12 +358,12 @@ impl LineEditor {
 
     /// Take the shared text box for this paragraph ([`forget_typing_before`]): its own history,
     /// or none once the page has its text.
-    pub(crate) fn claim_typing(&mut self, ctx: &egui::Context, doc: pdfcraft_engine::DocId) {
+    pub(crate) fn claim_typing(&mut self, ctx: &egui::Context, doc: simplypdf_engine::DocId) {
         forget_typing_before(ctx, input_id(), doc, &mut self.typing_from, &self.original);
     }
 
     /// Adopt the rewritten paragraph's current geometry before the next overlay frame.
-    pub(crate) fn refresh_source(&mut self, block: &pdfcraft_engine::TextBlock, lines: Vec<pdfcraft_engine::TextLine>) {
+    pub(crate) fn refresh_source(&mut self, block: &simplypdf_engine::TextBlock, lines: Vec<simplypdf_engine::TextLine>) {
         self.source_rect = block.rect.map(|v| v as f32);
         self.multiline = block.rows.len() > 1;
         self.source = Some((block.clone(), lines));
@@ -389,7 +393,7 @@ impl LineEditor {
         };
 
         let spans = block.edited_spans(&self.text);
-        let matching_lines: Vec<&pdfcraft_engine::TextLine> = match &self.selection {
+        let matching_lines: Vec<&simplypdf_engine::TextLine> = match &self.selection {
             Some(range) if range.start < range.end => {
                 spans.iter().filter(|(span, _)| span.start < range.end && span.end > range.start).filter_map(|(_, idx)| lines.get(*idx)).collect()
             }
@@ -400,12 +404,12 @@ impl LineEditor {
             return self.current_formatting(sources);
         };
 
-        let line_font = |l: &pdfcraft_engine::TextLine| -> String {
+        let line_font = |l: &simplypdf_engine::TextLine| -> String {
             if let Some((_, face)) = sources.iter().find(|(res, _)| res == &l.font) {
                 return face.clone();
             }
             let base = l.base_font.as_str();
-            let name = pdfcraft_engine::strip_subset_tag(base);
+            let name = simplypdf_engine::strip_subset_tag(base);
             if let Some((_, face)) = sources.iter().find(|(_, face)| face.as_str() == name) {
                 return face.clone();
             }
@@ -495,7 +499,7 @@ impl LineEditor {
     /// The text changed from `before`: rows aligned on their own keep their alignment.
     pub(crate) fn follow_rows(&mut self, before: &str) {
         for look in [&mut self.look, &mut self.look0] {
-            look.aligns = pdfcraft_engine::paragraph_align::remap(before, &self.text, &look.aligns);
+            look.aligns = simplypdf_engine::paragraph_align::remap(before, &self.text, &look.aligns);
         }
     }
 }
@@ -504,13 +508,13 @@ impl LineEditor {
 pub struct SelectionFormatting {
     pub font_shown: String,
     pub size: Option<f64>,
-    pub family: Option<pdfcraft_engine::FontFamily>,
+    pub family: Option<simplypdf_engine::FontFamily>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
     pub color: Option<[f64; 3]>,
 }
 
-fn look_of_line(l: &pdfcraft_engine::TextLine) -> pdfcraft_engine::AddedText {
+fn look_of_line(l: &simplypdf_engine::TextLine) -> simplypdf_engine::AddedText {
     source_look(&l.base_font, l.size, l.color, l.bold, l.italic)
 }
 
@@ -578,7 +582,7 @@ fn paragraph_box(xf: &PageXform, info: &DocInfo, page: usize, rect: [f64; 4]) ->
 
 /// Whether `p` lies in the box of one of the paragraphs `lines` on `page`, its edge grips there
 /// included, not beside it: where Add text acts on the page's own paragraphs.
-pub(crate) fn over_paragraph(xf: &PageXform, info: &DocInfo, page: usize, lines: &[pdfcraft_engine::TextBlock], p: Pos2) -> bool {
+pub(crate) fn over_paragraph(xf: &PageXform, info: &DocInfo, page: usize, lines: &[simplypdf_engine::TextBlock], p: Pos2) -> bool {
     lines.iter().any(|l| paragraph_box(xf, info, page, l.rect).contains(p))
 }
 
@@ -593,7 +597,7 @@ fn has_edges(info: &DocInfo, page: usize) -> bool {
 /// arrow says so; a click still opens it for typing) and its edge rewraps it, from a little way
 /// outside the box (the handle is drawn half outside it, #2276); the open one takes the text
 /// cursor. `active` is the paragraph open for typing on this page.
-pub(crate) fn hit(xf: &PageXform, info: &DocInfo, page: usize, lines: &[pdfcraft_engine::TextBlock], active: Option<usize>, p: Pos2) -> Option<Hit> {
+pub(crate) fn hit(xf: &PageXform, info: &DocInfo, page: usize, lines: &[simplypdf_engine::TextBlock], active: Option<usize>, p: Pos2) -> Option<Hit> {
     if !xf.rect.contains(p) {
         return None;
     }
@@ -619,7 +623,7 @@ pub(crate) fn user_box(xf: &PageXform, info: &DocInfo, page: usize, r: Rect) -> 
 
 /// Open `block` on `page` in the inline editor. The box's geometry and source are read from the
 /// `lines` handed in, so callers pass the document's current inventory.
-fn open_editor(cx: PageToolContext<'_>, lines: &[pdfcraft_engine::TextBlock], boxes: &[Rect], block: usize, view: &mut DocView) {
+fn open_editor(cx: PageToolContext<'_>, lines: &[simplypdf_engine::TextBlock], boxes: &[Rect], block: usize, view: &mut DocView) {
     let PageToolContext { ui, xf, doc, page, .. } = cx;
     view.pending_text_open = None;
     let (Some(l), Some(b)) = (lines.get(block), boxes.get(block)) else { return };
@@ -661,7 +665,7 @@ fn open_editor(cx: PageToolContext<'_>, lines: &[pdfcraft_engine::TextBlock], bo
 
 /// Lines and their screen boxes for a page; hover outlines, click opens the editor. Returns
 /// `true` when the pointer was used.
-pub(crate) fn page_input(cx: PageToolContext<'_>, lines: &[pdfcraft_engine::TextBlock], view: &mut DocView, allow_interaction: bool) -> bool {
+pub(crate) fn page_input(cx: PageToolContext<'_>, lines: &[simplypdf_engine::TextBlock], view: &mut DocView, allow_interaction: bool) -> bool {
     let PageToolContext { ui, resp, xf, ptr, page, doc, .. } = cx;
     let info = &doc.info;
     if view.block_drag.is_some_and(|d| d.generation != doc.edit_generation()) {
@@ -726,7 +730,7 @@ pub(crate) fn page_input(cx: PageToolContext<'_>, lines: &[pdfcraft_engine::Text
                 // edge) moves the paragraph with it.
                 let width = (l.rect[2] - l.rect[0]) + (to[2] - to[0]) - (from[2] - from[0]);
                 let shift = to[0] - from[0];
-                let style = pdfcraft_engine::BlockStyle { width: Some(width), offset: (shift != 0.0).then_some([shift, 0.0]), ..Default::default() };
+                let style = simplypdf_engine::BlockStyle { width: Some(width), offset: (shift != 0.0).then_some([shift, 0.0]), ..Default::default() };
                 // `editor_text` has a newline for every visual row, so a wrap would come back as a
                 // hard break and a wider box would not reflow it. `reflow_text` rejoins a wrap
                 // and keeps a newline that was typed.
@@ -789,13 +793,13 @@ pub(crate) fn page_input(cx: PageToolContext<'_>, lines: &[pdfcraft_engine::Text
             }
             if let Some(old) = view.line_editor.take() {
                 let style = old.style();
-                if old.text != old.original || style != pdfcraft_engine::BlockStyle::default() {
+                if old.text != old.original || style != simplypdf_engine::BlockStyle::default() {
                     view.applied_editor = Some(old.clone());
                     view.pending_edit = Some(Edit::EditTextBlock { page: old.page, block: old.block, text: old.text, style });
                 }
             }
             // The clicked box opens next frame, from the document with that edit applied.
-            view.pending_text_open = lines.get(hit).map(|l| (page, pdfcraft_engine::BlockKey::of(l)));
+            view.pending_text_open = lines.get(hit).map(|l| (page, simplypdf_engine::BlockKey::of(l)));
             return true;
         }
         open_editor(cx, lines, &boxes, hit, view);
@@ -1003,7 +1007,7 @@ pub(crate) fn overlay(ctx: &egui::Context, view: &mut DocView, info: &DocInfo) -
 /// The edit a closed paragraph editor applies, or `None` when nothing in it changed.
 pub(crate) fn finished_edit(ed: LineEditor) -> Option<Edit> {
     let style = ed.style();
-    (ed.text != ed.original || style != pdfcraft_engine::BlockStyle::default()).then_some(Edit::EditTextBlock {
+    (ed.text != ed.original || style != simplypdf_engine::BlockStyle::default()).then_some(Edit::EditTextBlock {
         page: ed.page,
         block: ed.block,
         text: ed.text,
@@ -1036,7 +1040,7 @@ mod tests {
     /// past the format can't bring back an alignment from before it (FredApps on bfc6f8b1).
     #[test]
     fn formatting_applied_restarts_the_alignments_by_text() {
-        use pdfcraft_engine::{DocId, TextAlign::Right};
+        use simplypdf_engine::{DocId, TextAlign::Right};
         let (ctx, id) = (egui::Context::default(), egui::Id::unique("box"));
         let mut from = None;
         forget_typing_before(&ctx, id, DocId(1), &mut from, "A\nB");
@@ -1046,7 +1050,7 @@ mod tests {
         from = None;
         forget_typing_before(&ctx, id, DocId(1), &mut from, "A");
         follow_typing(&ctx, id, "A", "A\nB", &mut [&mut aligns]);
-        assert_eq!(aligns, pdfcraft_engine::paragraph_align::remap("A", "A\nB", &[None]), "the row before the format doesn't come back aligned");
+        assert_eq!(aligns, simplypdf_engine::paragraph_align::remap("A", "A\nB", &[None]), "the row before the format doesn't come back aligned");
     }
 
     /// The rows' alignments by text go aside with the box's history when another tab's box takes
@@ -1054,7 +1058,7 @@ mod tests {
     /// alignment, while the other tab's box starts with none.
     #[test]
     fn alignments_by_text_survive_a_trip_to_another_tab() {
-        use pdfcraft_engine::{DocId, TextAlign::Right};
+        use simplypdf_engine::{DocId, TextAlign::Right};
         let (ctx, id) = (egui::Context::default(), egui::Id::unique("box"));
         let (mut a_from, mut b_from) = (None, None);
         forget_typing_before(&ctx, id, DocId(1), &mut a_from, "A\nB");
@@ -1075,7 +1079,7 @@ mod tests {
     /// Undo never takes back the pick.
     #[test]
     fn typing_history_restores_alignments_unless_one_was_picked_since() {
-        use pdfcraft_engine::TextAlign::{Center, Right};
+        use simplypdf_engine::TextAlign::{Center, Right};
         let (ctx, id) = (egui::Context::default(), egui::Id::unique("box"));
         let mut aligns = vec![None, Some(Center), Some(Right)];
         follow_typing(
@@ -1125,7 +1129,7 @@ C",
         );
         assert_eq!(
             aligns,
-            pdfcraft_engine::paragraph_align::remap(
+            simplypdf_engine::paragraph_align::remap(
                 "A
 C", "A
 B
@@ -1176,8 +1180,8 @@ C", &picked
     }
 
     /// An app with one text document open, and an editor on its first paragraph.
-    fn preview_app() -> (crate::PdfCraftApp, LineEditor) {
-        let mut app = crate::PdfCraftApp::new();
+    fn preview_app() -> (crate::SimplyPDFApp, LineEditor) {
+        let mut app = crate::SimplyPDFApp::new();
         let bytes = app.session.create_from_text("Preview", "Preview text").unwrap();
         app.open_bytes("preview.pdf", None, bytes.as_ref().clone()).unwrap();
         let doc = app.session.get(app.views[0].id).unwrap();
@@ -1229,7 +1233,7 @@ C", &picked
     fn review_a_caret_only_script_formats_the_whole_draft() {
         let mut text = "x2".to_string();
         let mut caret = Some(1..1);
-        assert!(toggle_script(&mut text, &mut caret, pdfcraft_engine::text_script::Script::Super));
+        assert!(toggle_script(&mut text, &mut caret, simplypdf_engine::text_script::Script::Super));
         assert_eq!(text, "ˣ²");
         assert_eq!(caret, None);
     }
@@ -1273,7 +1277,7 @@ C", &picked
         let (mut app, mut ed) = preview_app();
         ed.text = "Text preview".into();
         app.views[0].line_editor = Some(ed);
-        let dir = std::env::temp_dir().join(format!("pdfcraft-ui-open-paragraph-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("simplypdf-ui-open-paragraph-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
         app.save_override = Some(dir.join("out.pdf").to_string_lossy().into_owned());
@@ -1394,7 +1398,7 @@ C", &picked
 
     #[test]
     fn superscript_and_subscript_conversion() {
-        use pdfcraft_engine::text_script::Script;
+        use simplypdf_engine::text_script::Script;
         let (mut text, mut selection) = ("E = mc2".to_string(), Some(6..7));
         assert!(toggle_script(&mut text, &mut selection, Script::Super));
         assert_eq!((text.as_str(), selection.clone()), ("E = mc²", Some(6..8)), "the selection follows the converted character");
@@ -1430,8 +1434,8 @@ C", &picked
             size_chosen: false,
             focus: true,
             had_focus: false,
-            look: pdfcraft_engine::AddedText::default(),
-            look0: pdfcraft_engine::AddedText::default(),
+            look: simplypdf_engine::AddedText::default(),
+            look0: simplypdf_engine::AddedText::default(),
             extras: Extras { line_spacing: 1.33, underline: true, ..Default::default() },
             extras0: Extras::default(),
             typing_from: None,

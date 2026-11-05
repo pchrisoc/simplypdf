@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use pdfcraft_render::{Layer, LayerOp, RenderPool};
+use simplypdf_render::{Layer, LayerOp, RenderPool};
 
 use crate::{Document, display_config, render_threads};
 
@@ -10,8 +10,8 @@ use crate::{Document, display_config, render_threads};
 /// made for printing): `/BaseState /ON`, `/ON` the visible layers, `/OFF` the hidden ones. Its
 /// other entries (`/Order`, `/RBGroups`, `/AS`…) are kept. A document without `/OCProperties`
 /// is left alone.
-pub(crate) fn set_default_layer_state(cos: &mut pdfcraft_cos::Document, layers: &[Layer]) {
-    use pdfcraft_cos::{Dict, ObjRef, Object};
+pub(crate) fn set_default_layer_state(cos: &mut simplypdf_cos::Document, layers: &[Layer]) {
+    use simplypdf_cos::{Dict, ObjRef, Object};
     let Some(root_ref) = cos.trailer().get(b"Root").and_then(Object::as_ref) else { return };
     let Some(mut root) = cos.get(root_ref).as_dict().cloned() else { return };
     let Some(properties) = root.get(b"OCProperties").cloned() else { return };

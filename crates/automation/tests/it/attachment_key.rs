@@ -1,9 +1,9 @@
 //! `attachment_add` reports the name-tree key of the file it added, even when a file attached to
 //! a page as a comment already has the same name.
 
-use pdfcraft_automation::{Automation, Content};
-use pdfcraft_engine::{AttachIcon, Edit, NewAnnotation, Session, Shape, Style};
 use serde_json::{Value, json};
+use simplypdf_automation::{Automation, Content};
+use simplypdf_engine::{AttachIcon, Edit, NewAnnotation, Session, Shape, Style};
 
 fn tool(a: &mut Automation, name: &str, args: Value) -> Value {
     match a.call(name, &args).unwrap().remove(0) {

@@ -1,5 +1,5 @@
 [package]
-name = "pdfcraft-print"
+name = "simplypdf-print"
 description = "Printing: page selection, sizing (fit, actual, shrink, custom), multiple pages per sheet, booklets, posters, comments & forms; print-ready PDF and the system spooler"
 version.workspace = true
 edition.workspace = true
@@ -10,10 +10,10 @@ workspace = true
 
 [dependencies]
 craft-print = { workspace = true }
-pdfcraft-cos = { workspace = true }
-pdfcraft-content = { workspace = true }
-pdfcraft-model = { workspace = true }
+simplypdf-cos = { workspace = true }
+simplypdf-content = { workspace = true }
+simplypdf-model = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-pdfcraft-render = { workspace = true }
+simplypdf-render = { workspace = true }

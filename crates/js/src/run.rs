@@ -131,7 +131,7 @@ pub fn run_shared(script: &str, event: &Event, doc: &DocInfo, fields: Arc<Vec<Fi
     {
         std::thread::scope(|scope| {
             let spawned = std::thread::Builder::new()
-                .name("pdfcraft-js".into())
+                .name("simplypdf-js".into())
                 .stack_size(SCRIPT_STACK)
                 .spawn_scoped(scope, || run_here(script, event, doc, fields, kept, skipped, limits));
             match spawned {
@@ -217,7 +217,7 @@ fn run_here(
         install(&mut ctx)?;
         let ev = event_object(&mut ctx, event);
         ctx.register_global_property(js_string!("event"), ev.clone(), Attribute::all())?;
-        // One document script that throws (calling a method PdfCraft lacks, say) must not keep
+        // One document script that throws (calling a method SimplyPDF lacks, say) must not keep
         // every field script in the form from running: what it defined before the error, and
         // the other scripts, stay available (#3940).
         for &(i, d) in doc_scripts {

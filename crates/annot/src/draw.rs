@@ -9,8 +9,8 @@ use super::{AnnotError, Dict, Document, ObjRef, Object, Stream, appearance};
 ///
 /// A comment whose text the standard fonts can't draw, with an appearance another program drew
 /// (with a font that has those characters), keeps that appearance: redrawing it would put `?` in
-/// their place, so the edit is refused (`AnnotError::Undrawable`). One PdfCraft drew with `?`
-/// (marked `pdfcraft_fonts::UNDRAWN_MARK`) is redrawn.
+/// their place, so the edit is refused (`AnnotError::Undrawable`). One SimplyPDF drew with `?`
+/// (marked `simplypdf_fonts::UNDRAWN_MARK`) is redrawn.
 pub fn set_appearance(doc: &mut Document, r: ObjRef) -> Result<(), AnnotError> {
     refuse_foreign_text(doc, &annot_dict(doc, r))?;
     draw_appearance(doc, r)
@@ -26,7 +26,7 @@ pub(crate) fn redraw_or_restore(doc: &mut Document, r: ObjRef, before: Dict) -> 
 }
 
 /// Draw `r`'s normal appearance from its dictionary, whatever its text: characters the standard
-/// fonts can't draw come out as `?`, and the annotation is marked (`pdfcraft_fonts::UNDRAWN_MARK`,
+/// fonts can't draw come out as `?`, and the annotation is marked (`simplypdf_fonts::UNDRAWN_MARK`,
 /// cleared when all of it can be drawn) so the edit is reported and flattening won't make that
 /// `?` permanent. For new text (a new comment, changed contents), as Acrobat keeps text its font
 /// can't show, and for display-only copies.
@@ -84,7 +84,7 @@ fn apply_appearance(doc: &mut Document, r: ObjRef, d: &Dict, stream: Stream) -> 
             d.set(b"Rect".to_vec(), num_array(&rect));
         }
         d.remove(b"AS");
-        pdfcraft_fonts::set_undrawn_mark(d, missing);
+        simplypdf_fonts::set_undrawn_mark(d, missing);
     })?;
     Ok(())
 }

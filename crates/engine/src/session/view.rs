@@ -67,7 +67,7 @@ impl Session {
     /// A dynamic stamp's second line: "By Ada at 2:14 pm, Oct 02, 2026" (local time).
     pub fn stamp_by_line(&self, author: &str) -> String {
         let offset = self.local_offset();
-        let d = self.now().map(|t| pdfcraft_cos::pdf_date(t + offset)).unwrap_or_default();
+        let d = self.now().map(|t| simplypdf_cos::pdf_date(t + offset)).unwrap_or_default();
         let num = |a: usize, b: usize| d.get(a..b).and_then(|s| s.parse::<u32>().ok()).unwrap_or(0);
         let (y, mo, day, hh, mm) = (num(2, 6), num(6, 8), num(8, 10), num(10, 12), num(12, 14));
         const MONTHS: [&str; 12] = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -78,7 +78,7 @@ impl Session {
 
     pub fn today(&self) -> (i64, u32, u32) {
         let offset = self.local_offset();
-        self.now().map(|t| pdfcraft_cos::pdf_date(t + offset)).as_deref().and_then(parse_ymd).unwrap_or((1970, 1, 1))
+        self.now().map(|t| simplypdf_cos::pdf_date(t + offset)).as_deref().and_then(parse_ymd).unwrap_or((1970, 1, 1))
     }
 
     /// Open a document from bytes. Rendering starts lazily when pages are requested.
@@ -104,14 +104,14 @@ impl Session {
     pub fn find_urls(&self, id: DocId) -> Vec<(usize, Vec<[f64; 4]>, String)> {
         let Some(doc) = self.get(id) else { return Vec::new() };
         let config = RenderConfig { password: doc.password.as_deref().map(Arc::from), ..Default::default() };
-        let mut r = pdfcraft_render::PageRenderer::new(doc.bytes.clone(), config);
+        let mut r = simplypdf_render::PageRenderer::new(doc.bytes.clone(), config);
         let mut out = Vec::new();
         for page in 0..doc.info.pages.len() {
-            let res = r.render(pdfcraft_render::RenderRequest { page, kind: pdfcraft_render::RequestKind::Text, scale: 1.0, ..Default::default() });
+            let res = r.render(simplypdf_render::RenderRequest { page, kind: simplypdf_render::RequestKind::Text, scale: 1.0, ..Default::default() });
             let Some(text) = res.text else { continue };
             let found: std::cell::RefCell<Vec<(std::ops::Range<usize>, String)>> = Default::default();
             let hits = text.find_with(|chars| {
-                let urls = pdfcraft_annot::links::find_urls(chars);
+                let urls = simplypdf_annot::links::find_urls(chars);
                 let ranges = urls.iter().map(|u| u.0.clone()).collect();
                 *found.borrow_mut() = urls;
                 ranges
@@ -148,14 +148,14 @@ impl Session {
     pub fn bookmark_page(&self, id: DocId, offset: usize, limit: usize) -> Option<BookmarkPage> {
         let doc = self.get(id)?;
         if let Some(editor) = doc.editor.as_ref() {
-            let page = pdfcraft_organize::bookmark_page(&editor.cos, offset, limit);
+            let page = simplypdf_organize::bookmark_page(&editor.cos, offset, limit);
             let rows = page
                 .bookmarks
                 .into_iter()
                 .map(|b| {
                     let view = b.view.map_or_else(Default::default, |(kind, numbers)| {
                         let numbers: Vec<Option<f32>> = numbers.iter().map(|n| n.map(|n| n as f32)).collect();
-                        pdfcraft_render::DestView::from_operands(Some(&kind), &numbers)
+                        simplypdf_render::DestView::from_operands(Some(&kind), &numbers)
                     });
                     BookmarkRow { path: b.path, title: b.title, open: b.open, page: b.page, view, color: b.color, italic: b.italic, bold: b.bold }
                 })
@@ -171,16 +171,16 @@ impl Session {
     /// The bookmark at `path` with everything under it, or the whole outline for `[]`, as a tree
     /// another document can take ([`crate::Edit::ImportBookmarks`]). `None` when no document has
     /// `id`, or its structure could not be read for editing.
-    pub fn outline_tree(&self, id: DocId, path: &[usize]) -> Option<Result<pdfcraft_organize::OutlineTree, pdfcraft_organize::OutlineError>> {
+    pub fn outline_tree(&self, id: DocId, path: &[usize]) -> Option<Result<simplypdf_organize::OutlineTree, simplypdf_organize::OutlineError>> {
         let editor = self.get(id)?.editor.as_ref()?;
-        Some(pdfcraft_organize::outline_tree(&editor.cos, path))
+        Some(simplypdf_organize::outline_tree(&editor.cos, path))
     }
 
     /// Top-level bookmarks as split points: (first page of each part, its bookmark's title).
     pub fn bookmark_splits(&self, id: DocId) -> Vec<(usize, String)> {
         let Some(doc) = self.get(id) else { return Vec::new() };
         let top: Vec<(Option<usize>, String)> = match doc.editor.as_ref() {
-            Some(editor) => pdfcraft_organize::top_level_bookmarks(&editor.cos).into_iter().map(|b| (b.page, b.title)).collect(),
+            Some(editor) => simplypdf_organize::top_level_bookmarks(&editor.cos).into_iter().map(|b| (b.page, b.title)).collect(),
             None => doc.info.outline.iter().map(|o| (o.page, o.title.clone())).collect(),
         };
         let mut out: Vec<(usize, String)> = top.into_iter().filter_map(|(page, title)| Some((page?, title))).collect();
@@ -303,7 +303,7 @@ impl Session {
     /// have changed it (Document Properties ▸ Fonts, `doc_info`). A no-op otherwise.
     pub fn refresh_fonts(&mut self, id: DocId) {
         let Some(doc) = self.docs.iter_mut().find(|d| d.id == id && d.fonts_stale) else { return };
-        if let Ok(info) = pdfcraft_render::inspect(doc.bytes.clone(), doc.password.as_deref()) {
+        if let Ok(info) = simplypdf_render::inspect(doc.bytes.clone(), doc.password.as_deref()) {
             doc.info.fonts = info.fonts;
         }
         doc.fonts_stale = false;

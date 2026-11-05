@@ -23,19 +23,19 @@ fn save_dialog_folder_handles_unc_paths() {
     assert_eq!(save_dialog_folder(Some(r"\\nas\projets")), None);
     assert_eq!(save_dialog_folder(Some(r"C:\Users\a\f.pdf")), Some(PathBuf::from(r"C:\Users\a")));
 }
-use pdfcraft_platform::staging::{STAGING_ATTEMPTS, staging_suffixes};
+use simplypdf_platform::staging::{STAGING_ATTEMPTS, staging_suffixes};
 use std::path::{Path, PathBuf};
 
 /// A fresh, empty folder for one staging test.
 fn staging_dir(test: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("pdfcraft-ui-staging-{}-{test}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("simplypdf-ui-staging-{}-{test}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }
 
 fn staged(dir: &Path, suffix: u64) -> PathBuf {
-    dir.join(format!(".out.pdf.pdfcraft-{suffix:016x}.tmp"))
+    dir.join(format!(".out.pdf.simplypdf-{suffix:016x}.tmp"))
 }
 
 fn read(p: &Path) -> String {
@@ -298,9 +298,9 @@ fn one_page_pdf() -> Vec<u8> {
 
 /// `one_page_pdf`, opening without a password, whose permissions refuse changes.
 fn no_changes_pdf() -> Vec<u8> {
-    let mut doc = pdfcraft_cos::Document::open(std::sync::Arc::new(one_page_pdf())).unwrap();
-    let encryption = pdfcraft_cos::NewEncryption {
-        algorithm: pdfcraft_cos::Algorithm::Aes256,
+    let mut doc = simplypdf_cos::Document::open(std::sync::Arc::new(one_page_pdf())).unwrap();
+    let encryption = simplypdf_cos::NewEncryption {
+        algorithm: simplypdf_cos::Algorithm::Aes256,
         user_password: "",
         owner_password: "owner",
         permissions: -1 ^ 8,
@@ -308,7 +308,7 @@ fn no_changes_pdf() -> Vec<u8> {
         seed: [4; 32],
     };
     doc.set_encryption(&encryption).unwrap();
-    pdfcraft_cos::write_full(&doc, &Default::default()).unwrap()
+    simplypdf_cos::write_full(&doc, &Default::default()).unwrap()
 }
 
 /// Undo with a new text box open on a document that refuses changes: the box is put back as
@@ -316,7 +316,7 @@ fn no_changes_pdf() -> Vec<u8> {
 /// behind once the add was refused.
 #[test]
 fn a_refused_text_box_is_put_back_whole() {
-    let mut app = crate::PdfCraftApp::new();
+    let mut app = crate::SimplyPDFApp::new();
     app.set_option("language", "en").unwrap();
     app.open_bytes("a.pdf", None, no_changes_pdf()).unwrap();
     let style = crate::content_ui::default_style();
@@ -340,7 +340,7 @@ fn a_refused_text_box_is_put_back_whole() {
 fn save_commits_the_open_text_box() {
     let dir = staging_dir("open-text-box");
     let dest = dir.join("out.pdf");
-    let mut app = crate::PdfCraftApp::new();
+    let mut app = crate::SimplyPDFApp::new();
     app.set_option("language", "en").unwrap();
     app.open_bytes("a.pdf", None, one_page_pdf()).unwrap();
     app.save_override = Some(dest.to_string_lossy().into_owned());
@@ -374,10 +374,10 @@ fn save_asks_where_to_keep_an_email_attachment_and_leaves_the_temporary_copy_alo
     std::fs::write(&attachment, &original).unwrap();
     let kept = dir.join("Quote.pdf");
 
-    let mut app = crate::PdfCraftApp::new();
+    let mut app = crate::SimplyPDFApp::new();
     app.set_option("language", "en").unwrap();
     app.open_bytes("Quote.pdf", Some(attachment.to_string_lossy().into_owned()), original.clone()).unwrap();
-    assert!(app.apply_edit(pdfcraft_engine::Edit::RotatePages { pages: vec![0], degrees: 90 }));
+    assert!(app.apply_edit(simplypdf_engine::Edit::RotatePages { pages: vec![0], degrees: 90 }));
     app.pick_override = Some(vec![kept.to_string_lossy().into_owned()]);
 
     assert!(!app.save_active(SaveTarget::InPlace), "Save asks instead of writing the temporary copy");
@@ -387,7 +387,7 @@ fn save_asks_where_to_keep_an_email_attachment_and_leaves_the_temporary_copy_alo
 
     // The chosen file is the document's file now: the next Save writes it without asking.
     app.pick_override = None;
-    assert!(app.apply_edit(pdfcraft_engine::Edit::RotatePages { pages: vec![0], degrees: 90 }));
+    assert!(app.apply_edit(simplypdf_engine::Edit::RotatePages { pages: vec![0], degrees: 90 }));
     assert!(app.save_active(SaveTarget::InPlace));
     let _ = std::fs::remove_dir_all(&dir);
 }

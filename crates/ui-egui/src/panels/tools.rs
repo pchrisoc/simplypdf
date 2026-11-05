@@ -1,13 +1,14 @@
 use super::edit::{actions_menu, edit_panel, stamp_palette};
 use super::{
-    Align2, Availability, Color32, CornerRadius, LeftPanel, PdfCraftApp, Rect, Sense, Stroke, Tokens, ToolGroup, catalog, icons, theme, vec2, widgets,
+    Align2, Availability, Color32, CornerRadius, LeftPanel, Rect, Sense, SimplyPDFApp, Stroke, Tokens, ToolGroup, catalog, icons, theme, vec2,
+    widgets,
 };
 
 fn hue(g: &ToolGroup) -> Color32 {
     Color32::from_rgb(g.hue[0], g.hue[1], g.hue[2])
 }
 
-pub fn left_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
+pub fn left_panel(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     // Organize closed another way (the grid's Close, or a page opened from it) closes the tool too,
     // as its panel's Close does, back to the workspace's own panel.
@@ -17,7 +18,6 @@ pub fn left_panel(app: &mut PdfCraftApp, ui: &mut egui::Ui) {
     egui::Frame::NONE.fill(t.panel).inner_margin(egui::Margin { left: 14, right: 14, top: 12, bottom: 10 }).stroke(Stroke::new(1.0, t.divider)).show(
         ui,
         |ui| {
-            crate::tool_access::sidebar(app, ui);
             match app.left {
                 // Organize pages has its own panel whenever the grid shows (with a document open).
                 _ if app.active.is_some() && crate::organize_panel::showing(app) => crate::organize_panel::panel(app, ui, &t),
@@ -69,7 +69,7 @@ pub(super) fn clear_of_scrollbar(ui: &mut egui::Ui) {
 
 /// The All tools sidebar: Expand (the full view) and Close, then the tool list, the first few
 /// tools until View more shows them all.
-fn all_tools(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
+fn all_tools(app: &mut SimplyPDFApp, ui: &mut egui::Ui, t: &Tokens) {
     // Labels distinct from the Combine grid's Expand and Collapse, which can show beside them.
     let (expand, close) = panel_header(ui, t, "All tools", Some(("maximize-2", tl!("Expand all tools"))));
     if expand {
@@ -77,6 +77,16 @@ fn all_tools(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens) {
     }
     if close {
         app.left_open = false;
+    }
+    if app.active.is_some() && !app.all_tools_full {
+        egui::ScrollArea::vertical().id_salt("tool-group-browser").show(ui, |ui| {
+            clear_of_scrollbar(ui);
+            for group in catalog::TOOL_GROUPS {
+                if widgets::ghost_button(ui, group.icon, tl!(group.label)).clicked() {
+                    app.select_tool(group.id);
+                }
+            }
+        });
     }
 }
 
@@ -92,7 +102,7 @@ pub(super) fn row_label(ui: &mut egui::Ui, text: &str, font: egui::FontId, color
 }
 
 /// Draw the detail view for one tool group, dispatching its commands and tool-specific panels.
-fn tool_detail(app: &mut PdfCraftApp, ui: &mut egui::Ui, t: &Tokens, g: &'static ToolGroup) {
+fn tool_detail(app: &mut SimplyPDFApp, ui: &mut egui::Ui, t: &Tokens, g: &'static ToolGroup) {
     if g.id == "edit" {
         edit_panel(app, ui, t, g);
         return;

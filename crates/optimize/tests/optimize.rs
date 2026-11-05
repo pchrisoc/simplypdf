@@ -2,17 +2,17 @@
 
 use std::sync::Arc;
 
-use pdfcraft_cos::{Dict, Document, ObjRef, Object, SaveOptions, Stream, write_full};
-use pdfcraft_filters::{Filter, Params};
-use pdfcraft_optimize::{
+use simplypdf_cos::{Dict, Document, ObjRef, Object, SaveOptions, Stream, write_full};
+use simplypdf_filters::{Filter, Params};
+use simplypdf_optimize::{
     Compatibility, Compression, ImageSettings, MonoCompression, MonoSettings, OptimizeError, Settings, SpaceCategory, audit_space,
     effective_resolutions, optimize,
 };
 
 /// What image `s` decodes to, its fax or JBIG2 data included, with no limit on the work: the
 /// samples an operation would read through its `ImageBudget`.
-fn decoded_image(doc: &Document, s: &Stream) -> Result<Vec<u8>, pdfcraft_cos::CosError> {
-    pdfcraft_cos::ImageBudget::with_work(u64::MAX).decode(doc, s, pdfcraft_cos::MAX_DECODED)
+fn decoded_image(doc: &Document, s: &Stream) -> Result<Vec<u8>, simplypdf_cos::CosError> {
+    simplypdf_cos::ImageBudget::with_work(u64::MAX).decode(doc, s, simplypdf_cos::MAX_DECODED)
 }
 
 fn image(doc: &mut Document, w: u32, h: u32, n: usize, jpeg: bool, smask: Option<ObjRef>) -> ObjRef {
@@ -94,7 +94,7 @@ fn image_resolution_uses_the_pages_physical_unit() {
         (Some(Object::Int(-10)), 1.0),
         (Some(Object::Real(0.5)), 1.0),
         (Some(Object::name("Ten")), 1.0),
-        (Some(Object::Int(100_000)), pdfcraft_model::MAX_USER_UNIT),
+        (Some(Object::Int(100_000)), simplypdf_model::MAX_USER_UNIT),
     ] {
         for indirect in [false, true] {
             let mut doc = Document::new_empty();
@@ -155,7 +155,7 @@ fn images_are_measured_where_drawn_and_downsampled() {
         &[("A", masked), ("B", photo), ("C", twice)],
         "q 72 0 0 72 36 36 cm /A Do Q q 1 0 0 1 100 100 cm 600 0 0 400 0 0 cm /B Do Q q 72 0 0 72 0 0 cm /C Do Q q 288 0 0 288 300 300 cm /C Do Q",
     );
-    let pages = pdfcraft_annot::page_refs(&doc).unwrap();
+    let pages = simplypdf_annot::page_refs(&doc).unwrap();
     let ppi = effective_resolutions(&doc, &pages);
     assert_eq!(ppi[&big].round(), 600.0);
     assert_eq!(ppi[&small].round(), 50.0);
@@ -183,9 +183,9 @@ fn images_are_measured_where_drawn_and_downsampled() {
 
     // The optimized file opens, and the page still shows the picture where it was.
     let reopened = Document::open(Arc::new(after_bytes.clone())).unwrap();
-    assert_eq!(pdfcraft_annot::page_refs(&reopened).unwrap().len(), 2);
-    let mut r = pdfcraft_render::PageRenderer::new(Arc::new(after_bytes), pdfcraft_render::RenderConfig::default());
-    let out = r.render(pdfcraft_render::RenderRequest { page: 0, scale: 1.0, ..Default::default() });
+    assert_eq!(simplypdf_annot::page_refs(&reopened).unwrap().len(), 2);
+    let mut r = simplypdf_render::PageRenderer::new(Arc::new(after_bytes), simplypdf_render::RenderConfig::default());
+    let out = r.render(simplypdf_render::RenderRequest { page: 0, scale: 1.0, ..Default::default() });
     assert!(out.error.is_none(), "{:?}", out.error);
     // Top-left image area (36..180 x 600..744 user → y from the top 48..192): drawn, not white.
     let i = ((100 * out.width + 100) * 4) as usize;
@@ -313,14 +313,14 @@ fn mono_image(doc: &mut Document, w: u32, h: u32, data: &[u8], predictor: Option
     let s = match predictor {
         None => Stream::flate(d, data),
         Some(predictor) => {
-            let params = pdfcraft_filters::Params { predictor, colors: 1, bits_per_component: 1, columns: w as i64, early_change: 1 };
+            let params = simplypdf_filters::Params { predictor, colors: 1, bits_per_component: 1, columns: w as i64, early_change: 1 };
             let mut parms = Dict::new();
             parms.set(b"Predictor".to_vec(), Object::Int(predictor));
             parms.set(b"BitsPerComponent".to_vec(), Object::Int(1));
             parms.set(b"Columns".to_vec(), Object::Int(w as i64));
             d.set(b"Filter".to_vec(), Object::name("FlateDecode"));
             d.set(b"DecodeParms".to_vec(), Object::Dict(parms));
-            Stream::from_raw(d, pdfcraft_filters::encode(&pdfcraft_filters::Filter::Flate, &params, data).unwrap())
+            Stream::from_raw(d, simplypdf_filters::encode(&simplypdf_filters::Filter::Flate, &params, data).unwrap())
         }
     };
     doc.add(Object::Stream(s))
@@ -328,8 +328,8 @@ fn mono_image(doc: &mut Document, w: u32, h: u32, data: &[u8], predictor: Option
 
 fn render(doc: &Document) -> Vec<u8> {
     let bytes = write_full(doc, &SaveOptions::default()).unwrap();
-    let mut r = pdfcraft_render::PageRenderer::new(Arc::new(bytes), pdfcraft_render::RenderConfig::default());
-    let out = r.render(pdfcraft_render::RenderRequest { page: 0, scale: 1.0, ..Default::default() });
+    let mut r = simplypdf_render::PageRenderer::new(Arc::new(bytes), simplypdf_render::RenderConfig::default());
+    let out = r.render(simplypdf_render::RenderRequest { page: 0, scale: 1.0, ..Default::default() });
     assert!(out.error.is_none(), "{:?}", out.error);
     out.rgba.to_vec()
 }
@@ -351,7 +351,7 @@ fn black_and_white_images_become_ccitt_group_4() {
         Object::name("Indexed"),
         Object::name("DeviceRGB"),
         1.into(),
-        Object::String(pdfcraft_cos::PdfString::literal(vec![0xC0, 0x10, 0x10, 0xF8, 0xF0, 0xE0])),
+        Object::String(simplypdf_cos::PdfString::literal(vec![0xC0, 0x10, 0x10, 0xF8, 0xF0, 0xE0])),
     ]);
     let indexed = mono_image(&mut doc, w, h, &text, None, &[("BitsPerComponent", 1.into()), ("ColorSpace", indexed_cs.clone())]);
     let predicted = mono_image(&mut doc, w, h, &text, Some(15), &[("BitsPerComponent", 1.into()), ("ColorSpace", Object::name("DeviceGray"))]);
@@ -380,7 +380,7 @@ fn black_and_white_images_become_ccitt_group_4() {
     // 64 × 8 white: its Group 4 data is smaller than its Flate data, but not by the longer
     // dictionary Group 4 needs.
     let tiny = mono_image(&mut doc, 64, 8, &[0xFF; 64], None, &[("BitsPerComponent", 1.into()), ("ColorSpace", Object::name("DeviceGray"))]);
-    let tiny_g4 = pdfcraft_filters::encode_g4(&[0xFF; 64], 64, 8).unwrap();
+    let tiny_g4 = simplypdf_filters::encode_g4(&[0xFF; 64], 64, 8).unwrap();
     assert!(tiny_g4.len() < stream(&doc, tiny).raw.len(), "{} against {}", tiny_g4.len(), stream(&doc, tiny).raw.len());
     let p = page(
         &mut doc,
@@ -505,7 +505,7 @@ fn images_whose_decode_parms_are_references_come_out_as_with_them_direct() {
         let one_bit = mono_image(&mut doc, w, h, &bilevel(w, h, false), Some(15), &grey);
         let black_and_white_samples = eight_bit(&bilevel(w, h, false), w, h);
         let shades: Vec<u8> = (0..w * h).map(|i| ((i % w) * 255 / w) as u8 ^ ((i / w) as u8 & 0x0F)).collect();
-        let params = pdfcraft_filters::Params { predictor: 15, colors: 1, bits_per_component: 8, columns: w as i64, early_change: 1 };
+        let params = simplypdf_filters::Params { predictor: 15, colors: 1, bits_per_component: 8, columns: w as i64, early_change: 1 };
         let mut parms = Dict::new();
         parms.set(b"Predictor".to_vec(), Object::Int(15));
         parms.set(b"Columns".to_vec(), Object::Int(w as i64));
@@ -518,14 +518,14 @@ fn images_whose_decode_parms_are_references_come_out_as_with_them_direct() {
         d.set(b"ColorSpace".to_vec(), Object::name("DeviceGray"));
         d.set(b"Filter".to_vec(), Object::name("FlateDecode"));
         d.set(b"DecodeParms".to_vec(), Object::Dict(parms));
-        let coded = pdfcraft_filters::encode(&pdfcraft_filters::Filter::Flate, &params, &shades).unwrap();
+        let coded = simplypdf_filters::encode(&simplypdf_filters::Filter::Flate, &params, &shades).unwrap();
         let eight_bit = doc.add(Object::Stream(Stream::from_raw(d.clone(), coded)));
-        let params = pdfcraft_filters::Params { predictor: 10, ..params };
+        let params = simplypdf_filters::Params { predictor: 10, ..params };
         let mut parms = Dict::new();
         parms.set(b"Predictor".to_vec(), Object::Int(10));
         parms.set(b"Columns".to_vec(), Object::Int(w as i64));
         d.set(b"DecodeParms".to_vec(), Object::Dict(parms));
-        let black_and_white = pdfcraft_filters::encode(&pdfcraft_filters::Filter::Flate, &params, &black_and_white_samples).unwrap();
+        let black_and_white = simplypdf_filters::encode(&simplypdf_filters::Filter::Flate, &params, &black_and_white_samples).unwrap();
         let packed = doc.add(Object::Stream(Stream::from_raw(d.clone(), black_and_white)));
         let palette = vec![0, 0, 255, 255, 255, 255];
         d.set(
@@ -534,11 +534,11 @@ fn images_whose_decode_parms_are_references_come_out_as_with_them_direct() {
                 Object::name("Indexed"),
                 Object::name("DeviceRGB"),
                 1.into(),
-                Object::String(pdfcraft_cos::PdfString::literal(palette)),
+                Object::String(simplypdf_cos::PdfString::literal(palette)),
             ]),
         );
         let entries = samples_of(&bilevel(w, h, false), w, h, [&[0], &[1]], 8);
-        let entries = pdfcraft_filters::encode(&pdfcraft_filters::Filter::Flate, &params, &entries).unwrap();
+        let entries = simplypdf_filters::encode(&simplypdf_filters::Filter::Flate, &params, &entries).unwrap();
         let indexed = doc.add(Object::Stream(Stream::from_raw(d, entries)));
         for r in [one_bit, eight_bit, packed, indexed] {
             let mut s = stream(&doc, r);
@@ -617,7 +617,7 @@ fn images_whose_data_decodes_far_past_their_samples_are_left_alone() {
         let digits: Vec<u8> = data.iter().flat_map(|b| format!("{b:02X}").into_bytes()).collect();
         let mut text: Vec<u8> = digits.chunks(64).flat_map(|line| line.iter().copied().chain(*b"\n")).collect();
         text.push(b'>');
-        pdfcraft_filters::encode_flate(&text)
+        simplypdf_filters::encode_flate(&text)
     };
     let mut doc = Document::new_empty();
     let as_hex = |doc: &mut Document, data: &[u8], bits: i64, (w, h): (u32, u32)| {
@@ -776,7 +776,7 @@ fn eight_bit_black_and_white_images_become_one_bit() {
         Object::name("Indexed"),
         Object::name("DeviceGray"),
         255.into(),
-        Object::String(pdfcraft_cos::PdfString::literal((0..=255u8).rev().collect::<Vec<_>>())),
+        Object::String(simplypdf_cos::PdfString::literal((0..=255u8).rev().collect::<Vec<_>>())),
     ]);
     let indexed = image(&mut doc, &grey, &[("ColorSpace", palette)]);
     let keyed = image(&mut doc, &grey, &[gray_cs, ("Mask", Object::Array(vec![0.into(), 0.into()]))]);
@@ -871,7 +871,7 @@ fn rgb_and_two_colour_indexed_black_and_white_images_become_one_bit() {
             Object::name("Indexed"),
             Object::name("DeviceRGB"),
             (entries.len() as i64 / 3 - 1).into(),
-            Object::String(pdfcraft_cos::PdfString::literal(entries.to_vec())),
+            Object::String(simplypdf_cos::PdfString::literal(entries.to_vec())),
         ])
     };
     let blue_white = palette(&[0, 0, 255, 255, 255, 255]);
@@ -992,7 +992,7 @@ fn a_resampled_group_4_image_is_stored_as_flate_when_smaller() {
     parms.set(b"K".to_vec(), Object::Int(-1));
     parms.set(b"Columns".to_vec(), Object::Int(w.into()));
     d.set(b"DecodeParms".to_vec(), Object::Dict(parms));
-    let img = doc.add(Object::Stream(Stream::from_raw(d, pdfcraft_filters::encode_g4(&stripes, w, h).unwrap())));
+    let img = doc.add(Object::Stream(Stream::from_raw(d, simplypdf_filters::encode_g4(&stripes, w, h).unwrap())));
     // 144 × 57.6 pt is 600 ppi.
     page(&mut doc, &[("A", img)], "q 144 0 0 57.6 20 600 cm /A Do Q");
     let r = optimize(&mut doc, &Settings::default()).unwrap();
@@ -1023,7 +1023,7 @@ fn decode_arrays_read_as_numbers_however_written() {
         Object::name("Indexed"),
         Object::name("DeviceRGB"),
         1.into(),
-        Object::String(pdfcraft_cos::PdfString::literal(vec![0, 0, 255, 255, 255, 255])),
+        Object::String(simplypdf_cos::PdfString::literal(vec![0, 0, 255, 255, 255, 255])),
     ]);
     let indices = samples_of(&text, w, h, [&[0], &[1]], 8);
     let max = doc.add(Object::Int(255));
@@ -1480,7 +1480,7 @@ fn ambiguous_monochrome_text_is_recompressed_without_lossy_reduction() {
         for (k, v) in entries {
             d.set(k.as_bytes().to_vec(), v.clone());
         }
-        doc.add(Object::Stream(Stream::from_raw(d, pdfcraft_filters::encode_g4(&text, w, h).unwrap())))
+        doc.add(Object::Stream(Stream::from_raw(d, simplypdf_filters::encode_g4(&text, w, h).unwrap())))
     };
     // Group 4 behind ASCIIHexDecode, its parameters second in the array.
     let behind_hex = |doc: &mut Document| {
@@ -1646,7 +1646,7 @@ fn monochrome_downsampling_leaves_halftones_and_overwide_rows_at_their_resolutio
         assert_eq!(size(*r), (Some(1200), Some(480)), "halftone {i}");
     }
 
-    for (columns, resampled) in [(pdfcraft_filters::MAX_CCITT_COLUMNS, 1), (pdfcraft_filters::MAX_CCITT_COLUMNS + 1, 0)] {
+    for (columns, resampled) in [(simplypdf_filters::MAX_CCITT_COLUMNS, 1), (simplypdf_filters::MAX_CCITT_COLUMNS + 1, 0)] {
         let mut doc = Document::new_empty();
         let white = vec![0xFF; (columns as usize).div_ceil(8) * 2];
         let img = mono_image(&mut doc, columns, 2, &white, None, &grey);
@@ -1664,7 +1664,7 @@ fn monochrome_downsampling_leaves_halftones_and_overwide_rows_at_their_resolutio
 #[test]
 fn a_fax_image_behind_a_decompression_bomb_is_left_alone() {
     let (w, h) = (1200u32, 480u32);
-    let g4 = pdfcraft_filters::encode_g4(&bilevel(w, h, false), w, h).unwrap();
+    let g4 = simplypdf_filters::encode_g4(&bilevel(w, h, false), w, h).unwrap();
     for padding in [0, 4 << 20] {
         let mut doc = Document::new_empty();
         let mut code = g4.clone();
@@ -1680,7 +1680,7 @@ fn a_fax_image_behind_a_decompression_bomb_is_left_alone() {
         parms.set(b"K".to_vec(), Object::Int(-1));
         parms.set(b"Columns".to_vec(), Object::Int(w.into()));
         d.set(b"DecodeParms".to_vec(), Object::Array(vec![Object::Null, Object::Dict(parms)]));
-        let img = doc.add(Object::Stream(Stream::from_raw(d, pdfcraft_filters::encode_flate(&code))));
+        let img = doc.add(Object::Stream(Stream::from_raw(d, simplypdf_filters::encode_flate(&code))));
         // 144 × 57.6 pt is 600 ppi.
         page(&mut doc, &[("A", img)], "q 144 0 0 57.6 20 600 cm /A Do Q");
         let before = stream(&doc, img).raw;
@@ -1697,7 +1697,7 @@ fn a_fax_image_behind_a_decompression_bomb_is_left_alone() {
 
 /// A CCITT image `w` × `h` coded as Group 4 from `bits`, behind ASCIIHexDecode when `hex`.
 fn g4_image(doc: &mut Document, bits: &[u8], (w, h): (u32, u32), hex: bool) -> ObjRef {
-    let g4 = pdfcraft_filters::encode_g4(bits, w, h).unwrap();
+    let g4 = simplypdf_filters::encode_g4(bits, w, h).unwrap();
     let mut d = Dict::new();
     d.set(b"Subtype".to_vec(), Object::name("Image"));
     d.set(b"Width".to_vec(), Object::Int(w.into()));
@@ -1858,10 +1858,10 @@ fn group_3_fax_images_become_group_4() {
     for (k, on_bytes) in [(0, None), (1, None), (0, Some(false)), (0, Some(true)), (1, Some(true))] {
         let g3 = group_3(&runs, k > 0, on_bytes);
         let (end_of_line, encoded_byte_align) = (k > 0 && on_bytes.is_none(), on_bytes.is_some());
-        let p = pdfcraft_filters::CcittParams { k, columns: w.into(), end_of_line, encoded_byte_align, ..Default::default() };
+        let p = simplypdf_filters::CcittParams { k, columns: w.into(), end_of_line, encoded_byte_align, ..Default::default() };
         let mut work = u64::MAX;
         assert_eq!(
-            pdfcraft_filters::decode_ccitt_within(&g3, &p, h, &mut work).unwrap(),
+            simplypdf_filters::decode_ccitt_within(&g3, &p, h, &mut work).unwrap(),
             bits,
             "/K {k}, on bytes {on_bytes:?}: the Group 3 data is the picture"
         );
@@ -1927,7 +1927,7 @@ fn black_and_white_images_become_jbig2() {
         Object::name("Indexed"),
         Object::name("DeviceRGB"),
         1.into(),
-        Object::String(pdfcraft_cos::PdfString::literal(vec![0xC0, 0x10, 0x10, 0xF8, 0xF0, 0xE0])),
+        Object::String(simplypdf_cos::PdfString::literal(vec![0xC0, 0x10, 0x10, 0xF8, 0xF0, 0xE0])),
     ]);
     let indexed = mono_image(&mut doc, w, h, &text, None, &[("BitsPerComponent", 1.into()), ("ColorSpace", indexed_cs.clone())]);
     page(
@@ -2064,7 +2064,7 @@ fn rendered_text_becomes_jbig2_symbols() {
     assert_eq!(r.images_recompressed, 1);
     let s = stream(&doc, im);
     assert_eq!(s.dict.name(b"Filter"), Some(&b"JBIG2Decode"[..]));
-    let generic = pdfcraft_filters::encode_jbig2_generic(&text, w, h).unwrap();
+    let generic = simplypdf_filters::encode_jbig2_generic(&text, w, h).unwrap();
     assert!(s.raw.len() * 2 < generic.len(), "symbols {} bytes, generic {}", s.raw.len(), generic.len());
     assert!(!s.dict.contains(b"DecodeParms"), "alone, it shares no dictionary");
     assert!(render(&doc) == before, "the page looks the same");
@@ -2073,8 +2073,8 @@ fn rendered_text_becomes_jbig2_symbols() {
 /// Page `index` of `doc`, saved and opened again, rendered at scale 1.
 fn render_page(doc: &Document, index: usize) -> Vec<u8> {
     let bytes = write_full(doc, &SaveOptions::default()).unwrap();
-    let mut r = pdfcraft_render::PageRenderer::new(Arc::new(bytes), pdfcraft_render::RenderConfig::default());
-    let out = r.render(pdfcraft_render::RenderRequest { page: index, scale: 1.0, ..Default::default() });
+    let mut r = simplypdf_render::PageRenderer::new(Arc::new(bytes), simplypdf_render::RenderConfig::default());
+    let out = r.render(simplypdf_render::RenderRequest { page: index, scale: 1.0, ..Default::default() });
     assert!(out.error.is_none(), "{:?}", out.error);
     out.rgba.to_vec()
 }
@@ -2149,7 +2149,7 @@ fn jbig2_pages_share_one_symbol_dictionary() {
         })
         .collect();
     let before: Vec<Vec<u8>> = (0..pages.len()).map(|p| render_page(&doc, p)).collect();
-    let alone: usize = pages.iter().map(|text| pdfcraft_filters::encode_jbig2(text, w, h).unwrap().len()).sum();
+    let alone: usize = pages.iter().map(|text| simplypdf_filters::encode_jbig2(text, w, h).unwrap().len()).sum();
     let settings = Settings { mono: MonoSettings { compression: MonoCompression::Jbig2, ..MonoSettings::REDUCE }, ..Settings::default() };
     let report = optimize(&mut doc, &settings).unwrap();
     let globals = globals_of(&doc, images[0]).expect("the first page names the globals");
@@ -2214,7 +2214,7 @@ fn retained_jbig2_shares_nothing() {
                 d.set(key.as_bytes().to_vec(), Object::Int(value));
             }
             d.set(b"Filter".to_vec(), Object::name("JBIG2Decode"));
-            let im = doc.add(Object::Stream(Stream::from_raw(d, pdfcraft_filters::encode_jbig2(&text, w, h).unwrap())));
+            let im = doc.add(Object::Stream(Stream::from_raw(d, simplypdf_filters::encode_jbig2(&text, w, h).unwrap())));
             // 1200 samples over 144 pt: 600 ppi.
             page(&mut doc, &[("Im", im)], "q 144 0 0 115.2 6 300 cm /Im Do Q");
             im
@@ -2302,7 +2302,7 @@ fn jbig2_scans_are_averaged_and_stored_again() {
         page(&mut doc, &[("Im", im)], &format!("q {width} 0 0 {height} 20 600 cm /Im Do Q"));
         (doc, im)
     };
-    let coded = pdfcraft_filters::encode_jbig2_generic(&squares, w, h).unwrap();
+    let coded = simplypdf_filters::encode_jbig2_generic(&squares, w, h).unwrap();
     // 144 × 57.6 pt is 600 ppi.
     let at_600 = (144.0, 57.6);
     for compression in [MonoCompression::CcittG4, MonoCompression::Jbig2, MonoCompression::Retain] {
@@ -2334,7 +2334,7 @@ fn jbig2_scans_are_averaged_and_stored_again() {
     // At 300 ppi, below 450: rendered text, whose letters repeat, coded as one generic region.
     let (tw, th) = (600u32, 480u32);
     let text = rendered_text(tw, th);
-    let generic = pdfcraft_filters::encode_jbig2_generic(&text, tw, th).unwrap();
+    let generic = simplypdf_filters::encode_jbig2_generic(&text, tw, th).unwrap();
     let at_300 = (144.0, 115.2);
     for compression in [MonoCompression::CcittG4, MonoCompression::Retain] {
         let settings = Settings { mono: MonoSettings { compression, ..MonoSettings::REDUCE }, ..Settings::default() };
@@ -2376,7 +2376,7 @@ fn jbig2_scans_are_averaged_and_stored_again() {
 }
 
 /// A whole 300 dpi letter page of rendered text, more marks than one JBIG2 text region of the
-/// decoder PdfCraft renders with takes, still looks the same as JBIG2 symbols.
+/// decoder SimplyPDF renders with takes, still looks the same as JBIG2 symbols.
 #[test]
 fn a_dense_page_of_rendered_text_looks_the_same_as_jbig2_symbols() {
     let mut doc = Document::new_empty();
@@ -2390,7 +2390,7 @@ fn a_dense_page_of_rendered_text_looks_the_same_as_jbig2_symbols() {
     assert_eq!(r.images_recompressed, 1);
     let s = stream(&doc, im);
     assert_eq!(s.dict.name(b"Filter"), Some(&b"JBIG2Decode"[..]));
-    assert!(s.raw.len() * 2 < pdfcraft_filters::encode_jbig2_generic(&text, w, h).unwrap().len(), "symbol coded");
+    assert!(s.raw.len() * 2 < simplypdf_filters::encode_jbig2_generic(&text, w, h).unwrap().len(), "symbol coded");
     // The copies take several text regions (segment type 7, ISO/IEC 14492 7.3), read from the
     // segment headers (7.2): number, flags, referred-to count and numbers, page, data length.
     let mut regions = 0;
@@ -2592,7 +2592,7 @@ fn invalid_links_and_unreferenced_destinations_go() {
         d.set(b"Dest".to_vec(), dest);
         Object::Ref(doc.add(Object::Dict(d)))
     };
-    let s = |t: &str| Object::String(pdfcraft_cos::PdfString::literal(t.as_bytes().to_vec()));
+    let s = |t: &str| Object::String(simplypdf_cos::PdfString::literal(t.as_bytes().to_vec()));
     let annots = vec![
         link(&mut doc, Object::Array(vec![Object::Ref(p), Object::name("Fit")])),
         link(&mut doc, Object::Array(vec![Object::Ref(ObjRef::new(999, 0)), Object::name("Fit")])),
@@ -2636,7 +2636,7 @@ fn invalid_links_and_unreferenced_destinations_go() {
 
 #[test]
 fn progress_is_reported_per_image_and_a_refusal_cancels() {
-    use pdfcraft_optimize::{OptimizeError, Stage, optimize_with_progress};
+    use simplypdf_optimize::{OptimizeError, Stage, optimize_with_progress};
     let build = || {
         let mut doc = Document::new_empty();
         let a = image(&mut doc, 300, 300, 3, false, None);
@@ -3072,7 +3072,7 @@ fn printed_page(rows: usize, jpeg: impl Fn(usize) -> bool, edit: impl Fn(usize, 
 
 /// The images the first page's content stream draws, by name, with their streams.
 fn drawn_images(doc: &Document) -> Vec<Stream> {
-    let pages = pdfcraft_annot::page_refs(doc).unwrap();
+    let pages = simplypdf_annot::page_refs(doc).unwrap();
     let p = doc.get(pages[0]).as_dict().cloned().unwrap();
     let res = doc.resolve(p.get(b"Resources").unwrap()).as_dict().cloned().unwrap();
     let xo = doc.resolve(res.get(b"XObject").unwrap()).as_dict().cloned().unwrap();
@@ -3080,7 +3080,7 @@ fn drawn_images(doc: &Document) -> Vec<Stream> {
         Object::Stream(s) => s.decoded().unwrap(),
         _ => panic!("contents"),
     };
-    pdfcraft_content::parse(&c)
+    simplypdf_content::parse(&c)
         .ops
         .iter()
         .filter(|o| o.is("Do"))
@@ -3115,7 +3115,7 @@ fn a_page_picture_printed_as_one_pixel_strips_is_merged_into_one_image() {
 
 #[test]
 fn the_mobile_preset_makes_a_printed_page_small() {
-    use pdfcraft_optimize::Preset;
+    use simplypdf_optimize::Preset;
     let (doc, _) = printed_page(200, |_| true, |_, s| s);
     let bytes = |d: &Document| write_full(d, &SaveOptions::default()).unwrap().len();
     let before = bytes(&doc);
@@ -3196,7 +3196,7 @@ fn a_deeply_nested_form_is_measured_at_its_largest_use() {
             for c in &pages {
                 page(&mut doc, &[("F", outer)], c);
             }
-            let refs = pdfcraft_annot::page_refs(&doc).unwrap();
+            let refs = simplypdf_annot::page_refs(&doc).unwrap();
             assert_eq!(effective_resolutions(&doc, &refs)[&img].round(), 150.0, "{levels} levels, {label}");
             optimize(&mut doc, &Settings::default()).unwrap();
             assert_eq!(stream(&doc, img).dict.int(b"Width"), Some(1200), "{levels} levels, {label}");
@@ -3218,7 +3218,7 @@ fn a_form_drawing_itself_is_walked_once_per_use() {
     d.dict.set(b"Resources".to_vec(), Object::Dict(resources(x)));
     doc.set(f, Object::Stream(d));
     page(&mut doc, &[("F", f)], "q 72 0 0 72 36 36 cm /F Do Q");
-    let refs = pdfcraft_annot::page_refs(&doc).unwrap();
+    let refs = simplypdf_annot::page_refs(&doc).unwrap();
     // Only the outer use: the cycle isn't followed, and doesn't count as a missed use.
     assert_eq!(effective_resolutions(&doc, &refs)[&img].round(), 1200.0);
 }
@@ -3239,7 +3239,7 @@ fn a_shared_form_without_resources_draws_each_callers_image() {
         outers.push(inner);
     }
     page(&mut doc, &[("A", outers[0]), ("B", outers[1])], "q 72 0 0 72 36 36 cm /A Do Q q 576 0 0 576 18 100 cm /B Do Q");
-    let refs = pdfcraft_annot::page_refs(&doc).unwrap();
+    let refs = simplypdf_annot::page_refs(&doc).unwrap();
     let ppi = effective_resolutions(&doc, &refs);
     assert_eq!(ppi[&a].round(), 1200.0);
     assert_eq!(ppi.get(&b).map(|p| p.round()), Some(150.0));
@@ -3257,7 +3257,7 @@ fn images_are_not_resampled_when_some_uses_could_not_be_measured() {
         &[("F", deep), ("Im", img), ("O", other)],
         "q 72 0 0 72 36 36 cm /Im Do Q q 72 0 0 72 200 36 cm /O Do Q q 576 0 0 576 18 100 cm /F Do Q",
     );
-    let refs = pdfcraft_annot::page_refs(&doc).unwrap();
+    let refs = simplypdf_annot::page_refs(&doc).unwrap();
     let ppi = effective_resolutions(&doc, &refs);
     assert_eq!((ppi[&img], ppi[&other]), (f64::INFINITY, f64::INFINITY));
     optimize(&mut doc, &Settings::default()).unwrap();
@@ -3277,7 +3277,7 @@ fn images_are_not_resampled_when_some_uses_could_not_be_measured() {
         next = label;
     }
     page(&mut doc, &names, "q 72 0 0 72 36 36 cm /F1 Do Q");
-    let refs = pdfcraft_annot::page_refs(&doc).unwrap();
+    let refs = simplypdf_annot::page_refs(&doc).unwrap();
     assert_eq!(effective_resolutions(&doc, &refs)[&img], f64::INFINITY);
 }
 
@@ -3288,9 +3288,9 @@ fn images_are_not_resampled_when_a_page_enters_more_forms_than_allowed() {
     let mut doc = Document::new_empty();
     let img = image(&mut doc, 1200, 1200, 3, false, None);
     let empty = form(&mut doc, None, "");
-    let draws = "/E Do ".repeat(pdfcraft_cos::MAX_PAGE_FORMS + 1);
+    let draws = "/E Do ".repeat(simplypdf_cos::MAX_PAGE_FORMS + 1);
     page(&mut doc, &[("E", empty), ("Im", img)], &format!("q 72 0 0 72 36 36 cm /Im Do Q {draws}"));
-    let refs = pdfcraft_annot::page_refs(&doc).unwrap();
+    let refs = simplypdf_annot::page_refs(&doc).unwrap();
     assert_eq!(effective_resolutions(&doc, &refs)[&img], f64::INFINITY);
 }
 
@@ -3317,7 +3317,7 @@ fn compatibility_level_sets_version_unpacks_for_1_4_and_checks_encryption() {
         assert!(bytes.starts_with(format!("%PDF-{expected}\n").as_bytes()), "{expected}");
         let has_objstm = bytes.windows(7).any(|w| w == b"/ObjStm");
         assert_eq!(has_objstm, compat != Compatibility::Pdf1_4, "{compat:?}");
-        let info = pdfcraft_render::inspect(Arc::new(bytes), None).unwrap();
+        let info = simplypdf_render::inspect(Arc::new(bytes), None).unwrap();
         assert_eq!(info.pdf_version, expected);
     }
 
@@ -3331,8 +3331,8 @@ fn compatibility_level_sets_version_unpacks_for_1_4_and_checks_encryption() {
     // Encryption that requires a newer PDF version than the chosen compatibility is refused.
     let mut aes256 = base.clone();
     aes256
-        .set_encryption(&pdfcraft_cos::NewEncryption {
-            algorithm: pdfcraft_cos::Algorithm::Aes256,
+        .set_encryption(&simplypdf_cos::NewEncryption {
+            algorithm: simplypdf_cos::Algorithm::Aes256,
             user_password: "u",
             owner_password: "o",
             permissions: -1,
@@ -3349,8 +3349,8 @@ fn compatibility_level_sets_version_unpacks_for_1_4_and_checks_encryption() {
 
     let mut aes128 = base;
     aes128
-        .set_encryption(&pdfcraft_cos::NewEncryption {
-            algorithm: pdfcraft_cos::Algorithm::Aes128,
+        .set_encryption(&simplypdf_cos::NewEncryption {
+            algorithm: simplypdf_cos::Algorithm::Aes128,
             user_password: "u",
             owner_password: "o",
             permissions: -1,
@@ -3434,7 +3434,7 @@ fn indirectly_referenced_destination_is_kept() {
     // used, silently breaking the link.
     let mut doc = Document::new_empty();
     let p = page(&mut doc, &[], "BT ET");
-    let s = |t: &str| Object::String(pdfcraft_cos::PdfString::literal(t.as_bytes().to_vec()));
+    let s = |t: &str| Object::String(simplypdf_cos::PdfString::literal(t.as_bytes().to_vec()));
     // A link whose /Dest is `ref -> "target"`, and an unused destination for contrast.
     let name_ref = Object::Ref(doc.add(s("target")));
     let mut link = Dict::new();
@@ -3466,7 +3466,7 @@ fn a_destination_named_only_by_a_remote_or_embedded_go_to_is_removed() {
     // destination of the same name that nothing else uses is unreferenced.
     let mut doc = Document::new_empty();
     let p = page(&mut doc, &[], "BT ET");
-    let s = |t: &str| Object::String(pdfcraft_cos::PdfString::literal(t.as_bytes().to_vec()));
+    let s = |t: &str| Object::String(simplypdf_cos::PdfString::literal(t.as_bytes().to_vec()));
     let link = |doc: &mut Document, action: Dict| {
         let mut link = Dict::new();
         link.set(b"Type".to_vec(), Object::name("Annot"));
@@ -3519,7 +3519,7 @@ fn lzw_ops() -> Vec<u8> {
 }
 
 fn lzw(data: &[u8], params: &Params) -> Vec<u8> {
-    pdfcraft_filters::encode(&Filter::Lzw, params, data).unwrap()
+    simplypdf_filters::encode(&Filter::Lzw, params, data).unwrap()
 }
 
 /// `params` as a `/DecodeParms` dictionary, only the entries that differ from the defaults.
@@ -3582,7 +3582,7 @@ fn lzw_streams_become_flate_and_decode_to_the_same_bytes() {
     let (img, px) = lzw_image(&mut doc, &png);
     let (img_late, _) = lzw_image(&mut doc, &png_late);
     page(&mut doc, &[("Im", img), ("Im2", img_late)], "q 64 0 0 48 72 600 cm /Im Do Q q 64 0 0 48 172 600 cm /Im2 Do Q");
-    let pg = pdfcraft_annot::page_refs(&doc).unwrap()[0];
+    let pg = simplypdf_annot::page_refs(&doc).unwrap()[0];
     doc.update_dict(pg, |d| {
         d.set(b"Contents".to_vec(), Object::Array(vec![Object::Ref(c_early), Object::Ref(c_late), d.get(b"Contents").unwrap().clone()]))
     })
@@ -3612,7 +3612,7 @@ fn lzw_streams_become_flate_and_decode_to_the_same_bytes() {
 /// and nothing runs after it.
 #[test]
 fn a_cancel_lands_during_the_lzw_pass() {
-    use pdfcraft_optimize::{OptimizeError, Stage, optimize_with_progress};
+    use simplypdf_optimize::{OptimizeError, Stage, optimize_with_progress};
     let build = |streams: usize| {
         let mut doc = Document::new_empty();
         let mut d = Dict::new();
@@ -3658,8 +3658,8 @@ fn a_page_drawn_from_lzw_streams_renders_the_same_after_conversion() {
     doc.update_dict(pg, |p| p.set(b"Contents".to_vec(), Object::Ref(c))).unwrap();
     let render = |doc: &Document| {
         let bytes = write_full(doc, &SaveOptions::default()).unwrap();
-        let mut r = pdfcraft_render::PageRenderer::new(Arc::new(bytes), pdfcraft_render::RenderConfig::default());
-        let out = r.render(pdfcraft_render::RenderRequest { page: 0, scale: 1.0, ..Default::default() });
+        let mut r = simplypdf_render::PageRenderer::new(Arc::new(bytes), simplypdf_render::RenderConfig::default());
+        let out = r.render(simplypdf_render::RenderRequest { page: 0, scale: 1.0, ..Default::default() });
         assert!(out.error.is_none(), "{:?}", out.error);
         out.rgba
     };
@@ -3703,7 +3703,7 @@ fn lzw_inside_a_filter_chain_is_replaced_and_the_other_stages_kept() {
     let after = stream(&doc, pic);
     assert_eq!(after.dict.get(b"Filter"), Some(&Object::Array(vec![Object::name("FlateDecode"), Object::name("DCTDecode")])));
     assert!(!after.dict.contains(b"DecodeParms"), "all null: dropped");
-    let inside = pdfcraft_filters::decode(&[(Filter::Flate, Params::default())], &after.raw, 1 << 20).unwrap();
+    let inside = simplypdf_filters::decode(&[(Filter::Flate, Params::default())], &after.raw, 1 << 20).unwrap();
     assert_eq!(inside, jpeg, "the JPEG bytes are kept exactly");
 }
 
@@ -3736,7 +3736,7 @@ fn lzw_streams_that_cannot_be_read_or_are_not_asked_for_stay_unchanged() {
     let mut objstm = filtered(&["LZWDecode"], good.clone());
     objstm.dict.set(b"Type".to_vec(), Object::name("ObjStm"));
     let mut external = filtered(&["LZWDecode"], good.clone());
-    external.dict.set(b"F".to_vec(), Object::String(pdfcraft_cos::PdfString::literal(b"data.bin".to_vec())));
+    external.dict.set(b"F".to_vec(), Object::String(simplypdf_cos::PdfString::literal(b"data.bin".to_vec())));
     let cases = [
         ("corrupt LZW", filtered(&["LZWDecode"], corrupt), Settings::default()),
         ("corrupt under a PNG predictor", bad_predictor, Settings::default()),
@@ -3796,7 +3796,7 @@ fn indexed_thin_rules_survive_averaging_for_both_palette_orders_and_decodes() {
                 Object::name("Indexed"),
                 Object::name("DeviceGray"),
                 1.into(),
-                Object::String(pdfcraft_cos::PdfString::literal(palette)),
+                Object::String(simplypdf_cos::PdfString::literal(palette)),
             ]);
             let mut entries = vec![("BitsPerComponent", 1.into()), ("ColorSpace", cs)];
             if inverted {
@@ -3820,7 +3820,7 @@ fn indexed_thin_rules_survive_averaging_for_both_palette_orders_and_decodes() {
 }
 
 /// An image past what the JBIG2 decoder takes on a side stays as it is: JBIG2 can state the size,
-/// but PdfCraft's decoder refuses such a stream, so stored as JBIG2 it drew nothing here. At 65,535
+/// but SimplyPDF's decoder refuses such a stream, so stored as JBIG2 it drew nothing here. At 65,535
 /// on a side, the same bars do become JBIG2, so the fixture does reach that choice, and the coding
 /// stored (symbols, here) reads back through that decoder.
 #[test]
@@ -3955,7 +3955,7 @@ fn an_indexed_image_used_beyond_the_page_content_read_is_not_averaged() {
     for y in 0..h as usize {
         data[y * stride + 101 / 8] &= !(0x80 >> (101 % 8));
     }
-    let palette = Object::String(pdfcraft_cos::PdfString::literal(vec![0, 0, 0, 255, 255, 255]));
+    let palette = Object::String(simplypdf_cos::PdfString::literal(vec![0, 0, 0, 255, 255, 255]));
     let indexed = Object::Array(vec![Object::name("Indexed"), Object::name("DeviceRGB"), 1.into(), palette]);
     let cases = [(&indexed, false, 600), (&indexed, true, 1200), (&Object::name("DeviceGray"), false, 600), (&Object::name("DeviceGray"), true, 600)];
     for (cs, in_annotation, width) in cases {
@@ -3988,7 +3988,7 @@ fn an_indexed_palette_is_read_by_the_luma_of_its_colours() {
     for y in 0..h as usize {
         data[y * stride + 101 / 8] &= !(0x80 >> (101 % 8));
     }
-    let palette = Object::String(pdfcraft_cos::PdfString::literal(vec![0, 0, 255, 255, 0, 0]));
+    let palette = Object::String(simplypdf_cos::PdfString::literal(vec![0, 0, 255, 255, 0, 0]));
     let optimized = |space: &str| {
         let cs = Object::Array(vec![Object::name(space), Object::name("DeviceRGB"), 1.into(), palette.clone()]);
         let mut doc = Document::new_empty();
@@ -4017,7 +4017,7 @@ fn an_indexed_image_is_averaged_only_in_a_spelling_it_can_read() {
     for y in 0..h as usize {
         data[y * stride + 101 / 8] &= !(0x80 >> (101 % 8));
     }
-    let table = || Object::String(pdfcraft_cos::PdfString::literal(vec![0, 0, 0, 255, 255, 255]));
+    let table = || Object::String(simplypdf_cos::PdfString::literal(vec![0, 0, 0, 255, 255, 255]));
     let indexed = |family: Object, base: Object, hival: Object, table: Object| Object::Array(vec![family, base, hival, table]);
     let rgb = || Object::name("DeviceRGB");
     let plain = || indexed(Object::name("Indexed"), rgb(), 1.into(), table());
@@ -4045,7 +4045,7 @@ fn an_indexed_image_is_averaged_only_in_a_spelling_it_can_read() {
     assert_eq!(width(&|_| vec![("ColorSpace", indexed(Object::name("Indexed"), base.clone(), 1.into(), table()))]), averaged, "the base in an array");
     assert_eq!(width(&|_| vec![("ColorSpace", indexed(Object::name("I"), rgb(), 1.into(), table()))]), kept, "an inline abbreviation");
     assert_eq!(width(&|_| vec![("ColorSpace", indexed(Object::name("Indexed"), rgb(), Object::Real(1.0), table()))]), kept, "a real hival");
-    let long = Object::String(pdfcraft_cos::PdfString::literal([vec![0, 0, 0, 255, 255, 255], vec![0; 4097]].concat()));
+    let long = Object::String(simplypdf_cos::PdfString::literal([vec![0, 0, 0, 255, 255, 255], vec![0; 4097]].concat()));
     assert_eq!(width(&|_| vec![("ColorSpace", indexed(Object::name("Indexed"), rgb(), 1.into(), long.clone()))]), kept, "a string past a palette");
     // 16 KiB of raw data is all a table may take, whatever it decodes to.
     let mut d = Dict::new();
@@ -4053,7 +4053,7 @@ fn an_indexed_image_is_averaged_only_in_a_spelling_it_can_read() {
     let table_of = |raw: usize| {
         let d = d.clone();
         let hex: Vec<u8> = b"000000FFFFFF".iter().copied().chain(std::iter::repeat_n(b' ', raw - 13)).chain(*b">").collect();
-        move |doc: &mut Document| doc.add(Object::Stream(pdfcraft_cos::Stream::from_raw(d.clone(), hex.clone())))
+        move |doc: &mut Document| doc.add(Object::Stream(simplypdf_cos::Stream::from_raw(d.clone(), hex.clone())))
     };
     for (raw, expected) in [(16384, averaged), (16385, kept)] {
         let add = table_of(raw);

@@ -1,7 +1,7 @@
 //! Arbitrary bytes through every reader: an error or a value, never a panic.
 
-use pdfcraft_prc::{BitReader, PrcFile, Schema};
 use proptest::prelude::*;
+use simplypdf_prc::{BitReader, PrcFile, Schema};
 
 proptest! {
     #[test]

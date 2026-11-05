@@ -1,5 +1,7 @@
 # PdfCraft roadmap
 
+> SimplyPDF update 2026-11-05: app, CLI, crate and package names use SimplyPDF; takeoff work adds inline edits, category visibility, independent tool navigator/settings columns, and constrained HVAC presets. Native build, clippy, focused UI/automation tests, CLI rendering and asset/layer gates pass; upstream parity estimates unchanged.
+
 > **Last reviewed:** 2026-11-03 | **Last updated:** 2026-11-03 | **Change:** patch (M5 #5850 review: indirect typewriter intent and composer edits preserve outer whitespace; movement regression commits by outside click; estimates unchanged)
 
 > **Last reviewed:** 2026-11-03 | **Last updated:** 2026-11-03 | **Change:** patch (M5 #5850: Enter adds Fill & Sign line breaks; outside clicks commit, Escape cancels, and saved multiline appearances retain their text and height; estimates unchanged)
@@ -222,6 +224,8 @@ Ranked; detail and the full milestone table in [docs/roadmap.md](docs/roadmap.md
 | 8 | 1.0 polish: performance, right-to-left, missing languages, keyboard-only (M14) | 55–95 |
 
 ## Progress log
+
+- 2026-11-05: SimplyPDF naming and takeoff workspace controls verified: native build, clippy, 30 measurement tests, four UI regressions, three automation regressions, CLI render/save/XLSX smoke test, assets and layering.
 
 - **2026-11-04 (M12, takeoff workspace):** A bottom takeoff table supports search, column sorting, numeric quantities, unit-separated totals and selection linked to the drawing. Placement controls attach the table and measurement settings to sidebars or float them within the workspace.
 

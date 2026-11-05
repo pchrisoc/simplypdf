@@ -75,7 +75,7 @@ pub enum Edit {
         pages: Option<Vec<usize>>,
         at: usize,
         /// How a form field whose name the document already uses is kept separate.
-        field_conflicts: pdfcraft_organize::FieldConflicts,
+        field_conflicts: simplypdf_organize::FieldConflicts,
     },
     /// Add a bookmark to `page` as child `index` of the bookmark at `parent` (`[]` = top level).
     /// It goes to the user-space point (`left`, `top`) of the page at the reader's zoom, and
@@ -121,11 +121,11 @@ pub enum Edit {
     },
     /// Write `bookmarks` as children of `parent` from child `index` on, or with `replace` in
     /// place of the whole outline (`parent` must then be `[]`). A bookmark whose page this
-    /// document lacks is kept without a destination (see [`pdfcraft_organize::import_outline`]).
+    /// document lacks is kept without a destination (see [`simplypdf_organize::import_outline`]).
     ImportBookmarks {
         parent: Vec<usize>,
         index: usize,
-        bookmarks: Vec<pdfcraft_organize::OutlineNode>,
+        bookmarks: Vec<simplypdf_organize::OutlineNode>,
         replace: bool,
     },
     /// Bookmarks for the tagged headings (H, H1–H6), nested by level under a new first
@@ -140,12 +140,17 @@ pub enum Edit {
     NumberPages {
         from: usize,
         to: usize,
-        style: pdfcraft_organize::LabelStyle,
+        style: simplypdf_organize::LabelStyle,
         prefix: String,
         first: u32,
     },
     /// Add a calibrated distance, perimeter or area annotation.
     AddMeasurement(measure::NewMeasurement),
+    UpdateMeasurement {
+        page: usize,
+        index: usize,
+        patch: measure::MeasurementPatch,
+    },
     /// Store a drawing scale for a rectangular viewport (PDF user space).
     SetMeasurementScale {
         page: usize,
@@ -174,7 +179,7 @@ pub enum Edit {
         rect: [f64; 4],
         model: Arc<Vec<u8>>,
         poster: Option<MarkFile>,
-        activation: pdfcraft_annot::Activation3d,
+        activation: simplypdf_annot::Activation3d,
         name: String,
     },
     /// Delete the comment at `index` in the page's `/Annots`, with its pop-up and replies.
@@ -255,7 +260,7 @@ pub enum Edit {
         opacity: Option<f64>,
         width: Option<f64>,
         /// Line or polyline: two endings. Callout: one. `None` leaves `/LE` unchanged.
-        endings: Option<Vec<pdfcraft_annot::LineEnding>>,
+        endings: Option<Vec<simplypdf_annot::LineEnding>>,
     },
     /// Fill a rectangle, oval or polygon comment, or remove its fill (`None`).
     FillAnnotation {
@@ -349,14 +354,14 @@ pub enum Edit {
     AutoTagFormFields,
     /// Change one property on a reachable indirect structure tag.
     SetTagProperty {
-        object: pdfcraft_cos::ObjRef,
+        object: simplypdf_cos::ObjRef,
         property: a11y::TagProperty,
         value: Option<String>,
     },
     /// Move a structure tag before or after a direct sibling in reading order.
     MoveTag {
-        object: pdfcraft_cos::ObjRef,
-        anchor: pdfcraft_cos::ObjRef,
+        object: simplypdf_cos::ObjRef,
+        anchor: simplypdf_cos::ObjRef,
         placement: a11y::TagPlacement,
     },
     /// Add alternate text ▸ Decorative figure: the figure's content becomes an artifact.
@@ -365,7 +370,7 @@ pub enum Edit {
     },
     /// Tags panel ▸ Mark as artifact: retire a leaf tag and mark its content as an artifact.
     MarkTagArtifact {
-        object: pdfcraft_cos::ObjRef,
+        object: simplypdf_cos::ObjRef,
     },
     /// Document JavaScripts: add, replace (`script`) or remove (`None`) the document-level
     /// script `name`.
@@ -383,7 +388,7 @@ pub enum Edit {
     /// Standards ▸ Save as PDF/A: fix what can be fixed for `level` (metadata, output intent,
     /// forbidden actions, annotation flags, …).
     ConvertPdfA {
-        level: pdfcraft_preflight::Level,
+        level: simplypdf_preflight::Level,
     },
     /// Remove what identifies the document as meeting `standard` (PDF/A or PDF/X).
     RemoveStandardId {
@@ -392,7 +397,7 @@ pub enum Edit {
     /// What a script (button or console) changed in form fields: values, read-only, required
     /// and visibility.
     ApplyScriptChanges {
-        changes: Vec<pdfcraft_forms::FieldChange>,
+        changes: Vec<simplypdf_forms::FieldChange>,
     },
     /// An XFA form's scripted event (a button's `click`, say) on the object at `som`: what the
     /// script changes (values, rows, visibility) is applied and the form laid out again.
@@ -404,7 +409,7 @@ pub enum Edit {
     /// image (from [`ocr::OcrJob::run`](crate::ocr::OcrJob::run)).
     AddOcrText {
         page: usize,
-        words: Vec<pdfcraft_ocr::PlacedWord>,
+        words: Vec<simplypdf_ocr::PlacedWord>,
     },
     /// Edit a PDF ▸ Edit text: replace the text of line `line` (from `Document::text_lines`) on
     /// `page`, in its own font when it can show it, else in Helvetica.
@@ -433,7 +438,7 @@ pub enum Edit {
         block: usize,
         text: String,
         /// Formatting changes (font, size, colour, alignment); default keeps the paragraph's.
-        style: pdfcraft_edit::BlockStyle,
+        style: simplypdf_edit::BlockStyle,
     },
     /// An explicit open-licensed full font program, completing subsets or selected by a user.
     RegisterTextFont {
@@ -561,7 +566,7 @@ pub enum Edit {
     /// Sanitize Document: every category, then a full rewrite on save.
     Sanitize,
     /// An XFA form made an ordinary (static) PDF form: the XFA packets, `/NeedsRendering` and
-    /// PdfCraft's private keys go, the pages as laid out and the fields with their values
+    /// SimplyPDF's private keys go, the pages as laid out and the fields with their values
     /// stay, so every viewer shows the same form and none lays it out again. Its scripts no
     /// longer run.
     XfaToStatic,

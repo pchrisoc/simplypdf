@@ -1,6 +1,6 @@
 [package]
-name = "pdfcraft-ui-egui"
-description = "The egui shell of PdfCraft"
+name = "simplypdf-ui-egui"
+description = "The egui shell of SimplyPDF"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -19,13 +19,13 @@ craft-i18n = { workspace = true }
 # Quit from the menus asks the window to close, so the unsaved-changes check runs; on macOS a window
 # close also quits through `terminate:` (the Touch Bar crash, #1136).
 craft-quit = { workspace = true, features = ["egui"] }
-pdfcraft-fonts = { workspace = true }
-pdfcraft-engine = { workspace = true }
-pdfcraft-cos = { workspace = true }
-pdfcraft-content = { workspace = true }
-pdfcraft-render = { workspace = true }
-pdfcraft-model = { workspace = true }
-pdfcraft-platform = { workspace = true }
+simplypdf-fonts = { workspace = true }
+simplypdf-engine = { workspace = true }
+simplypdf-cos = { workspace = true }
+simplypdf-content = { workspace = true }
+simplypdf-render = { workspace = true }
+simplypdf-model = { workspace = true }
+simplypdf-platform = { workspace = true }
 egui = { workspace = true, features = ["bytemuck", "default_fonts", "monochrome_emoji_fonts"] }
 egui_extras = { workspace = true }
 eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit", "persistence", "links", "clipboard"] }
@@ -64,7 +64,7 @@ pollster = "1.0"
 fontconfig-parser = "0.5.8"
 
 [target.'cfg(target_os = "macos")'.dependencies]
-# Safe AppKit calls for drag coordinates and repairing an existing per-file PDFCraft binding.
+# Safe AppKit calls for drag coordinates and repairing an existing per-file SimplyPDF binding.
 # The Objective-C wrappers and block support are already in the tree through arboard and rfd.
 objc2 = "0.6"
 objc2-app-kit = { version = "0.3", default-features = false, features = ["std", "NSEvent", "NSScreen", "NSWorkspace", "block2"] }
@@ -72,7 +72,7 @@ objc2-foundation = { version = "0.3", default-features = false, features = ["std
 block2 = "0.6"
 plist = "1.10"
 # A plain fsync where a volume refuses the full flush `sync_all` asks for (SMB, FUSE); already in
-# the tree through pdfcraft-cli.
+# the tree through simplypdf-cli.
 rustix = { version = "1", features = ["fs"] }
 
 [target.'cfg(windows)'.dependencies]
@@ -91,13 +91,13 @@ web-sys = { version = "0.3", features = ["Window", "Document", "Element", "HtmlE
 
 [dev-dependencies]
 craft-update = { workspace = true }
-pdfcraft-xfa = { workspace = true }
+simplypdf-xfa = { workspace = true }
 egui_kittest = { workspace = true, features = ["eframe", "wgpu"] }
-# Tests draw PdfCraft text without a system provider: the bundled and monochrome emoji faces must
+# Tests draw SimplyPDF text without a system provider: the bundled and monochrome emoji faces must
 # be enabled on the test graph itself (a dependency's dev-features do not propagate).
 egui = { workspace = true, features = ["default_fonts", "monochrome_emoji_fonts"] }
 image = { version = "0.25", default-features = false, features = ["png"] }
-# Glyph-coverage test of the interface fonts; the same skrifa pdfcraft-fonts already uses.
+# Glyph-coverage test of the interface fonts; the same skrifa simplypdf-fonts already uses.
 skrifa = "0.44"
 proptest = { workspace = true }
 

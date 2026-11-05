@@ -9,13 +9,13 @@ use std::ops::Range;
 use std::sync::Arc;
 
 use egui::{Align2, Color32, CornerRadius, Pos2, Rect, Sense, Stroke, TextureHandle, TextureOptions, Vec2, pos2, vec2};
-use pdfcraft_engine::{DocId, Edit};
-use pdfcraft_render::{DestView, DocInfo, LayerOp, LinkTarget, PRINT_TAG, PageText, RenderPool, RenderRequest, RequestKind, Tile, device_pixels};
+use simplypdf_engine::{DocId, Edit};
+use simplypdf_render::{DestView, DocInfo, LayerOp, LinkTarget, PRINT_TAG, PageText, RenderPool, RenderRequest, RequestKind, Tile, device_pixels};
 
 use crate::page_cursor::Layer;
 use crate::page_pointer::PagePointer;
 use crate::theme::{self, Tokens};
-use crate::{PdfCraftApp, QuickTool, RightPanel, comments, icons, widgets};
+use crate::{QuickTool, RightPanel, SimplyPDFApp, comments, icons, widgets};
 
 mod area;
 pub(crate) mod autoscroll;
@@ -102,7 +102,7 @@ impl PainterExt for egui::Painter {
 /// User-space selectable bounding box for an image object.
 /// If the image object has an active clipping path applied to it (the crop box),
 /// this is the mathematical intersection of the full CTM-derived rect and the clipping path's rect.
-pub fn image_selectable_bounds(im: &pdfcraft_engine::PageImage) -> [f64; 4] {
+pub fn image_selectable_bounds(im: &simplypdf_engine::PageImage) -> [f64; 4] {
     if let Some(clip) = im.clip_rect {
         let r = [im.rect[0].max(clip[0]), im.rect[1].max(clip[1]), im.rect[2].min(clip[2]), im.rect[3].min(clip[3])];
         if r.iter().all(|v| v.is_finite()) && r[2] > r[0] && r[3] > r[1] {
@@ -116,7 +116,7 @@ pub fn image_selectable_bounds(im: &pdfcraft_engine::PageImage) -> [f64; 4] {
 /// If the image object has an active clipping path applied to it (the crop box),
 /// the final selectable `egui::Rect` is the mathematical intersection of the image's
 /// full CTM-derived rect and the clipping path's rect.
-pub fn image_screen_rect(im: &pdfcraft_engine::PageImage, xf: &PageXform, info: &DocInfo, page: usize) -> Rect {
+pub fn image_screen_rect(im: &simplypdf_engine::PageImage, xf: &PageXform, info: &DocInfo, page: usize) -> Rect {
     let full = xf.user_rect_f64(info, page, im.rect);
     if let Some(clip) = im.clip_rect {
         let clip_r = xf.user_rect_f64(info, page, clip);
@@ -211,7 +211,7 @@ impl ImageObb {
         Self { s00, s10, s11, s01, s_bc, s_rc, s_tc, s_lc, s_rot, screen_center, u_axis, v_axis, is_rotated }
     }
 
-    pub fn from_image(im: &pdfcraft_engine::PageImage, xf: &PageXform, info: &DocInfo, page: usize) -> Self {
+    pub fn from_image(im: &simplypdf_engine::PageImage, xf: &PageXform, info: &DocInfo, page: usize) -> Self {
         let [a, b, c, d, ..] = im.matrix;
         let is_rot = b.abs() > 1e-4 || c.abs() > 1e-4 || a < 0.0 || d < 0.0;
         let bounds = image_selectable_bounds(im);
@@ -257,7 +257,7 @@ impl ImageObb {
 
 /// Whether pointer `p` is on an image being cropped, its crop box or its handles (#5835).
 pub(crate) fn crop_contains_point(
-    img: &pdfcraft_engine::PageImage,
+    img: &simplypdf_engine::PageImage,
     crop: &crate::edit_text_ui::CropMode,
     xf: &PageXform,
     info: &DocInfo,
@@ -317,7 +317,7 @@ impl PageLayout {
         }
     }
 
-    /// Registry command that switches to this base layout (`PdfCraftApp::execute`).
+    /// Registry command that switches to this base layout (`SimplyPDFApp::execute`).
     pub fn command(self) -> &'static str {
         match self {
             Self::Single => "view.layout.single",
@@ -438,7 +438,7 @@ pub struct Snapshot {
 /// A snapshot reads like its source document, plus the snapshot suffix that tells
 /// the tabs apart. Without a title the file name (which already carries the suffix)
 /// is enough.
-pub(crate) fn tab_label(app: &PdfCraftApp, index: usize) -> Option<String> {
+pub(crate) fn tab_label(app: &SimplyPDFApp, index: usize) -> Option<String> {
     let view = app.views.get(index)?;
     let doc = app.session.get(view.id)?;
     let Some(snap) = view.snapshot.as_ref() else { return Some(doc.display_name()) };
@@ -606,7 +606,7 @@ pub struct DocView {
     pub pending_edit: Option<Edit>,
     /// Edit text: the lines per page (with the document generation they were read at), and the
     /// line being edited.
-    pub(crate) edit_lines: HashMap<usize, (u64, Vec<pdfcraft_engine::TextBlock>)>,
+    pub(crate) edit_lines: HashMap<usize, (u64, Vec<simplypdf_engine::TextBlock>)>,
     pub line_editor: Option<crate::edit_text_ui::LineEditor>,
     /// The paragraph editor whose edit was just queued. It opens again with its typing if the
     /// edit fails, as a refused form field does.
@@ -614,11 +614,11 @@ pub struct DocView {
     /// The box a click switched to while another paragraph was being edited: it opens once the
     /// queued edit has applied, so its index and geometry come from the document it now is (#2022).
     /// It is held as the paragraph's text and box, not an index: the edit can regroup the page.
-    pub(crate) pending_text_open: Option<(usize, pdfcraft_engine::BlockKey)>,
+    pub(crate) pending_text_open: Option<(usize, simplypdf_engine::BlockKey)>,
     pub(crate) text_background: crate::edit_text_ui::TextBackground,
     pub(crate) move_background: crate::content_ui::MoveBackground,
     /// Edit text & images: the images per page (by document generation), and the selected one.
-    pub(crate) edit_images: HashMap<usize, (u64, Vec<pdfcraft_engine::PageImage>)>,
+    pub(crate) edit_images: HashMap<usize, (u64, Vec<simplypdf_engine::PageImage>)>,
     pub(crate) objects: crate::object_ui::ObjectSelection,
     pub image_selection: Option<crate::edit_text_ui::ImageSelection>,
     /// Select tool: the picture clicked, to copy in its original format.
@@ -834,7 +834,7 @@ pub(crate) fn default_page_context_menu(ui: &mut egui::Ui, page: usize, at: [f64
     pick(
         ui.add_enabled(
             perms.can_paste,
-            egui::Button::new(tl!("Paste")).shortcut_text(crate::commands::shortcut_label(ui.ctx(), pdfcraft_engine::commands::Shortcut::cmd("V"))),
+            egui::Button::new(tl!("Paste")).shortcut_text(crate::commands::shortcut_label(ui.ctx(), simplypdf_engine::commands::Shortcut::cmd("V"))),
         ),
         ui,
         A::Paste(page, at),
@@ -1134,7 +1134,7 @@ type PageRenders = (Vec<(usize, f32, u64, Option<Tile>)>, Vec<usize>);
 /// What the page-scroll closure reads: this frame's zoom, scrolling, tool and document state.
 #[derive(Clone, Copy)]
 struct PageEnv<'a> {
-    added: &'a Vec<pdfcraft_engine::Added>,
+    added: &'a Vec<simplypdf_engine::Added>,
     allowed: bool,
     author: &'a String,
     auto_delta: Vec2,
@@ -1151,11 +1151,11 @@ struct PageEnv<'a> {
     content_w: f32,
     custom_stamp: &'a Option<crate::stamps_ui::CustomStamp>,
     date_text: &'a Result<String, String>,
-    doc: &'a pdfcraft_engine::Document,
-    doc_links: &'a Vec<pdfcraft_engine::LinkItem>,
+    doc: &'a simplypdf_engine::Document,
+    doc_links: &'a Vec<simplypdf_engine::LinkItem>,
     edge_delta: Vec2,
     editing_content: bool,
-    form: &'a Arc<Vec<pdfcraft_engine::FormField>>,
+    form: &'a Arc<Vec<simplypdf_engine::FormField>>,
     generation: u64,
     glide: Vec2,
     hand: bool,
@@ -1181,7 +1181,7 @@ struct PageEnv<'a> {
     t: &'a Tokens,
     table_preview: &'a Option<crate::field_table_ui::Preview>,
     tag: u64,
-    text_style: &'a pdfcraft_engine::AddedText,
+    text_style: &'a simplypdf_engine::AddedText,
     tool: QuickTool,
     units: crate::units::Unit,
     unobstructed: bool,
@@ -1492,7 +1492,7 @@ fn paint_page_tiles(
 }
 
 /// Images parsed once per page and document edit generation, shared by painting and menus.
-fn cached_edit_images<'a>(view: &'a mut DocView, doc: &pdfcraft_engine::Document, page: usize) -> &'a [pdfcraft_engine::PageImage] {
+fn cached_edit_images<'a>(view: &'a mut DocView, doc: &simplypdf_engine::Document, page: usize) -> &'a [simplypdf_engine::PageImage] {
     let generation = doc.edit_generation();
     let entry = view.edit_images.entry(page).or_insert_with(|| (generation, doc.page_images(page)));
     if entry.0 != generation {
@@ -2189,7 +2189,7 @@ fn scroll_prefetch(view: &DocView, visible_now: &[usize]) -> Vec<usize> {
 /// The whole-page raster a prefetch asks for: the page at this scale, or the backdrop of a page
 /// that is tiled at this scale. A cached raster sharper than the backdrop stays demanded as it
 /// is, as `paint_page_surface` demands it under tiles.
-fn prefetch_demand(view: &DocView, p: &pdfcraft_render::PageInfo, i: usize, scale: f32, tag: u64, max_side: f32) -> (usize, f32, u64, Option<Tile>) {
+fn prefetch_demand(view: &DocView, p: &simplypdf_render::PageInfo, i: usize, scale: f32, tag: u64, max_side: f32) -> (usize, f32, u64, Option<Tile>) {
     let side = p.width.max(p.height).max(1.0);
     if side * scale <= TILE_THRESHOLD.min(max_side) {
         return (i, scale, tag, None);
@@ -2358,7 +2358,7 @@ fn plan_renders(ui: &egui::Ui, view: &mut DocView, info: &DocInfo, renders: Page
 }
 
 /// Acts on the notice bar button that was clicked.
-fn apply_notice(app: &mut PdfCraftApp, index: usize, notice: Option<Notice>) {
+fn apply_notice(app: &mut SimplyPDFApp, index: usize, notice: Option<Notice>) {
     match notice {
         #[cfg(not(target_arch = "wasm32"))]
         Some(Notice::Reload) => app.watch.reload_request = app.views.get(index).map(|view| view.id),
@@ -2390,7 +2390,7 @@ fn apply_notice(app: &mut PdfCraftApp, index: usize, notice: Option<Notice>) {
 /// The snapshot notice bar's Close was clicked: close here, where no document borrow is held. The
 /// tab is looked up by id: indices may have shifted since the click, and the flag rides its own
 /// view, so a stale flag can never close the wrong tab. Whether a tab was closed (or asked about).
-fn close_requested_tab(app: &mut PdfCraftApp, index: usize) -> bool {
+fn close_requested_tab(app: &mut SimplyPDFApp, index: usize) -> bool {
     let pending = app.views.get(index).filter(|v| v.close_requested).map(|v| v.id).and_then(|id| app.views.iter().position(|v| v.id == id));
     let Some(i) = pending else { return false };
     app.views[i].close_requested = false;
@@ -2608,10 +2608,10 @@ fn schedule_presentation_turn(ui: &egui::Ui, view: &mut DocView, click: Option<b
 /// Follows the link that was clicked. A link to another file comes back, to be opened once the
 /// document is no longer borrowed.
 fn follow_link(
-    app: &mut PdfCraftApp,
+    app: &mut SimplyPDFApp,
     index: usize,
     target: Option<LinkTarget>,
-) -> Option<(pdfcraft_engine::DocId, String, pdfcraft_render::RemoteDestination)> {
+) -> Option<(simplypdf_engine::DocId, String, simplypdf_render::RemoteDestination)> {
     let view_id = app.views[index].id;
     match target? {
         LinkTarget::Page(p, dest) => {
@@ -2630,7 +2630,7 @@ fn follow_link(
 
 /// A finished marquee zoom, a signature rectangle drawn, or an empty signature field clicked.
 /// Returns the tool to go on with.
-fn finish_sign_requests(app: &mut PdfCraftApp, index: usize, mut tool: QuickTool) -> QuickTool {
+fn finish_sign_requests(app: &mut SimplyPDFApp, index: usize, mut tool: QuickTool) -> QuickTool {
     if let Some(done) = app.views[index].marquee_done.take() {
         app.finish_marquee(index, done);
     }
@@ -2820,7 +2820,7 @@ fn refine_goto_point(mut scroll: egui::ScrollArea, view: &mut DocView, geometry:
 
 /// Draws the document tab at `index`: its notice bars, then its pages (or the Organize grid) in a
 /// scroll area with this frame's zoom, scrolling, tool input, overlays and render requests.
-pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
+pub fn document_area(app: &mut SimplyPDFApp, index: usize, ui: &mut egui::Ui) {
     let t = Tokens::get(ui.ctx());
     let can_paste_key = egui::Id::unique("can-paste-image");
     let can_paste_image = if ui.input(|i| i.pointer.secondary_pressed()) {
@@ -3120,7 +3120,7 @@ pub fn document_area(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui) {
     }
     let form_notice = view.forms.notice.take();
     // One crop, then back to selecting (as Acrobat does).
-    let cropped = view.pending_edit.as_ref().is_some_and(|e| matches!(e, pdfcraft_engine::Edit::SetPageBox { .. }));
+    let cropped = view.pending_edit.as_ref().is_some_and(|e| matches!(e, simplypdf_engine::Edit::SetPageBox { .. }));
     let mut tool = app.quick_tool;
     comments::keys(ui.ctx(), view, &mut tool, allowed);
     if preparing {
@@ -3207,15 +3207,15 @@ struct FrameRequests {
     open_table: Option<(usize, [f64; 4])>,
     form_notice: Option<crate::forms_ui::FormNotice>,
     copy_selected: bool,
-    remote_open: Option<(pdfcraft_engine::DocId, String, pdfcraft_render::RemoteDestination)>,
-    form: Arc<Vec<pdfcraft_engine::FormField>>,
+    remote_open: Option<(simplypdf_engine::DocId, String, simplypdf_render::RemoteDestination)>,
+    form: Arc<Vec<simplypdf_engine::FormField>>,
     generation: u64,
     avail: Rect,
 }
 
 /// Opens the dialogs and runs the app commands the frame asked for.
 #[allow(clippy::cognitive_complexity)]
-fn apply_frame_requests(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui, requests: FrameRequests) {
+fn apply_frame_requests(app: &mut SimplyPDFApp, index: usize, ui: &mut egui::Ui, requests: FrameRequests) {
     let FrameRequests {
         open_props,
         field_props,
@@ -3266,9 +3266,9 @@ fn apply_frame_requests(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui, 
         app.views[index].pending_edit = Some(if app.quick_tool == QuickTool::Comment(comments::CommentTool::Highlight) {
             // An area highlight: a highlight over the box.
             let style = app.comment_prefs.style(comments::CommentTool::Highlight);
-            pdfcraft_engine::Edit::AddAnnotation(pdfcraft_engine::NewAnnotation {
+            simplypdf_engine::Edit::AddAnnotation(simplypdf_engine::NewAnnotation {
                 page,
-                shape: pdfcraft_engine::Shape::TextMarkup { kind: pdfcraft_engine::Markup::Highlight, quads },
+                shape: simplypdf_engine::Shape::TextMarkup { kind: simplypdf_engine::Markup::Highlight, quads },
                 style,
                 contents: String::new(),
                 author,
@@ -3359,7 +3359,7 @@ fn apply_frame_requests(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui, 
         }
         Some(PageMenuAction::FlattenComments) => {
             app.views[index].comments.selected = None;
-            app.views[index].pending_edit = Some(pdfcraft_engine::Edit::Flatten { comments: true, fields: false });
+            app.views[index].pending_edit = Some(simplypdf_engine::Edit::Flatten { comments: true, fields: false });
         }
         Some(PageMenuAction::AddBookmark) => {
             app.bookmark_action(crate::panels::BmAction::New);
@@ -3377,7 +3377,7 @@ fn apply_frame_requests(app: &mut PdfCraftApp, index: usize, ui: &mut egui::Ui, 
             app.add_image_dialog();
         }
         Some(PageMenuAction::DeletePage(page)) => {
-            app.views[index].pending_edit = Some(pdfcraft_engine::Edit::DeletePages { pages: vec![page] });
+            app.views[index].pending_edit = Some(simplypdf_engine::Edit::DeletePages { pages: vec![page] });
         }
         Some(PageMenuAction::ExportPdf) => {
             app.select_tool("export");

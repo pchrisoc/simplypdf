@@ -1,5 +1,5 @@
 use super::*;
-use pdfcraft_platform::staging::STAGING_ATTEMPTS;
+use simplypdf_platform::staging::STAGING_ATTEMPTS;
 
 /// `n` pages, page i showing "Page i".
 fn numbered_pages(n: usize) -> Vec<u8> {
@@ -148,7 +148,7 @@ fn search_bounds_warning_volume_and_does_not_reach_distant_failures() {
 
 #[test]
 fn a_bounded_text_find_reads_only_the_pages_it_needs_and_says_it_stopped() {
-    let dir = std::env::temp_dir().join(format!("pdfcraft-automation-find-{}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("simplypdf-automation-find-{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     std::fs::write(dir.join("long.pdf"), numbered_pages(200)).unwrap();
@@ -244,14 +244,14 @@ fn other_shares_and_device_paths_are_refused_by_name() {
 
 /// A fresh, empty folder for one staging test.
 fn staging_dir(test: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("pdfcraft-staging-{}-{test}", std::process::id()));
+    let dir = std::env::temp_dir().join(format!("simplypdf-staging-{}-{test}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(&dir).unwrap();
     dir
 }
 
 fn staged(dir: &Path, suffix: u64) -> PathBuf {
-    dir.join(format!(".out.pdf.{suffix:016x}.pdfcraft-tmp"))
+    dir.join(format!(".out.pdf.{suffix:016x}.simplypdf-tmp"))
 }
 
 fn read(p: &Path) -> String {

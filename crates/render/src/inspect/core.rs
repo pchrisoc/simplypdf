@@ -173,7 +173,7 @@ impl<'a> Inspector<'a> {
             info.producer = self.text(d, b"Producer");
             const STANDARD: [&[u8]; 9] =
                 [b"Title", b"Author", b"Subject", b"Keywords", b"Creator", b"Producer", b"CreationDate", b"ModDate", b"Trapped"];
-            // The same rule as the engine's list after an edit (`pdfcraft_organize::custom_info`,
+            // The same rule as the engine's list after an edit (`simplypdf_organize::custom_info`,
             // trimmed and without empty values): text strings only, so a name value is not a
             // custom property, and the cap counts listed entries.
             info.custom = d

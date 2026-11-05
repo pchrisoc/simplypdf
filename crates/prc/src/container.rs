@@ -293,7 +293,7 @@ impl PrcFile {
     ///
     /// # Examples
     /// ```
-    /// use pdfcraft_prc::{PrcError, PrcFile};
+    /// use simplypdf_prc::{PrcError, PrcFile};
     /// assert_eq!(PrcFile::parse(b"%PDF"), Err(PrcError::NotPrc));
     /// ```
     pub fn parse(data: &[u8]) -> Result<Self, PrcError> {

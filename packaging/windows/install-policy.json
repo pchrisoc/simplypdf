@@ -1,12 +1,12 @@
 {
-  "id": "pdfcraft",
-  "name": "PdfCraft",
-  "upgradeCode": "EA00C367-7270-4C50-9D8B-A7A5C88AD27F",
+  "id": "simplypdf",
+  "name": "SimplyPDF",
+  "upgradeCode": "31AA527A-AA2D-537F-9994-8C67FF78DB50",
   "sources": [
-    "pdfcraft.wxs",
+    "simplypdf.wxs",
     "installer-ui.wxs"
   ],
-  "icon": "assets/app-icon/pdfcraft.ico",
+  "icon": "assets/app-icon/simplypdf.ico",
   "localization": [],
   "extensions": [],
   "payloads": [
@@ -14,315 +14,315 @@
     "LICENSE-MIT",
     "LICENSE-document.txt",
     "NOTICE",
-    "pdfcraft-cli.exe",
-    "pdfcraft.exe"
+    "simplypdf-cli.exe",
+    "simplypdf.exe"
   ],
   "registry": [
     [
       "-1",
-      "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\pdfcraft.exe",
+      "Software\\Microsoft\\Windows\\CurrentVersion\\App Paths\\simplypdf.exe",
       "",
-      "[#PdfcraftExe]"
+      "[#SimplyPDFExe]"
     ],
     [
       "-1",
-      "Software\\Classes\\PdfCraft.Document",
+      "Software\\Classes\\SimplyPDF.Document",
       "",
       "PDF Document"
     ],
     [
       "-1",
-      "Software\\Classes\\PdfCraft.Document\\DefaultIcon",
+      "Software\\Classes\\SimplyPDF.Document\\DefaultIcon",
       "",
-      "\"[#PdfcraftExe]\",-2"
+      "\"[#SimplyPDFExe]\",-2"
     ],
     [
       "-1",
-      "Software\\Classes\\PdfCraft.Document\\shell\\open\\command",
+      "Software\\Classes\\SimplyPDF.Document\\shell\\open\\command",
       "",
-      "\"[#PdfcraftExe]\" \"%1\""
+      "\"[#SimplyPDFExe]\" \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\PdfCraft.Document",
+      "Software\\Classes\\SimplyPDF.Document",
       "TypeOverlay",
       ""
     ],
     [
       "-1",
       "Software\\Classes\\.pdf\\OpenWithProgids",
-      "PdfCraft.Document",
+      "SimplyPDF.Document",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\pdfcraft.exe",
+      "Software\\Classes\\Applications\\simplypdf.exe",
       "FriendlyAppName",
-      "PdfCraft"
+      "SimplyPDF"
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\pdfcraft.exe\\DefaultIcon",
+      "Software\\Classes\\Applications\\simplypdf.exe\\DefaultIcon",
       "",
-      "\"[#PdfcraftExe]\",-2"
+      "\"[#SimplyPDFExe]\",-2"
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\pdfcraft.exe\\SupportedTypes",
+      "Software\\Classes\\Applications\\simplypdf.exe\\SupportedTypes",
       ".pdf",
       ""
     ],
     [
       "-1",
-      "Software\\Classes\\Applications\\pdfcraft.exe\\shell\\open\\command",
+      "Software\\Classes\\Applications\\simplypdf.exe\\shell\\open\\command",
       "",
-      "\"[#PdfcraftExe]\" \"%1\""
+      "\"[#SimplyPDFExe]\" \"%1\""
     ],
     [
       "-1",
-      "Software\\PdfCraft\\Capabilities",
+      "Software\\SimplyPDF\\Capabilities",
       "ApplicationName",
-      "PdfCraft"
+      "SimplyPDF"
     ],
     [
       "-1",
-      "Software\\PdfCraft\\Capabilities",
+      "Software\\SimplyPDF\\Capabilities",
       "ApplicationDescription",
       "Open-source PDF workbench"
     ],
     [
       "-1",
-      "Software\\PdfCraft\\Capabilities",
+      "Software\\SimplyPDF\\Capabilities",
       "ApplicationIcon",
-      "[#PdfcraftExe],0"
+      "[#SimplyPDFExe],0"
     ],
     [
       "-1",
-      "Software\\PdfCraft\\Capabilities\\FileAssociations",
+      "Software\\SimplyPDF\\Capabilities\\FileAssociations",
       ".pdf",
-      "PdfCraft.Document"
+      "SimplyPDF.Document"
     ],
     [
       "-1",
       "Software\\RegisteredApplications",
-      "PdfCraft",
-      "Software\\PdfCraft\\Capabilities"
+      "SimplyPDF",
+      "Software\\SimplyPDF\\Capabilities"
     ],
     [
       "-1",
-      "Software\\PdfCraft\\Shortcuts",
+      "Software\\SimplyPDF\\Shortcuts",
       "StartMenu",
       "#1"
     ],
     [
       "-1",
-      "Software\\PdfCraft\\Shortcuts",
+      "Software\\SimplyPDF\\Shortcuts",
       "Desktop",
       "#1"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.pdf\\shell\\PdfCraft.Edit",
+      "Software\\Classes\\SystemFileAssociations\\.pdf\\shell\\SimplyPDF.Edit",
       "",
-      "Edit with PdfCraft"
+      "Edit with SimplyPDF"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.pdf\\shell\\PdfCraft.Edit",
+      "Software\\Classes\\SystemFileAssociations\\.pdf\\shell\\SimplyPDF.Edit",
       "Icon",
-      "\"[#PdfcraftExe]\",0"
+      "\"[#SimplyPDFExe]\",0"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.pdf\\shell\\PdfCraft.Edit",
+      "Software\\Classes\\SystemFileAssociations\\.pdf\\shell\\SimplyPDF.Edit",
       "MultiSelectModel",
       "Document"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.pdf\\shell\\PdfCraft.Edit\\command",
+      "Software\\Classes\\SystemFileAssociations\\.pdf\\shell\\SimplyPDF.Edit\\command",
       "",
-      "\"[#PdfcraftExe]\" \"%1\""
+      "\"[#SimplyPDFExe]\" \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.png\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.png\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.png\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.png\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.png\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.png\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jpg\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.jpg\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jpg\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.jpg\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jpg\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.jpg\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jpeg\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.jpeg\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jpeg\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.jpeg\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jpeg\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.jpeg\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.tif\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.tif\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.tif\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.tif\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.tif\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.tif\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.tiff\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.tiff\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.tiff\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.tiff\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.tiff\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.tiff\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.gif\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.gif\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.gif\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.gif\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.gif\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.gif\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.bmp\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.bmp\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.bmp\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.bmp\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.bmp\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.bmp\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jp2\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.jp2\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jp2\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.jp2\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jp2\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.jp2\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.j2k\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.j2k\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.j2k\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.j2k\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.j2k\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.j2k\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jpx\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.jpx\\shell\\SimplyPDF.CreatePdf",
       "",
-      "Create PDF with PdfCraft\u2026"
+      "Create PDF with SimplyPDF\u2026"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jpx\\shell\\PdfCraft.CreatePdf",
+      "Software\\Classes\\SystemFileAssociations\\.jpx\\shell\\SimplyPDF.CreatePdf",
       "MultiSelectModel",
       "Single"
     ],
     [
       "-1",
-      "Software\\Classes\\SystemFileAssociations\\.jpx\\shell\\PdfCraft.CreatePdf\\command",
+      "Software\\Classes\\SystemFileAssociations\\.jpx\\shell\\SimplyPDF.CreatePdf\\command",
       "",
-      "\"[#PdfcraftExe]\" --create-images \"%1\""
+      "\"[#SimplyPDFExe]\" --create-images \"%1\""
     ]
   ],
   "mode": "dualScope"

@@ -1,6 +1,6 @@
 [package]
-name = "pdfcraft-render"
-description = "Page rendering (bootstrap: hayro) and document inspection for PdfCraft"
+name = "simplypdf-render"
+description = "Page rendering (bootstrap: hayro) and document inspection for SimplyPDF"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -9,11 +9,11 @@ license.workspace = true
 workspace = true
 
 [dependencies]
-pdfcraft-cos = { workspace = true }
-pdfcraft-fonts = { workspace = true }
+simplypdf-cos = { workspace = true }
+simplypdf-fonts = { workspace = true }
 hayro = { workspace = true }
 hayro-syntax = { workspace = true }
-# Picks the face of an installed font collection (the version pdfcraft-fonts already uses).
+# Picks the face of an installed font collection (the version simplypdf-fonts already uses).
 skrifa = "0.44"
 lopdf = { workspace = true }
 kurbo = { workspace = true }

@@ -67,7 +67,7 @@ impl HeaderFooter {
     /// (and a `\r` that would be drawn is refused too). The dialog asks this too, so its preview
     /// never offers text that applying refuses (#2013).
     pub fn first_undrawable(&self) -> Option<char> {
-        self.text.iter().flat_map(|t| t.lines()).find_map(pdfcraft_fonts::first_non_win_ansi)
+        self.text.iter().flat_map(|t| t.lines()).find_map(simplypdf_fonts::first_non_win_ansi)
     }
 
     /// The room the header and the footer take at the top and the bottom of a page, in points:
@@ -111,7 +111,7 @@ pub(crate) fn shrink_matrix(hf: &HeaderFooter, size: (f64, f64), view: [f64; 6])
 /// the document, an image (drawn into a unit square) or a form (a page of a PDF).
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct MarkSource {
-    pub xobject: pdfcraft_cos::ObjRef,
+    pub xobject: simplypdf_cos::ObjRef,
     /// Its natural size in points.
     pub size: (f64, f64),
     /// An image XObject (unit square); otherwise a form whose `/Matrix` maps it to `size`.
@@ -144,7 +144,7 @@ impl Watermark {
     pub fn first_undrawable(&self) -> Option<char> {
         match self.source {
             Some(_) => None,
-            None => self.text.trim().lines().find_map(pdfcraft_fonts::first_non_win_ansi),
+            None => self.text.trim().lines().find_map(simplypdf_fonts::first_non_win_ansi),
         }
     }
 }
@@ -206,7 +206,7 @@ pub(crate) fn picture(src: &MarkSource, page: (f64, f64), scale: f64, rotation: 
 }
 
 /// Register a mark picture in the page's own resources (`/PCPic<num>`).
-pub(crate) fn add_picture_resource(doc: &mut Document, page: &pdfcraft_model::Page, src: &MarkSource) -> Result<(), EditError> {
+pub(crate) fn add_picture_resource(doc: &mut Document, page: &simplypdf_model::Page, src: &MarkSource) -> Result<(), EditError> {
     let p = doc.get(page.obj).as_dict().cloned().unwrap_or_default();
     let mut res = p.get(b"Resources").map(|r| doc.resolve(r)).and_then(|r| r.as_dict().cloned()).unwrap_or_default();
     let mut xo = res.get(b"XObject").map(|x| doc.resolve(x)).and_then(|x| x.as_dict().cloned()).unwrap_or_default();
@@ -226,7 +226,7 @@ pub struct Context {
 // Model-derived transforms can contain tiny scale factors; retain their PDF decimal precision.
 pub(crate) fn matrix_number(value: f64) -> String {
     let mut bytes = Vec::new();
-    pdfcraft_cos::serialize(&Object::Real(value), &mut bytes);
+    simplypdf_cos::serialize(&Object::Real(value), &mut bytes);
     String::from_utf8_lossy(&bytes).into_owned()
 }
 

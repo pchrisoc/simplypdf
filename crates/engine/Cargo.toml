@@ -1,6 +1,6 @@
 [package]
-name = "pdfcraft-engine"
-description = "PdfCraft engine façade: session, documents, command/tool catalogue"
+name = "simplypdf-engine"
+description = "SimplyPDF engine façade: session, documents, command/tool catalogue"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -10,35 +10,35 @@ workspace = true
 
 [dependencies]
 craft-docpath = { workspace = true }
-pdfcraft-measure = { workspace = true }
+simplypdf-measure = { workspace = true }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "tiff"] }
-pdfcraft-render = { workspace = true }
-pdfcraft-cos = { workspace = true }
-pdfcraft-organize = { workspace = true }
-pdfcraft-annot = { workspace = true }
-pdfcraft-forms = { workspace = true }
-pdfcraft-xfa = { workspace = true }
-pdfcraft-edit = { workspace = true }
-pdfcraft-content = { workspace = true }
-pdfcraft-audit = { workspace = true }
-pdfcraft-redact = { workspace = true }
-pdfcraft-print = { workspace = true }
-pdfcraft-xfdf = { workspace = true }
-pdfcraft-sign = { workspace = true }
-pdfcraft-optimize = { workspace = true }
-pdfcraft-a11y = { workspace = true }
-pdfcraft-ocr = { workspace = true }
-pdfcraft-js = { workspace = true }
-pdfcraft-compare = { workspace = true }
-pdfcraft-preflight = { workspace = true }
-pdfcraft-export = { workspace = true }
-pdfcraft-fonts = { workspace = true }
-pdfcraft-create = { workspace = true }
-pdfcraft-model = { workspace = true }
-pdfcraft-geom = { workspace = true }
+simplypdf-render = { workspace = true }
+simplypdf-cos = { workspace = true }
+simplypdf-organize = { workspace = true }
+simplypdf-annot = { workspace = true }
+simplypdf-forms = { workspace = true }
+simplypdf-xfa = { workspace = true }
+simplypdf-edit = { workspace = true }
+simplypdf-content = { workspace = true }
+simplypdf-audit = { workspace = true }
+simplypdf-redact = { workspace = true }
+simplypdf-print = { workspace = true }
+simplypdf-xfdf = { workspace = true }
+simplypdf-sign = { workspace = true }
+simplypdf-optimize = { workspace = true }
+simplypdf-a11y = { workspace = true }
+simplypdf-ocr = { workspace = true }
+simplypdf-js = { workspace = true }
+simplypdf-compare = { workspace = true }
+simplypdf-preflight = { workspace = true }
+simplypdf-export = { workspace = true }
+simplypdf-fonts = { workspace = true }
+simplypdf-create = { workspace = true }
+simplypdf-model = { workspace = true }
+simplypdf-geom = { workspace = true }
 thiserror = { workspace = true }
 png = "0.18"
-# Already in the graph (through image and pdfcraft-create): image's TiffEncoder can't set the
+# Already in the graph (through image and simplypdf-create): image's TiffEncoder can't set the
 # resolution or the compression of an exported page.
 tiff = "0.11"
 # Already in the graph (url and idna through webbrowser, icu_properties through boa): they show
@@ -58,6 +58,6 @@ getrandom = "0.4"
 getrandom = { version = "0.4", features = ["wasm_js"] }
 
 [dev-dependencies]
-pdfcraft-testkit = { workspace = true }
+simplypdf-testkit = { workspace = true }
 # JBIG2 fixtures (`encode_jbig2_generic`).
-pdfcraft-filters = { workspace = true }
+simplypdf-filters = { workspace = true }
