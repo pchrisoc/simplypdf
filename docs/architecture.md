@@ -28,3 +28,5 @@ Keep engine-specific code in its adapter crate. Document acquisition, licenses, 
 The desktop and MCP can call the same `DistanceScale` API in `crates/simplypdf-core/src/measurement.rs`. Calibrate it from two canonical page points and a known length in millimeters. Pass two or more canonical page points to `length_mm` to measure an open path. Round only at the presentation or export boundary.
 
 The calling service will resolve scale scope and verification state before measuring. Keep those decisions in the shared service when it arrives so the desktop, export, and MCP all agree. Keep the distance API independent of storage and transport so it can be exercised with a small input and known result.
+
+`preview::preview_distance` combines the distance API with output unit conversion and calibration provenance. It takes a resolved scale outcome, so region matching and project state stay outside the calculation. See the [read-only MCP contract](mcp/README.md) for the adapter's planned mapping.

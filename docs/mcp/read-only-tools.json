@@ -1,0 +1,80 @@
+{
+  "tools": [
+    {
+      "name": "list_sheets",
+      "description": "List sheets and their page scale status in the selected saved project.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "cursor": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_calibration",
+      "description": "Inspect the saved calibration at an exact sheet or region scope.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sheet_id": { "type": "string", "minLength": 1 },
+          "region_id": { "type": "string", "minLength": 1 }
+        },
+        "required": ["sheet_id"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "preview_distance",
+      "description": "Preview an unrounded distance using the saved scale resolved for a canonical page path.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sheet_id": { "type": "string", "minLength": 1 },
+          "region_id": { "type": "string", "minLength": 1 },
+          "points": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": { "type": "number" }
+            }
+          },
+          "unit": { "enum": ["mm", "m", "in", "ft"] }
+        },
+        "required": ["sheet_id", "points", "unit"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "list_measurements",
+      "description": "List saved measurements and their calibration references, optionally filtered by sheet or category.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sheet_id": { "type": "string", "minLength": 1 },
+          "category": { "type": "string" },
+          "cursor": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    },
+    {
+      "name": "get_takeoff_totals",
+      "description": "Return unrounded subtotals in a common unit with explicit scale eligibility.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "sheet_id": { "type": "string", "minLength": 1 },
+          "category": { "type": "string" },
+          "unit": { "enum": ["mm", "m", "in", "ft"] },
+          "draft": { "type": "boolean", "default": false }
+        },
+        "required": ["unit"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

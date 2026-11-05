@@ -19,7 +19,8 @@ Project remote (SSH) `git@github.com:pchrisoc/simplypdf.git`
 - [x] Generate the first deterministic PDF fixture with independently specified geometry and lengths, plus a manifest.
 - [x] Implement canonical page geometry and headless tests for rotation, crop and media offsets, UserUnit, and canvas round trips.
 - [x] Define and test the shared distance interface for straight and continuous paths.
-- [ ] Draft the MCP schemas and service contract tests.
+- [x] Draft the [read-only MCP contract](docs/mcp/README.md) and test the shared distance preview service.
+- [ ] Add project-backed MCP service and transport contract tests as persistence and scope resolution land.
 - [x] Add the minimum Rust toolchain build and test workflow for Windows x64, macOS arm64, and Ubuntu 24.04 x64.
 - [ ] Confirm the three CI jobs pass and record the tested OS coverage.
 - [ ] Evaluate Rust desktop UI frameworks and Rust-compatible PDF rendering and editing adapters. Pin the dependencies selected for the spike. Check licensing, reproducibility, installer size, and memory. Open and render a fixture and verify point placement.

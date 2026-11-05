@@ -27,3 +27,11 @@ Next slice is the shared measurement contract and cross-platform core CI, follow
 - Reviewed outgoing paths before publication. The synthetic PDF is generated from first-party Rust source. The local Revu installer and vendor reference tree remain ignored.
 
 Next slice is the MCP schema and service contract draft, then a Rust desktop viewer spike that opens the synthetic PDF and demonstrates pointer alignment.
+
+## 2026-11-04 · Stage 0, read-only MCP contract and preview
+
+- Drafted machine-readable input schemas for all five tools and documented the saved snapshot boundary, result fields, unit conventions, and error mapping.
+- Added a headless Rust preview service with unrounded output conversion, explicit scale errors, and calibration provenance. Scope resolution remains a caller responsibility until the shared project service lands.
+- Verified all eleven integration tests with `cargo test --workspace --all-targets --locked --offline` on macOS arm64. Parsed the draft tool definitions and checked tool names, required fields, and absence of file path inputs. Live MCP protocol, project-backed service tests, and cross-platform results remain unverified in this slice.
+
+Next slice is the Rust desktop viewer spike. Open the synthetic drawing, render each page rotation, and verify pointer placement through the same core transform. Keep the renderer adapter separate from the viewer and record the dependency decision.
