@@ -15,6 +15,12 @@ and support `measure_export` CSV instead. It creates a workbook from the current
 current session. The result reports unsupported measurements and whether enumeration reached
 its limits. Choose a fresh output path for each export.
 
+CSV and XLSX extraction both require the PDF's copying permission, through the shared
+engine `measurements_for_export` API. Opening with the permissions password lifts that
+restriction. A refused export creates no output and preserves any existing file; viewing
+and listing the measurements remain available. Desktop CSV commands are disabled when
+copying is restricted.
+
 The `TakeoffData` named range contains the header and all measurement rows. In a separate
 LibreOffice Calc estimate, use **Sheet → External Links** to import this range. Calc can poll
 the source workbook at a configured interval. Automatic publication from PDF edits is pending.

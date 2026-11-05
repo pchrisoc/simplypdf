@@ -93,3 +93,7 @@ family (`sign`, `sign_with_timestamp`, `timestamp_document`, `embed_ltv`).
 `doc.text_edit_preview(page, block)` prepares a read-only page background with the selected
 paragraph’s glyphs removed, preserving text positioning, images and colours. It shares the
 working document’s render configuration and never enters the undo history.
+
+Measurement exports use `Document::measurements_for_export`, which checks copying
+permission before returning rows. `measurements` remains the read-only annotation viewer
+query. Both desktop export formats and CLI/MCP exports use the checked API.

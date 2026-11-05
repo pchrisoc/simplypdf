@@ -1,5 +1,10 @@
 # PdfCraft roadmap: milestones and what's next
 
+> SimplyPDF update 2026-11-05 (ENG-08.04 partial): CSV/XLSX exports share the engine
+> copying-permission check; encrypted user/owner regressions and native control verification
+> pass. Scoped engine/automation/UI strict Clippy, WASM compilation (existing warnings), native
+> builds and desktop export regression pass. CSV replacement policy remains pending; no completion increase.
+
 > SimplyPDF update 2026-11-05 (ENG-08.01 partial): shared CSV/XLSX takeoff schema v1
 > includes annotation IDs and HVAC properties; version metadata remains present for empty
 > exports. Native tests, strict scoped Clippy, assets, layers, and rotated CLI render smoke
@@ -301,6 +306,11 @@ M2 (renderer), M7 (content editing), M10 (OCR and Office), M11 (Preflight and st
 - Unmeasured fidelity: without an Acrobat comparison harness, quality gaps surface as user reports.
 
 ## Revision history
+
+**2026-11-05 · minor · ENG-08.04 partial:** Restricted PDF takeoff export now uses one
+engine guard across desktop and automation. The failing-before/passing-after regression
+checks owner access, no output on refusal and existing-file preservation. Native control
+verification confirms the disabled export command and visible table. Snapshot policy remains partial.
 
 **2026-11-05 · minor · ENG-08.01 partial:** Added the versioned shared takeoff export
 contract, preserved existing column positions, and verified empty/populated exports through

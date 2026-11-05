@@ -266,6 +266,13 @@ impl Document {
         let e = self.editor.as_ref().ok_or("the document can't be read")?;
         Ok(measure::list(&e.cos))
     }
+    /// Measurements for an external CSV/workbook. Viewing annotations remains available,
+    /// but extracting their contents honors the PDF's copying permission.
+    pub fn measurements_for_export(&self) -> Result<measure::Listing, String> {
+        self.check_copying().map_err(|e| e.to_string())?;
+        self.measurements()
+    }
+
     pub fn measurement_scale(&self, page: usize, at: measure::Point) -> Result<measure::Scale, String> {
         let e = self.editor.as_ref().ok_or("the document can't be read")?;
         measure::scale_at(&e.cos, page, at).map_err(|e| e.to_string())

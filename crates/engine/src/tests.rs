@@ -1631,7 +1631,18 @@ fn copy_restricted_documents_refuse_extraction_unless_opened_by_the_owner() {
     assert!(d.allows_printing() && d.allows_modification() && d.allows_assembly(), "only copying is withheld");
     assert_eq!(d.check_copying(), Err(EditError::NotPermitted("copying text and images")));
     assert!(d.page_image_file(0, 0).unwrap_err().contains("don't allow copying"));
-    let extracting = ["edit.snapshot", "export.image", "export.text", "export.docx", "export.pptx", "export.html", "export.rtf", "export.all_images"];
+    assert!(d.measurements_for_export().unwrap_err().contains("don't allow copying"));
+    let extracting = [
+        "edit.snapshot",
+        "export.image",
+        "export.text",
+        "export.docx",
+        "export.pptx",
+        "export.html",
+        "export.rtf",
+        "export.all_images",
+        "measure.export",
+    ];
     let enabled = |s: &Session, id, c| commands::is_enabled(commands::command(c).unwrap(), s, Some(id));
     for c in extracting {
         assert!(!enabled(&s, id, c), "{c} is disabled");
@@ -1640,6 +1651,7 @@ fn copy_restricted_documents_refuse_extraction_unless_opened_by_the_owner() {
     assert!(s.get(id).unwrap().autotag_preview(0).is_ok(), "like a11y.check, the auto-tag preview is allowed");
     let oid = s.open("r.pdf", None, bytes, Some("owner")).unwrap();
     assert!(s.get(oid).unwrap().allows_copying());
+    assert!(s.get(oid).unwrap().measurements_for_export().is_ok());
     assert!(extracting.iter().all(|c| enabled(&s, oid, c)));
     // Comparing reads both documents' text out, into the result, the report and the comments.
     let refused = || Err(EditError::NotPermitted("copying text and images"));

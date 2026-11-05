@@ -179,7 +179,7 @@ pub const COMMANDS: &[CommandSpec] = &[
     c("measure.scale", "Set measurement scale", None, None, Annotate, "ruler"),
     c("measure.info", "Measurement information", None, None, Document, "ruler"),
     c("measure.snap", "Measurement snapping", None, None, Document, "ruler"),
-    c("measure.export", "Export measurements as CSV", None, None, Document, "file-output"),
+    c("measure.export", "Export measurements as CSV", None, None, Copying, "file-output"),
     c("page.copy", "Copy pages", None, None, Document, "copy"),
     c("page.cut", "Cut pages", None, None, Assembly, "scissors"),
     c("page.paste", "Paste pages", None, None, Assembly, "clipboard-paste"),

@@ -201,7 +201,7 @@ impl Automation {
         Ok(json!({"snap":snap,"truncated":geometry.truncated,"intersection_limited":intersection_limited,"segments":geometry.segments.len()}))
     }
     pub(crate) fn measurement_export(&self, a: &Args) -> Result<Value> {
-        let all = self.doc(a)?.measurements().map_err(failed)?;
+        let all = self.doc(a)?.measurements_for_export().map_err(failed)?;
         let csv = measure::csv(&all.measurements);
         let target = self.resolve(a.str("out")?, true)?;
         crate::write_atomic(&target, csv.as_bytes())?;
@@ -226,10 +226,7 @@ impl Automation {
             return Err(failed(format!("{} already exists; choose a new workbook path", target.display())));
         }
         let doc = self.doc(a)?;
-        if !doc.allows_copying() {
-            return Err(failed("this PDF's security settings restrict copying measurements"));
-        }
-        let all = doc.measurements().map_err(failed)?;
+        let all = doc.measurements_for_export().map_err(failed)?;
         measure::xlsx::write_new(&target, &all.measurements).map_err(failed)?;
         Ok(
             json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}),

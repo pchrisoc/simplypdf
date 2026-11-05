@@ -225,6 +225,19 @@ Ranked; detail and the full milestone table in [docs/roadmap.md](docs/roadmap.md
 
 ## Progress log
 
+- 2026-11-05 (ENG-08.04 partial): Closed the CSV takeoff copying-permission bypass.
+  Desktop CSV/XLSX and CLI/MCP share `Document::measurements_for_export`; the CSV command
+  requires copying permission. The new automation regression failed before the fix and
+  passes after it, covering encrypted user/owner access, no output on refusal, existing-file
+  preservation and unchanged measurement rows. Native opt-in control inspection, command
+  rejection and a viewed screenshot confirm disabled export while the table remains readable;
+  CLI refusal creates no output. The broader snapshot task remains unchecked pending CSV
+  replacement-policy reconciliation; upstream parity estimates are unchanged. Six focused
+  automation cases, the engine copying-permission regression, the desktop measurement/export
+  control test, strict all-target Clippy for engine/automation/UI, native app/CLI builds, fmt,
+  assets, layers, and scoped engine/automation/UI WASM compilation pass. WASM retains existing
+  renderer/UI warnings; Windows/Linux runtime verification is not claimed.
+
 - 2026-11-05 (ENG-08.01 partial): Added the shared takeoff schema v1. CSV now includes
   annotation IDs/HVAC fields; XLSX appends a numeric schema column and defines
   `TakeoffSchemaVersion`, including for empty exports. CLI/MCP listing/export results

@@ -8266,6 +8266,37 @@ fn takeoff_exports_declare_schema_and_share_identity_and_hvac_columns() {
 }
 
 #[test]
+fn takeoff_exports_honor_copy_permissions_and_preserve_outputs() {
+    let dir = workdir("takeoff-copy-permissions");
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({"path":"a.pdf"}))["doc"].clone();
+    ok(&mut a, "measure_distance", json!({"doc":doc,"page":1,"points":[[10,10],[82,10]]}));
+    ok(&mut a, "doc_protect", json!({"doc":doc,"open_password":"open","permissions_password":"owner","copy":false}));
+    ok(&mut a, "doc_save", json!({"doc":doc,"path":"restricted.pdf"}));
+    let mut b = auto(&dir);
+    let user = ok(&mut b, "doc_open", json!({"path":"restricted.pdf","password":"open"}))["doc"].clone();
+    let before = ok(&mut b, "measure_list", json!({"doc":user}));
+    for (tool, filename) in [("measure_export", "restricted.csv"), ("takeoff_export_xlsx", "restricted.xlsx")] {
+        let args = json!({"doc":user,"out":filename});
+        match b.call(tool, &args) {
+            Err(ToolError::Failed(message)) => assert!(message.contains("copying"), "{message}"),
+            other => panic!("{tool} must refuse restricted export: {other:?}"),
+        }
+        assert!(!dir.join(filename).exists());
+    }
+    std::fs::write(dir.join("existing.csv"), b"keep estimate").unwrap();
+    assert!(b.call("measure_export", &json!({"doc":user,"out":"existing.csv"})).is_err());
+    assert_eq!(std::fs::read(dir.join("existing.csv")).unwrap(), b"keep estimate");
+    assert_eq!(ok(&mut b, "measure_list", json!({"doc":user})), before);
+    let owner = ok(&mut b, "doc_open", json!({"path":"restricted.pdf","password":"owner"}))["doc"].clone();
+    for (tool, filename) in [("measure_export", "owner.csv"), ("takeoff_export_xlsx", "owner.xlsx")] {
+        assert_eq!(ok(&mut b, tool, json!({"doc":owner,"out":filename}))["count"], 1);
+        assert!(dir.join(filename).is_file());
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
 fn takeoff_empty_exports_keep_headers_and_schema_metadata() {
     use std::io::Read;
 

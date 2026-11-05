@@ -424,6 +424,15 @@ rewrite history on subsequent iterations. Upstream contributions still use PRs.
   rates, and systems. Verify importing choices and handling values absent from the current list.
 - [ ] **ENG-08.04 — Snapshot exports.** Verify CSV and typed XLSX exports share engine rows and
   numeric quantities. Check escaping, named ranges, empty data, and existing-file protection.
+  Partial audit: shared schema/empty-export coverage is recorded under ENG-08.01. CSV and
+  XLSX now share the engine copying-permission guard; unrestricted CSV replacement policy
+  still needs reconciliation with the fresh-path workbook policy before this box is checked.
+  macOS evidence: `takeoff_exports_honor_copy_permissions_and_preserve_outputs` (observed
+  failing before the fix) and `copy_restricted_documents_refuse_extraction_unless_opened_by_the_owner`
+  pass. Native `--control` inspect/command/screenshot verifies disabled takeoff export while
+  restricted measurements remain visible; CLI refusal creates no file. The desktop
+  `measurement_tools_draw_live_calibrate_save_and_export` regression, scoped engine/automation/UI
+  strict Clippy and WASM checks, native builds, fmt, assets, and layers pass (existing WASM warnings).
 - [ ] **ENG-08.05 — Managed workbook publishing.** Add opt-in start/status/refresh/stop controls
   and tools for a dedicated data workbook. Verify atomic publication and last-good-file retention.
 - [ ] **ENG-08.06 — Live refresh.** Publish after add/edit/delete/undo/redo; retry transient locks

@@ -684,10 +684,7 @@ fn panel_body(app: &mut SimplyPDFApp, ui: &mut egui::Ui, t: &Tokens) {
 pub(crate) fn export_workbook(app: &mut SimplyPDFApp) {
     let Some((_, id)) = app.active_ids() else { return };
     let Some(doc) = app.session.get(id) else { return };
-    if !doc.allows_copying() {
-        return;
-    }
-    let listing = match doc.measurements() {
+    let listing = match doc.measurements_for_export() {
         Ok(listing) => listing,
         Err(error) => {
             app.notify(error);
@@ -739,7 +736,7 @@ pub(crate) fn command(app: &mut SimplyPDFApp, id: &str) {
 }
 pub(crate) fn export_csv(app: &mut SimplyPDFApp) {
     let Some((_, id)) = app.active_ids() else { return };
-    let result = app.session.get(id).ok_or_else(|| "no such document".to_string()).and_then(|d| d.measurements());
+    let result = app.session.get(id).ok_or_else(|| "no such document".to_string()).and_then(|d| d.measurements_for_export());
     match result {
         Err(e) => app.notify(&e),
         Ok(listing) => {
