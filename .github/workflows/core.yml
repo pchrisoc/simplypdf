@@ -1,0 +1,26 @@
+name: Rust core
+
+on: [push, pull_request]
+
+permissions:
+  contents: read
+
+jobs:
+  core:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2025, macos-15, ubuntu-24.04]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Install minimum Rust toolchain
+        run: rustup toolchain install 1.85.0 --profile minimal
+      - name: Record compiler and target
+        run: rustc +1.85.0 -vV
+      - name: Build core
+        run: cargo +1.85.0 build --workspace --locked --offline
+      - name: Test core and compile examples
+        run: cargo +1.85.0 test --workspace --all-targets --locked --offline

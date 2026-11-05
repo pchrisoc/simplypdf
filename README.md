@@ -18,8 +18,10 @@ Project remote (SSH) `git@github.com:pchrisoc/simplypdf.git`
 - [x] Configure a dependency-free Cargo workspace and headless Rust core crate.
 - [x] Generate the first deterministic PDF fixture with independently specified geometry and lengths, plus a manifest.
 - [x] Implement canonical page geometry and headless tests for rotation, crop and media offsets, UserUnit, and canvas round trips.
-- [ ] Define the shared measurement interface and draft the MCP schemas and service contract tests.
-- [ ] Run the core build and tests in CI on Windows x64, macOS arm64, and an Ubuntu LTS x64 baseline. Record exact setup commands and tested OS versions.
+- [x] Define and test the shared distance interface for straight and continuous paths.
+- [ ] Draft the MCP schemas and service contract tests.
+- [x] Add the minimum Rust toolchain build and test workflow for Windows x64, macOS arm64, and Ubuntu 24.04 x64.
+- [ ] Confirm the three CI jobs pass and record the tested OS coverage.
 - [ ] Evaluate Rust desktop UI frameworks and Rust-compatible PDF rendering and editing adapters. Pin the dependencies selected for the spike. Check licensing, reproducibility, installer size, and memory. Open and render a fixture and verify point placement.
 - [ ] Add a restricted PDF worker, tiled rendering, and cancellation. Benchmark first-page display, zoom, pan, and memory on large vector and scanned sheets.
 - [ ] Package each target and verify that all builds open the same fixtures and pass transform and reference-length checks.

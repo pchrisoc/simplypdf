@@ -22,3 +22,9 @@ The core permits points outside the visible crop so overlays can be clipped at t
 4. Run the headless tests, then add an adapter-level check that opens the actual fixture and verifies placement against its manifest. Record coverage by OS and engine version in the progress log.
 
 Keep engine-specific code in its adapter crate. Document acquisition, licenses, data conversions, and failure behavior next to each adapter when it lands.
+
+## Shared distance API
+
+The desktop and MCP can call the same `DistanceScale` API in `crates/simplypdf-core/src/measurement.rs`. Calibrate it from two canonical page points and a known length in millimeters. Pass two or more canonical page points to `length_mm` to measure an open path. Round only at the presentation or export boundary.
+
+The calling service will resolve scale scope and verification state before measuring. Keep those decisions in the shared service when it arrives so the desktop, export, and MCP all agree. Keep the distance API independent of storage and transport so it can be exercised with a small input and known result.

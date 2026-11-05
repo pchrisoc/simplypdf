@@ -18,3 +18,12 @@ Next slice is a deterministic fixture generator in Rust, a fixture manifest with
 - Verified with `cargo test --workspace --locked --offline --all-targets` on macOS 27.0.1 arm64 with Rust 1.98.1. Four geometry tests passed. Windows, Linux, the minimum Rust toolchain, and rustfmt verification remain pending.
 
 Next slice is the shared measurement contract and cross-platform core CI, followed by the desktop viewer spike using the committed fixture. The renderer adapter must open the actual PDF and match the manifest before the viewer coordinate gate can close.
+
+## 2026-11-04 · Stage 0, shared distance and CI
+
+- Added the Rust `DistanceScale` API for two-point calibration and unrounded straight or continuous lengths in millimeters. Tests cover the fixture triangle, malformed input, and numeric range errors.
+- Added a GitHub Actions matrix for Windows Server 2025 x64, macOS 15 arm64, and Ubuntu 24.04 x64. Each job builds and tests with Rust 1.85.0 and records its compiler and target. Hosted results are tracked separately from workflow setup.
+- Ran `cargo test --workspace --all-targets --locked --offline` and `cargo test --workspace --doc --locked --offline` on macOS arm64 with Rust 1.98.1. All seven integration tests passed. There are no doc tests. Local rustfmt verification remains pending.
+- Reviewed outgoing paths before publication. The synthetic PDF is generated from first-party Rust source. The local Revu installer and vendor reference tree remain ignored.
+
+Next slice is the MCP schema and service contract draft, then a Rust desktop viewer spike that opens the synthetic PDF and demonstrates pointer alignment.
