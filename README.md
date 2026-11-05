@@ -4,6 +4,8 @@ SimplyPDF is a planned local-first PDF workstation for architecture, engineering
 
 See the [implementation brief](SimplyPDF-implementation-plan.md) for data contracts and release criteria, and the [progress log](PROGRESS.md) for verification and handoff notes. Check off each item when its acceptance evidence is recorded. Keep each slice reviewable and record the outcome and next step in Markdown and its Git commit.
 
+See the [architecture and backend maintenance guide](docs/architecture.md), [desktop UI direction](docs/desktop-ui.md), and [synthetic fixture manifest](tests/fixtures/README.md).
+
 ## Repository policy
 
 Do not commit or push Bluebeam code or any proprietary source code or files to GitHub. This includes vendor installers, extracted or decompiled files, binaries, bundled fonts and assets, and proprietary sample documents. Keep local vendor material under the ignored `references/` directory or outside the checkout. Use original code and generated or explicitly redistributable fixtures. Review staged paths and content before committing, and review outgoing commits before pushing. Git ignore rules can be bypassed and do not protect files Git already tracks.
@@ -14,8 +16,9 @@ Project remote (SSH) `git@github.com:pchrisoc/simplypdf.git`
 
 - [x] Add the roadmap, progress log, and ignore rules for local vendor artifacts and build output.
 - [x] Configure a dependency-free Cargo workspace and headless Rust core crate.
-- [ ] Generate deterministic PDF fixtures with independently specified geometry and lengths, plus a manifest.
-- [ ] Implement canonical page geometry and headless tests for rotation, crop and media offsets, UserUnit, and canvas round trips. Define the shared measurement interface and draft the MCP schemas and service contract tests.
+- [x] Generate the first deterministic PDF fixture with independently specified geometry and lengths, plus a manifest.
+- [x] Implement canonical page geometry and headless tests for rotation, crop and media offsets, UserUnit, and canvas round trips.
+- [ ] Define the shared measurement interface and draft the MCP schemas and service contract tests.
 - [ ] Run the core build and tests in CI on Windows x64, macOS arm64, and an Ubuntu LTS x64 baseline. Record exact setup commands and tested OS versions.
 - [ ] Evaluate Rust desktop UI frameworks and Rust-compatible PDF rendering and editing adapters. Pin the dependencies selected for the spike. Check licensing, reproducibility, installer size, and memory. Open and render a fixture and verify point placement.
 - [ ] Add a restricted PDF worker, tiled rendering, and cancellation. Benchmark first-page display, zoom, pan, and memory on large vector and scanned sheets.
@@ -70,4 +73,4 @@ cargo test --workspace --locked --offline
 cargo fmt --all -- --check
 ```
 
-The current core crate is a build baseline. Fixture and geometry tests are tracked in Stage 0.
+The headless geometry tests run without a PDF engine. The fixture manifest includes the regeneration command.

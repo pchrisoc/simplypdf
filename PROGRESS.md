@@ -9,3 +9,12 @@
 - Verified ignore rules for the local Revu installer, vendor reference directory, and build output with `git check-ignore`.
 
 Next slice is a deterministic fixture generator in Rust, a fixture manifest with independently specified lengths and transforms, and the first headless geometry tests.
+
+## 2026-11-04 · Stage 0, geometry and synthetic fixture
+
+- Added a renderer-independent Rust transform from raw PDF user space through canonical page coordinates to a top-left canvas. The integration tests check independent expected positions, inverse transforms, crop clipping, rotation, UserUnit, and invalid input.
+- Added a deterministic four-page PDF generator in Rust and a manifest. Regenerated the PDF and compared bytes with `cmp`. Rendered all four pages with Ghostscript 10.06.0 using `gs -q -dBATCH -dNOPAUSE -dPDFSTOPONERROR -dUseCropBox -sDEVICE=pnggray -r72 -sOutputFile=/tmp/simplypdf-page-%d.png tests/fixtures/page-geometry.pdf`. Visually checked triangle placement and confirmed raster dimensions match the manifest.
+- Documented the engine replacement boundary and the desktop UI layout and review criteria. The viewer and engine selection are pending.
+- Verified with `cargo test --workspace --locked --offline --all-targets` on macOS 27.0.1 arm64 with Rust 1.98.1. Four geometry tests passed. Windows, Linux, the minimum Rust toolchain, and rustfmt verification remain pending.
+
+Next slice is the shared measurement contract and cross-platform core CI, followed by the desktop viewer spike using the committed fixture. The renderer adapter must open the actual PDF and match the manifest before the viewer coordinate gate can close.
