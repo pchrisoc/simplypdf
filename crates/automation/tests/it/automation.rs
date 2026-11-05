@@ -8208,7 +8208,7 @@ fn takeoff_export_xlsx_writes_numeric_cells_and_preserves_existing_files() {
         zip.by_name(name).unwrap().read_to_string(&mut text).unwrap();
         text
     };
-    assert!(xml("xl/workbook.xml").contains(r#"<definedName name="TakeoffData">Takeoff!$A$1:$M$2</definedName>"#));
+    assert!(xml("xl/workbook.xml").contains(r#"<definedName name="TakeoffData">Takeoff!$A$1:$N$2</definedName>"#));
     let sheet = xml("xl/worksheets/sheet1.xml");
     assert!(sheet.contains(r#"<c r="D2"><v>6</v></c>"#));
     assert!(!sheet.contains("<f>"));
@@ -8225,6 +8225,63 @@ fn takeoff_export_xlsx_writes_numeric_cells_and_preserves_existing_files() {
         assert_ne!(reply["result"]["isError"], true, "{reply}");
         assert!(dir.join("mcp.xlsx").is_file(), "{reply}");
     }
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn takeoff_exports_declare_schema_and_share_identity_and_hvac_columns() {
+    use std::io::Read;
+
+    let dir = workdir("takeoff-schema");
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({"path":"a.pdf"}))["doc"].clone();
+    ok(&mut a, "takeoff_pipe", json!({"doc":doc,"page":1,"points":[[10,10],[82,10]]}));
+    let listing = ok(&mut a, "measure_list", json!({"doc":doc}));
+    assert_eq!(listing["schema_version"], 1);
+    let id = listing["measurements"][0]["id"].as_str().unwrap();
+    assert!(!id.is_empty());
+    let csv = ok(&mut a, "measure_export", json!({"doc":doc,"out":"takeoff.csv"}));
+    let xlsx = ok(&mut a, "takeoff_export_xlsx", json!({"doc":doc,"out":"takeoff.xlsx"}));
+    assert_eq!(csv["schema_version"], 1);
+    assert_eq!(xlsx["schema_version"], 1);
+    let text = std::fs::read_to_string(dir.join("takeoff.csv")).unwrap();
+    assert!(
+        text.starts_with("Page,Index,Type,Value,Unit,Label,Author,Scale,Annotation ID,HVAC profile,Material,Nominal size,System,Schema version\r\n")
+    );
+    assert!(text.contains(&format!("\"{id}\",\"pipe\",\"Copper\",\"3 in\",\"HHW Supply\",1\r\n")));
+    let mut zip = zip::ZipArchive::new(std::fs::File::open(dir.join("takeoff.xlsx")).unwrap()).unwrap();
+    let mut workbook = String::new();
+    zip.by_name("xl/workbook.xml").unwrap().read_to_string(&mut workbook).unwrap();
+    assert!(workbook.contains(r#"<definedName name="TakeoffData">Takeoff!$A$1:$N$2</definedName>"#));
+    assert!(workbook.contains(r#"<definedName name="TakeoffSchemaVersion">1</definedName>"#));
+    let mut sheet = String::new();
+    zip.by_name("xl/worksheets/sheet1.xml").unwrap().read_to_string(&mut sheet).unwrap();
+    assert!(sheet.contains(r#"<c r="N2"><v>1</v></c>"#));
+    let mut strings = String::new();
+    zip.by_name("xl/sharedStrings.xml").unwrap().read_to_string(&mut strings).unwrap();
+    for value in [id, "pipe", "Copper", "3 in", "HHW Supply", "Schema version"] {
+        assert!(strings.contains(&format!("<t>{value}</t>")), "{strings}");
+    }
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
+fn takeoff_empty_exports_keep_headers_and_schema_metadata() {
+    use std::io::Read;
+
+    let dir = workdir("takeoff-empty-schema");
+    let mut a = auto(&dir);
+    let doc = ok(&mut a, "doc_open", json!({"path":"a.pdf"}))["doc"].clone();
+    ok(&mut a, "measure_export", json!({"doc":doc,"out":"empty.csv"}));
+    ok(&mut a, "takeoff_export_xlsx", json!({"doc":doc,"out":"empty.xlsx"}));
+    let text = std::fs::read_to_string(dir.join("empty.csv")).unwrap();
+    assert_eq!(text.lines().count(), 1);
+    assert!(text.ends_with("System,Schema version\r\n"));
+    let mut zip = zip::ZipArchive::new(std::fs::File::open(dir.join("empty.xlsx")).unwrap()).unwrap();
+    let mut workbook = String::new();
+    zip.by_name("xl/workbook.xml").unwrap().read_to_string(&mut workbook).unwrap();
+    assert!(workbook.contains(r#"<definedName name="TakeoffData">Takeoff!$A$1:$N$1</definedName>"#));
+    assert!(workbook.contains(r#"<definedName name="TakeoffSchemaVersion">1</definedName>"#));
     let _ = std::fs::remove_dir_all(dir);
 }
 

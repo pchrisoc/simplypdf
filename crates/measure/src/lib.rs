@@ -740,16 +740,37 @@ pub fn set_scale(doc: &mut Document, page_index: usize, bbox: [f64; 4], name: &s
     }
     Ok(())
 }
+/// Version of the shared CSV/XLSX takeoff row contract. Existing columns retain their order.
+pub const TAKEOFF_SCHEMA_VERSION: u32 = 1;
+/// Shared headings; CSV and XLSX use the same column order and engine measurements.
+pub const TAKEOFF_COLUMNS: [&str; 14] = [
+    "Page",
+    "Index",
+    "Type",
+    "Value",
+    "Unit",
+    "Label",
+    "Author",
+    "Scale",
+    "Annotation ID",
+    "HVAC profile",
+    "Material",
+    "Nominal size",
+    "System",
+    "Schema version",
+];
+
 pub fn csv(measurements: &[Measurement]) -> String {
     // Prefix spreadsheet formula triggers; quoting alone does not prevent evaluation.
     let field = |s: &str| {
         let prefix = if s.trim_start().starts_with(['=', '+', '-', '@']) || s.starts_with(['\t', '\r']) { "'" } else { "" };
         format!("\"{prefix}{}\"", s.replace('"', "\"\""))
     };
-    let mut out = "Page,Index,Type,Value,Unit,Label,Author,Scale\r\n".to_string();
+    let mut out = TAKEOFF_COLUMNS.join(",");
+    out.push_str("\r\n");
     for m in measurements {
         out.push_str(&format!(
-            "{},{},{},{},{},{},{},{}\r\n",
+            "{},{},{},{},{},{},{},{},{},{},{},{},{},{}\r\n",
             m.page.saturating_add(1),
             m.index.saturating_add(1),
             m.reading.kind.name(),
@@ -757,7 +778,13 @@ pub fn csv(measurements: &[Measurement]) -> String {
             field(&m.reading.unit),
             field(&m.label),
             field(&m.author),
-            field(&m.scale.ratio)
+            field(&m.scale.ratio),
+            field(&m.id),
+            field(m.hvac.as_ref().map_or("", |h| h.profile.as_str())),
+            field(m.hvac.as_ref().map_or("", |h| h.material.as_str())),
+            field(m.hvac.as_ref().map_or("", |h| h.size.as_str())),
+            field(m.hvac.as_ref().map_or("", |h| h.service.as_str())),
+            TAKEOFF_SCHEMA_VERSION
         ));
     }
     out

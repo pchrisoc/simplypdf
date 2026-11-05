@@ -13,3 +13,7 @@ Snapping interprets painted paths and nested Form XObjects, including graphics-s
 Imported single-unit decimal rectilinear scales support differing X and Y conversion factors when CYX is present. Unit labels are text strings and may be non-ASCII ("m²"). Compound units (such as feet and inches), fraction formats and non-rectilinear scales are not supported: `list` reports such measurements, and ones with invalid geometry, under `unsupported` with a reason instead of failing, and leaves their PDF data untouched. A polygon whose last vertex repeats the first is treated as closed. Interoperability with Acrobat-authored measurements is untested. Geospatial and 3D measuring are outside this component.
 
 Synthetic tests cover geometry, calibration, viewport precedence, coordinate transforms, saved annotations and captions, snapping targets, cyclic forms, malformed arguments, permissions, undo, save/reopen, rendering and spreadsheet-safe CSV. No sample PDF or font assets are added.
+
+CSV and native XLSX share `TAKEOFF_COLUMNS` and `TAKEOFF_SCHEMA_VERSION` (v1). See the
+[automation schema contract](../automation/README.md#takeoff-schema-v1) for column types,
+empty exports, compatibility, and the current imported-ID limitation.

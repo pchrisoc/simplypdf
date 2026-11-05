@@ -4456,7 +4456,7 @@ status = "shipped"
 commands = ["measure.export"]
 tools = ["measure_export"]
 evidence = ["crates/automation/tests/it/automation.rs::measurements_calibrate_draw_save_reopen_and_export", "crates/measure/src/tests.rs::measurement_csv_quotes_newlines_and_blocks_formula_cells", "crates/ui-egui/tests/it/control.rs::measurement_tools_draw_live_calibrate_save_and_export"]
-notes = "Atomic CSV export of page, annotation index, type, numeric value, unit, label, author and scale. Quotes embedded delimiters and prefixes spreadsheet formula triggers."
+notes = "Atomic schema-v1 CSV export of page, annotation index, type, numeric value, unit, label, author, scale, annotation ID and HVAC fields. Shares headings with XLSX. Quotes embedded delimiters and prefixes spreadsheet formula triggers."
 
 [[feature]]
 id = "comment.takeoff-xlsx"
@@ -4467,7 +4467,7 @@ milestone = "M12"
 status = "partial"
 tools = ["takeoff_export_xlsx"]
 evidence = ["crates/automation/tests/it/automation.rs::takeoff_export_xlsx_writes_numeric_cells_and_preserves_existing_files", "crates/ui-egui/tests/it/control.rs::measurement_tools_draw_live_calibrate_save_and_export"]
-notes = "Desktop, CLI and MCP use a shared Rust writer for XLSX snapshots with numeric values and a named data range. Automatic publication and Calc link setup are pending."
+notes = "Desktop, CLI and MCP use a shared Rust writer for schema-v1 XLSX snapshots with numeric values, TakeoffData and TakeoffSchemaVersion names. Imported missing/duplicate IDs, automatic publication and Calc link setup are pending."
 
 [[feature]]
 id = "comment.geospatial"

@@ -1,6 +1,6 @@
 //! Native XLSX snapshots shared by the desktop and automation tools.
 
-use crate::Measurement;
+use crate::{Measurement, TAKEOFF_COLUMNS, TAKEOFF_SCHEMA_VERSION};
 use rust_xlsxwriter::Workbook;
 use std::path::Path;
 
@@ -10,27 +10,7 @@ pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String
     let mut book = Workbook::new();
     let sheet = book.add_worksheet();
     sheet.set_name("Takeoff").map_err(failed)?;
-    sheet
-        .write_row(
-            0,
-            0,
-            [
-                "Page",
-                "Index",
-                "Type",
-                "Value",
-                "Unit",
-                "Label",
-                "Author",
-                "Scale",
-                "Annotation ID",
-                "HVAC profile",
-                "Material",
-                "Nominal size",
-                "System",
-            ],
-        )
-        .map_err(failed)?;
+    sheet.write_row(0, 0, TAKEOFF_COLUMNS).map_err(failed)?;
     sheet.set_freeze_panes(1, 0).map_err(failed)?;
     for (offset, m) in measurements.iter().enumerate() {
         let row = u32::try_from(offset.saturating_add(1)).map_err(|e| e.to_string())?;
@@ -39,12 +19,14 @@ pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String
         sheet.write_string(row, 2, m.reading.kind.name()).map_err(failed)?;
         sheet.write_number(row, 3, m.reading.value).map_err(failed)?;
         sheet.write_row(row, 4, [m.reading.unit.as_str(), &m.label, &m.author, &m.scale.ratio, &m.id]).map_err(failed)?;
+        sheet.write_number(row, 13, f64::from(TAKEOFF_SCHEMA_VERSION)).map_err(failed)?;
         if let Some(hvac) = &m.hvac {
             sheet.write_row(row, 9, [&hvac.profile, &hvac.material, &hvac.size, &hvac.service]).map_err(failed)?;
         }
     }
     let count = measurements.len();
-    book.define_name("TakeoffData", &format!("=Takeoff!$A$1:$M${}", count.saturating_add(1))).map_err(failed)?;
+    book.define_name("TakeoffData", &format!("=Takeoff!$A$1:$N${}", count.saturating_add(1))).map_err(failed)?;
+    book.define_name("TakeoffSchemaVersion", &TAKEOFF_SCHEMA_VERSION.to_string()).map_err(failed)?;
     let parent = path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
     let mut staged = tempfile::NamedTempFile::new_in(parent).map_err(|e| e.to_string())?;
     book.save_to_writer(staged.as_file_mut()).map_err(failed)?;

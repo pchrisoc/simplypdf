@@ -5,6 +5,7 @@ use simplypdf_engine::{
     Edit, Style,
     measure::{self, Kind, NewMeasurement, PageUnit, Scale},
 };
+#[cfg(not(target_arch = "wasm32"))]
 use std::path::Path;
 
 impl Automation {
@@ -93,7 +94,9 @@ impl Automation {
             .filter(|u| only.is_none_or(|p| u.page == p))
             .map(|u| json!({"page":u.page.saturating_add(1),"index":u.index.saturating_add(1),"reason":u.reason}))
             .collect();
-        Ok(json!({"count":measurements.len(),"measurements":measurements,"unsupported":unsupported,"truncated":all.truncated}))
+        Ok(
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"count":measurements.len(),"measurements":measurements,"unsupported":unsupported,"truncated":all.truncated}),
+        )
     }
     pub(crate) fn measurement_scale(&mut self, a: &Args) -> Result<Value> {
         let page = self.page(a)?;
@@ -202,9 +205,17 @@ impl Automation {
         let csv = measure::csv(&all.measurements);
         let target = self.resolve(a.str("out")?, true)?;
         crate::write_atomic(&target, csv.as_bytes())?;
-        Ok(json!({"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}))
+        Ok(
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}),
+        )
     }
 
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn takeoff_export_xlsx(&self, _a: &Args) -> Result<Value> {
+        Err(failed("XLSX export requires the desktop CLI or app; use measure_export for CSV in the browser"))
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
     pub(crate) fn takeoff_export_xlsx(&self, a: &Args) -> Result<Value> {
         let out = a.str("out")?;
         if !Path::new(out).extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("xlsx")) {
@@ -220,6 +231,8 @@ impl Automation {
         }
         let all = doc.measurements().map_err(failed)?;
         measure::xlsx::write_new(&target, &all.measurements).map_err(failed)?;
-        Ok(json!({"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}))
+        Ok(
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}),
+        )
     }
 }

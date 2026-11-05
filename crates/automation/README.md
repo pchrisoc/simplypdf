@@ -10,13 +10,31 @@ Agent control for PdfCraft: a headless tool table over the engine, and an opt-in
 ## Takeoff workbook
 
 Call `takeoff_export_xlsx` with `{"doc":1,"out":"takeoff.xlsx"}` through the CLI or MCP.
-It creates a workbook from the current document, including measurement edits made in the
+XLSX export requires the native desktop CLI/app; browser builds return an actionable error
+and support `measure_export` CSV instead. It creates a workbook from the current document, including measurement edits made in the
 current session. The result reports unsupported measurements and whether enumeration reached
 its limits. Choose a fresh output path for each export.
 
 The `TakeoffData` named range contains the header and all measurement rows. In a separate
 LibreOffice Calc estimate, use **Sheet → External Links** to import this range. Calc can poll
 the source workbook at a configured interval. Automatic publication from PDF edits is pending.
+
+### Takeoff schema v1
+
+Desktop CSV/XLSX exports and the CLI/MCP `measure_export` and `takeoff_export_xlsx`
+tools use the same column order: Page, Index, Type, Value, Unit, Label, Author, Scale,
+Annotation ID, HVAC profile, Material, Nominal size, System, Schema version.
+The first eight CSV and first thirteen XLSX columns keep their previous positions.
+Page and Index are one-based locations; Value is numeric, and Schema version is the
+numeric constant `1`. CSV quotes text and prefixes formula triggers; XLSX stores text
+as strings. Missing HVAC properties export as empty cells. Hidden takeoffs are included.
+
+`measure_list` and both export results return `schema_version: 1`. XLSX defines
+`TakeoffSchemaVersion = 1` even for an empty export; `TakeoffData` spans A:N and includes
+only the header when there are no measurements. Consumers should check the version
+before importing. The Annotation ID currently reflects PDF `/NM`: imported annotations
+may have missing or duplicate names. Do not use page/index or an unvalidated imported
+name as a durable workbook key; normalization is still pending under ENG-08.01.
 
 ## API
 

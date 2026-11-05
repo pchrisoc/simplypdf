@@ -225,6 +225,19 @@ Ranked; detail and the full milestone table in [docs/roadmap.md](docs/roadmap.md
 
 ## Progress log
 
+- 2026-11-05 (ENG-08.01 partial): Added the shared takeoff schema v1. CSV now includes
+  annotation IDs/HVAC fields; XLSX appends a numeric schema column and defines
+  `TakeoffSchemaVersion`, including for empty exports. CLI/MCP listing/export results
+  report the version. Existing columns retain their positions. The new schema regression
+  was observed failing before implementation. Native validation: 30 measurement tests,
+  46 automation unit tests and 337 integration cases (the existing invalid-filename test
+  rerun outside the sandbox, with its macOS filesystem limitation reported), strict scoped
+  Clippy, fmt, assets, layers, and a CLI save/export/render smoke test on a rotated synthetic
+  drawing pass. Imported missing/duplicate ID normalization remains pending; no checkbox
+  or upstream parity increase is claimed. Scoped WASM compilation also passes after fixing
+  the inherited native-only XLSX call in browser automation (browser requests return a clear
+  CSV alternative); five unchanged renderer WASM warnings remain.
+
 - 2026-11-05 (ENG roadmap): Added the complete engineering feature checklist to README with stable
   task IDs, implementation routes, acceptance criteria, discipline workflows, and evidence-based
   completion/push instructions for SimplyPDF main. New inventory remains unchecked pending audit;

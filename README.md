@@ -150,6 +150,8 @@ features. Keep the proprietary installer and any captured artifacts outside the 
   CLI/MCP. Both produce the same typed rows and `TakeoffData` range.
 - [ ] Define persistent measurement IDs and a versioned row schema for saved and imported
   markups. Verify IDs survive edits, page reordering, save/reopen, and undo/redo.
+  Partial (ENG-08.01): CSV/XLSX schema v1 now includes annotation IDs and HVAC properties;
+  imported missing/duplicate IDs still require normalization.
 - [ ] Add an opt-in managed workbook link to the [Measure panel](crates/ui-egui/src/tools/measure_ui.rs)
   and matching MCP start, status, refresh, and stop tools. Publish the same document state for
   edits from either entry point.
@@ -408,6 +410,14 @@ rewrite history on subsequent iterations. Upstream contributions still use PRs.
 
 - [ ] **ENG-08.01 — Persistent row identity.** Add stable measurement IDs and a versioned export
   schema. Verify edits, imports, reordered pages, undo, and reopen retain correct identity.
+  Partial: [schema v1](crates/automation/README.md#takeoff-schema-v1) is implemented;
+  imported missing/duplicate `/NM` normalization and identity lifecycle evidence remain pending.
+  macOS evidence: `cargo test -p simplypdf-automation -j 2 takeoff_` covers
+  `takeoff_exports_declare_schema_and_share_identity_and_hvac_columns` and
+  `takeoff_empty_exports_keep_headers_and_schema_metadata`; CLI rotated-page
+  CSV/XLSX/save/`page_render` smoke verifies the same 120 ft quantity in both exports.
+  Scoped Clippy, measurement/automation tests, fmt, assets, layers, and WASM compilation pass
+  (five inherited renderer WASM warnings; native-only XLSX reports a CSV alternative in browser builds).
 - [ ] **ENG-08.02 — Quantity formulas.** Add numeric/formula fields and unit-aware material/rate
   inputs. Verify dependencies, cycles, invalid expressions, and no silent unit conversion errors.
 - [ ] **ENG-08.03 — Classification lists.** Share editable choice lists for materials, cost codes,

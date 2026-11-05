@@ -1,5 +1,12 @@
 # PdfCraft roadmap: milestones and what's next
 
+> SimplyPDF update 2026-11-05 (ENG-08.01 partial): shared CSV/XLSX takeoff schema v1
+> includes annotation IDs and HVAC properties; version metadata remains present for empty
+> exports. Native tests, strict scoped Clippy, assets, layers, and rotated CLI render smoke
+> pass; scoped WASM compilation passes with five inherited renderer warnings. Browser XLSX
+> requests return an explicit CSV alternative. Imported-ID normalization remains pending;
+> upstream estimates are unchanged.
+
 > SimplyPDF engineering backlog 2026-11-05: [README engineering checklist](../README.md#engineering-feature-checklist)
 > now defines implementation and acceptance tasks for the full engineering inventory, plus the
 > verified-checkpoint publishing loop on SimplyPDF main. New items are unaudited and unchecked;
@@ -294,6 +301,10 @@ M2 (renderer), M7 (content editing), M10 (OCR and Office), M11 (Preflight and st
 - Unmeasured fidelity: without an Acrobat comparison harness, quality gaps surface as user reports.
 
 ## Revision history
+
+**2026-11-05 · minor · ENG-08.01 partial:** Added the versioned shared takeoff export
+contract, preserved existing column positions, and verified empty/populated exports through
+CLI/MCP tests. Imported missing/duplicate IDs remain pending; no completion increase.
 
 **2026-10-26 · patch:** M2/PR #4172: reconcile current main and preserve upstream Japanese serif/weight selection alongside the installed CJK viewer and preview fallback. Estimates unchanged.
 
