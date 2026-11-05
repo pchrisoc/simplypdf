@@ -16,7 +16,7 @@ The core permits points outside the visible crop so overlays can be clipped at t
 
 ## Replacing a backend
 
-1. Locate the engine boundary. The only current backend-facing contract is the metadata and coordinate API in `crates/simplypdf-core/src/geometry.rs`. Add a renderer interface once the viewer spike establishes which operations it needs.
+1. Locate the engine boundary. The [macOS viewer spike](../spikes/viewer/README.md) keeps Quartz calls in its PDF adapter and uses the metadata and coordinate API in `crates/simplypdf-core/src/geometry.rs`. Extract a cross-platform renderer interface after the second adapter establishes the shared operations.
 2. Map the replacement engine's page metadata to that contract. Record which offsets, rotations, and unit conversions the engine already applies. Verify with the four-page synthetic fixture before wiring pointer events.
 3. Keep persisted points and future takeoff calculations in canonical space. Reuse the same transform for overlay placement and pointer input. A renderer swap should preserve existing measurement positions and values.
 4. Run the headless tests, then add an adapter-level check that opens the actual fixture and verifies placement against its manifest. Record coverage by OS and engine version in the progress log.

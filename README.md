@@ -23,6 +23,7 @@ Project remote (SSH) `git@github.com:pchrisoc/simplypdf.git`
 - [ ] Add project-backed MCP service and transport contract tests as persistence and scope resolution land.
 - [x] Add the minimum Rust toolchain build and test workflow for Windows x64, macOS arm64, and Ubuntu 24.04 x64.
 - [ ] Confirm the three CI jobs pass and record the tested OS coverage.
+- [x] Build the [macOS viewer spike](spikes/viewer/README.md) and verify raster and pointer alignment against the four-page fixture.
 - [ ] Evaluate Rust desktop UI frameworks and Rust-compatible PDF rendering and editing adapters. Pin the dependencies selected for the spike. Check licensing, reproducibility, installer size, and memory. Open and render a fixture and verify point placement.
 - [ ] Add a restricted PDF worker, tiled rendering, and cancellation. Benchmark first-page display, zoom, pan, and memory on large vector and scanned sheets.
 - [ ] Package each target and verify that all builds open the same fixtures and pass transform and reference-length checks.

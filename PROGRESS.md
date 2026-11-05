@@ -35,3 +35,12 @@ Next slice is the MCP schema and service contract draft, then a Rust desktop vie
 - Verified all eleven integration tests with `cargo test --workspace --all-targets --locked --offline` on macOS arm64. Parsed the draft tool definitions and checked tool names, required fields, and absence of file path inputs. Live MCP protocol, project-backed service tests, and cross-platform results remain unverified in this slice.
 
 Next slice is the Rust desktop viewer spike. Open the synthetic drawing, render each page rotation, and verify pointer placement through the same core transform. Keep the renderer adapter separate from the viewer and record the dependency decision.
+
+## 2026-11-04 · Stage 0, macOS viewer spike
+
+- Added a separate Rust viewer prototype using eframe and macOS Core Graphics. The shell has sheet navigation, fit-to-window rendering, a theme switch, and a click coordinate readout.
+- Verified all four fixture rotations with a test that checks real raster ink and the inverse pointer transform at the expected edge midpoint. On the desktop, clicked the visible edge and observed approximately (149.05, 120.23) canonical points, near the expected midpoint (150, 120).
+- The adapter constructs the raster transform from shared page geometry after Quartz's convenience transform produced a different scale on this fixture. The Rust UI stays separate from Quartz handles. The headless build and test workflow remains independent of viewer dependencies.
+- Tested on macOS 27.0.1 arm64 with Rust 1.98.1. The viewer test passed using `cargo test --locked --offline --manifest-path spikes/viewer/Cargo.toml` after fetching its dependencies. Windows, Linux, the viewer's minimum toolchain, rustfmt, and packaging remain unverified.
+
+Next slice is a cross-platform renderer comparison against the same fixture, then file-open UI, zoom and pan, and background rendering. Full viewer acceptance remains open.
