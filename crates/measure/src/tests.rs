@@ -219,6 +219,14 @@ fn coordinates_roundtrip_for_crop_rotation_and_user_unit() {
 }
 
 #[test]
+fn scale_ratio_rejects_unrepresentable_page_and_real_distances() {
+    let a = [0.0, 0.0];
+    let b = [72.0, 0.0];
+    assert!(Scale::ratio(a, b, f64::MAX, PageUnit::In, 1.0, "m", 2).is_err());
+    assert!(Scale::ratio(a, b, 1.0, PageUnit::In, f64::MIN_POSITIVE, "m", 2).is_err());
+}
+
+#[test]
 fn zero_decimal_scale_uses_standard_rounding_format() {
     let d = fixture("", "", &[]);
     let scale = Scale::new(1.0, "m", 0).unwrap();
