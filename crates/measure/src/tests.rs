@@ -202,6 +202,18 @@ fn measurement_csv_quotes_newlines_and_blocks_formula_cells() {
 }
 
 #[test]
+fn csv_formula_cells_with_embedded_control_prefixes_are_escaped() {
+    let mut d = fixture("", "", &[]);
+    let mut m = new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]);
+    m.label = "\u{2003}\u{0001}=2+2".into();
+    m.author = "\n\t@SUM(A1:A9)".into();
+    add(&mut d, &m, &Meta::default()).unwrap();
+    let text = csv(&list(&d).measurements);
+    assert!(text.contains("\"'\u{2003}\u{0001}=2+2\""));
+    assert!(text.contains("\"'\n\t@SUM(A1:A9)\""));
+}
+
+#[test]
 fn coordinates_roundtrip_for_crop_rotation_and_user_unit() {
     for rotation in [0, 90, 180, 270] {
         let d = fixture("", &format!("/UserUnit 2 /Rotate {rotation} /CropBox [10 20 210 320]"), &[]);
