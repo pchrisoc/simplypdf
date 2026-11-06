@@ -595,3 +595,28 @@ fn numbered_symbols_are_editable_and_undo_as_one_batch() {
     json(&mut a, "edit_undo", json!({"doc":id.0}));
     assert_eq!(json(&mut a, "comment_list", json!({"doc":id.0}))["count"], 0);
 }
+
+#[test]
+fn numbered_symbols_survive_save_reopen_without_renumbering() {
+    let dir = staging_dir("numbered-symbols-reopen");
+    std::fs::write(dir.join("source.pdf"), numbered_pages(1)).unwrap();
+    let mut a = Automation::new().with_root(&dir).unwrap();
+    let original = json(&mut a, "doc_open", json!({"path":"source.pdf"}))["doc"].as_u64().unwrap();
+    let placed = json(
+        &mut a,
+        "numbered_symbols_add",
+        json!({"doc":original,"page":1,"positions":[[10.0,20.0],[40.0,50.0]],"prefix":"HV-","start":7}),
+    );
+    assert_eq!(placed["numbered_symbols"]["next"], 9);
+    json(&mut a, "doc_save", json!({"doc":original,"path":"numbered.pdf"}));
+    json(&mut a, "doc_close", json!({"doc":original}));
+    let reopened = json(&mut a, "doc_open", json!({"path":"numbered.pdf"}))["doc"].as_u64().unwrap();
+    let listed = json(&mut a, "comment_list", json!({"doc":reopened}));
+    assert_eq!(listed["count"], 2);
+    assert_eq!(listed["comments"][0]["contents"], "HV-7");
+    assert_eq!(listed["comments"][1]["contents"], "HV-8");
+    assert_eq!(listed["comments"][0]["type"], "FreeText");
+    assert_eq!(listed["comments"][1]["type"], "FreeText");
+    json(&mut a, "doc_close", json!({"doc":reopened}));
+    std::fs::remove_dir_all(dir).unwrap();
+}
