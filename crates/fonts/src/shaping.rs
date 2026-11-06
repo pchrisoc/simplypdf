@@ -2,7 +2,7 @@
 
 use std::sync::OnceLock;
 
-use harfrust::{BufferClusterLevel, Direction, ShapeOptions, ShaperData, UnicodeBuffer, script};
+use harfrust::{FontRef as HarfFontRef, BufferClusterLevel, Direction, ShapeOptions, ShaperData, UnicodeBuffer, script};
 use skrifa::instance::{LocationRef, Size};
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId, MetadataProvider};
@@ -52,7 +52,8 @@ fn face(script: ShapedScript) -> Option<&'static (FontRef<'static>, ShaperData)>
     cache
         .get_or_init(|| {
             let font = FontRef::new(script.font()?.bytes).ok()?;
-            let data = ShaperData::new(&font);
+            let harf_font = HarfFontRef::new(script.font()?.bytes).ok()?;
+            let data = ShaperData::new(&harf_font);
             Some((font, data))
         })
         .as_ref()
@@ -92,8 +93,9 @@ pub fn shape_thai(text: &str) -> Result<Vec<ShapedCluster>, GlyphError> {
 }
 
 fn shape_script(text: &str, rtl: bool, kind: ShapedScript) -> Result<Vec<ShapedCluster>, GlyphError> {
-    let (font, data) = face(kind).ok_or(GlyphError::NoFont)?;
-    let shaper = data.shaper(font).build();
+    let (_, data) = face(kind).ok_or(GlyphError::NoFont)?;
+    let harf_font = HarfFontRef::new(kind.font().ok_or(GlyphError::NoFont)?.bytes).map_err(|_| GlyphError::NoFont)?;
+    let shaper = data.shaper(&harf_font).build();
     let scale = 1.0 / f64::from(shaper.units_per_em().max(1));
     let mut buffer = UnicodeBuffer::new();
     buffer.push_str(text);
