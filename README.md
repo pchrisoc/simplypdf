@@ -207,6 +207,12 @@ features. Keep the proprietary installer and any captured artifacts outside the 
   Preserve upstream credits, asset provenance, and legacy file/settings compatibility.
 - [ ] Finish original release artwork and verify installed SimplyPDF builds can coexist with PDFCraft
   on Windows, macOS, and Linux.
+  Partial (brand replacement, Linux): owner-provided light/dark teal marks are now
+  embedded into the home screen and title bar, selected from the resolved theme.
+  Windows ICO, macOS ICNS, Linux hicolor, update-notification and high-resolution
+  assets are regenerated from matching geometric vectors. The package-native
+  icon remains the light default. Clean-install and coexistence acceptance on
+  all three operating systems still remains, so this stays unchecked.
 - [ ] Package SimplyPDF for Windows, macOS, and Linux. Test opening a PDF and starting the opt-in
   MCP server from a clean install on each platform.
 - [ ] Run a release smoke test on each platform using the same synthetic drawing and linked

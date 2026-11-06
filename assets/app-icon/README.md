@@ -1,55 +1,26 @@
-# PdfCraft app icon
+# SimplyPDF brand artwork
 
-<img src="simplypdf-small.svg" alt="PdfCraft app icon: an engraved lion's head on red" width="128">
+The project owner's two supplied logos (November 5, 2026) are the SimplyPDF
+visual identity. Both are geometric teal (`#266e81`) marks on a transparent
+background, faithfully reconstructed as SVG rectangles from the original
+2048 × 2048 artwork without changing the visible shape.
 
-**Creature:** a lion, in a frontal head-and-shoulders portrait, mane running off the bottom of the tile.
+- `simplypdf.svg` / `simplypdf-small.svg` — light-mode mark.
+- `simplypdf-dark.svg` — dark-mode mark.
+- `simplypdf-light-128.png` / `simplypdf-dark-128.png` — the theme-aware
+  home-screen and top-chrome marks. The resolved UI theme selects the variant.
+- `simplypdf-1024.png`, `simplypdf.ico`, `simplypdf.icns`, and
+  `hicolor/` — operating-system packaging and desktop icons (light default).
+- `simplypdf-dark-256.png` and `simplypdf-dark-1024.png` — dark-mode
+  packaging alternatives. OS launchers normally own their own theme-independent
+  icon selection; the in-app logo switches immediately with the theme.
 
-**Style:** an engraving (woodcut-weight line work) portrait in the Crafting Apps "owl template" framing:
-a full-bleed colour field, no frame or roundel, the animal looking at the viewer and filling the tile.
+`packaging/icons.sh` regenerates native and theme-variant assets from the
+SVG masters (requires resvg; iconutil for macOS). Update `ATTRIBUTION.toml`
+SHA-256 entries and run `cargo xtask assets --write` afterward.
 
-**Palette:** exactly three colours.
+The separate PDF document file icon (`simplypdf-document.svg`) is not a
+SimplyPDF brand logo and is retained as a file-type icon.
 
-| Colour | Hex | Used for |
-|---|---|---|
-| Ink | `#0b0b0c` | line work and the figure's contour |
-| Paper | `#efe9dc` | the figure (the lion's silhouette) |
-| PdfCraft red (app colour) | `#b70228` | the full-bleed field |
-
-**Tile:** `viewBox="0 0 512 512"`, a rounded square with `rx=112` that clips everything. Windows and Linux
-icons use the full-bleed tile. macOS icons put it on Apple's grid (an 824 px body centred on a transparent
-1024 px canvas).
-
-**Provenance:** the project owner's original drawing, made in ArtCraft (2880 px, keyed to the palette), then
-vectorised (potrace; no filtering or warping).
-Licence: [LICENSE.txt](LICENSE.txt) (`MIT OR Apache-2.0`, like the repo).
-
-## Files
-
-| File | What it is |
-|---|---|
-| `simplypdf.svg` | the master vector (traced at 2048 px); every PNG, `.ico` and `.icns` is rendered from it |
-| `simplypdf-small.svg` | a lighter vector (traced at 1024 px) for places where size matters, such as this README |
-| `simplypdf-1024.png` | 1024 px on Apple's grid; also the runtime Dock icon on macOS |
-| `simplypdf.icns` | macOS icon (16–1024 px) |
-| `simplypdf.ico` | Windows icon (16–256 px), embedded in `simplypdf.exe` by `apps/simplypdf/build.rs` |
-| `simplypdf-document.svg` | Windows PDF file icon master: a Lucide document outline, red badge and outlined PDF lettering; no font dependency |
-| `simplypdf-document.ico` | Windows PDF file icon (16–256 px), embedded as resource 2 in `simplypdf.exe` |
-| `hicolor/<n>x<n>/apps/ai.storyteller.simplypdf.png` | Linux hicolor theme, 16–512 px; the 256 px one is the runtime icon on Windows and Linux |
-| `hicolor/scalable/apps/ai.storyteller.simplypdf.svg` | Linux scalable icon (copy of the master) |
-
-Where it shows: `apps/simplypdf/src/main.rs` sets the window icon (Dock, taskbar, Alt-Tab, launcher) and the
-Wayland app id `ai.storyteller.pdfcraft`; `packaging/linux/ai.storyteller.simplypdf.desktop` names the
-hicolor icon.
-
-Windows PDF files use resource 2 (`"pdfcraft.exe",-2`) when PdfCraft is chosen as the default
-reader; the app keeps resource 1. The document outline is adapted from Lucide `file-text`
-1.49.0 (ISC); its badge and outlined lettering are original (`MIT OR Apache-2.0`), covered by
-[LICENSE-document.txt](LICENSE-document.txt). Both icons are embedded, requiring no runtime
-sidecar. This provides a file type icon; first-page thumbnails still need a thumbnail provider.
-
-## Regenerate
-
-```sh
-packaging/icons.sh        # needs resvg and python3; iconutil (macOS) for the .icns
-cargo xtask assets        # then update the sha256 values in ATTRIBUTION.toml and run with --write
-```
+All branded artwork is recorded in `ATTRIBUTION.toml` and distributed under
+the repository's dual MIT / Apache-2.0 license by the SimplyPDF owner.
