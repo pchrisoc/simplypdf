@@ -2335,6 +2335,19 @@ fn page_boxes_default_inherit_and_set() {
 }
 
 #[test]
+fn media_box_rejects_degenerate_or_overflowing_rectangles_atomically() {
+    let mut doc = open(fixture());
+    let before = page_boxes(&doc).unwrap();
+    for rect in [[0.0, 0.0, 0.0, 400.0], [0.0, 0.0, 300.0, 0.0], [-f64::MAX, 0.0, f64::MAX, 400.0], [0.0, -f64::MAX, 300.0, f64::MAX]] {
+        assert!(
+            matches!(set_page_box(&mut doc, &[0, 2], PageBox::Media, BoxSpec::Rect(rect)), Err(OrganizeError::InvalidBox(_))),
+            "invalid media box {rect:?} must be refused"
+        );
+        assert_eq!(page_boxes(&doc).unwrap(), before, "refusal must be atomic");
+    }
+}
+
+#[test]
 fn duplicate_pages_inserts_copies_after_the_last() {
     let mut doc = open(fixture());
     duplicate_pages(&mut doc, &[0, 1], None).unwrap();
