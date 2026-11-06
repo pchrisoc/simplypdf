@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Regenerate the app icons from assets/app-icon/simplypdf.svg and the Windows PDF file icon
+# Regenerate the light/dark app icons from the two SimplyPDF SVG masters and the PDF file icon
 # from assets/app-icon/simplypdf-document.svg. Both are master vectors.
 #
 # Needs: resvg (brew install resvg / cargo install resvg) and python3 (stdlib only, for the .ico).
@@ -12,20 +12,16 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DIR="$ROOT/assets/app-icon"
 SVG="$DIR/simplypdf.svg"
+DARK="$DIR/simplypdf-dark.svg"
 ID="ai.storyteller.simplypdf"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 command -v resvg >/dev/null || { echo "error: resvg not found (brew install resvg)" >&2; exit 1; }
 
-# The master is a full-bleed 512 tile (rx=112): right for Windows and Linux. macOS icons follow
-# Apple's grid instead: an 824 px body centred on a transparent 1024 canvas.
-MAC="$TMP/macos.svg"
-{
-  echo '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1024 1024">'
-  echo '<image x="100" y="100" width="824" height="824" xlink:href="'"$SVG"'"/>'
-  echo '</svg>'
-} >"$MAC"
+# The supplied brand art is full-bleed on all platforms. Keep macOS on the same
+# geometric mark; do not silently restore the older lion icon.
+MAC="$SVG"
 
 render() {
   local src="$1" size="$2" out="$3"
@@ -34,6 +30,10 @@ render() {
 
 # 1024 px PNG on Apple's grid (also the runtime Dock icon on macOS, see apps/simplypdf/src/main.rs).
 render "$MAC" 1024 "$DIR/simplypdf-1024.png"
+render "$SVG" 128 "$DIR/simplypdf-light-128.png"
+for s in 128 256 1024; do
+  render "$DARK" "$s" "$DIR/simplypdf-dark-$s.png"
+done
 
 # Linux hicolor theme (full bleed; hicolor/256x256 is also the runtime icon on Windows and Linux).
 for s in 16 24 32 48 64 128 256 512; do

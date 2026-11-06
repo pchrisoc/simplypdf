@@ -1,12 +1,12 @@
-PdfCraft app icon (pdfcraft.svg, pdfcraft-small.svg and every file derived from them in this
-directory: pdfcraft-1024.png, pdfcraft.icns, pdfcraft.ico, hicolor/).
+SimplyPDF app brand marks (simplypdf.svg, simplypdf-small.svg,
+simplypdf-dark.svg, theme PNGs, hicolor PNGs, simplypdf-1024.png,
+simplypdf.icns, simplypdf.ico).
 
-Original artwork made for this project by the project owner, drawn in ArtCraft and vectorised for
-PdfCraft (no third-party material). Licensed like the rest of PdfCraft, under either of
+Artwork supplied by the SimplyPDF project owner on November 5, 2026,
+reconstructed as geometric vectors for portable regeneration.
+Licensed under MIT OR Apache-2.0, the same as the SimplyPDF repository.
 
-  * Apache License, Version 2.0 (https://www.apache.org/licenses/LICENSE-2.0)
-  * MIT license (https://opensource.org/licenses/MIT)
+  https://opensource.org/licenses/MIT
+  https://www.apache.org/licenses/LICENSE-2.0
 
-at your option.
-
-Regenerate the derived files with packaging/icons.sh.
+The separate document icon has its own licence and attribution file.

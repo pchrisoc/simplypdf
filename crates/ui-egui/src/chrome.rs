@@ -65,6 +65,7 @@ pub fn tab_strip(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
                     });
                     ui.add_space(window_controls::SIDE_GAP - 4.0);
                 }
+                ui.add(crate::brand::image(t.dark(), 28.0)).on_hover_text("SimplyPDF");
                 if icons::button(ui, "house", button, app.active.is_none() && !app.combine_showing(), tl!("Home")).clicked() {
                     app.active = None;
                     app.combine_tab.focused = false;

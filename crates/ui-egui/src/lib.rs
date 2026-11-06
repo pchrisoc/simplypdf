@@ -14,7 +14,7 @@
 #[cfg(not(target_arch = "wasm32"))]
 pub const UPDATE_APP: craft_update::app::App = craft_update::app::App {
     icon_png: Some(include_bytes!("../../../assets/app-icon/hicolor/128x128/apps/ai.storyteller.simplypdf.png")),
-    accent: Some([0xb7, 0x02, 0x28]),
+    accent: Some([0x26, 0x6e, 0x81]),
     developer: "SimplyPDF contributors",
     ..craft_update::app::App::new("simplypdf", simplypdf_engine::build_info::APP_NAME, "PDF markup and takeoff", "pchrisoc/simplypdf")
 };
@@ -35,6 +35,7 @@ macro_rules! tl_ctx {
         $crate::i18n::tr_ctx($crate::i18n::current(), $context, $s)
     };
 }
+mod brand;
 pub mod canvas;
 mod chrome;
 pub mod hvac_ui;
