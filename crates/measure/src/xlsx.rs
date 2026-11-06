@@ -4,8 +4,22 @@ use crate::{Measurement, TAKEOFF_COLUMNS, TAKEOFF_SCHEMA_VERSION};
 use rust_xlsxwriter::Workbook;
 use std::path::Path;
 
+// Excel supports 1,048,576 rows, including the header at zero-based row 0.
+const MAX_DATA_ROWS: usize = 1_048_575;
+
+fn data_row(offset: usize) -> Result<u32, String> {
+    if offset >= MAX_DATA_ROWS {
+        return Err("takeoff exceeds Excel's 1,048,575 measurement-row limit".into());
+    }
+    u32::try_from(offset + 1).map_err(|e| e.to_string())
+}
+
 /// Write a workbook beside its destination and publish it only if the path is free.
 pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String> {
+    // Refuse impossible worksheets before allocating or staging any output.
+    if measurements.len() > MAX_DATA_ROWS {
+        return Err("takeoff exceeds Excel's 1,048,575 measurement-row limit".into());
+    }
     let failed = |e: rust_xlsxwriter::XlsxError| e.to_string();
     let mut book = Workbook::new();
     let sheet = book.add_worksheet();
@@ -13,7 +27,7 @@ pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String
     sheet.write_row(0, 0, TAKEOFF_COLUMNS).map_err(failed)?;
     sheet.set_freeze_panes(1, 0).map_err(failed)?;
     for (offset, m) in measurements.iter().enumerate() {
-        let row = u32::try_from(offset.saturating_add(1)).map_err(|e| e.to_string())?;
+        let row = data_row(offset)?;
         sheet.write_number(row, 0, m.page.saturating_add(1) as f64).map_err(failed)?;
         sheet.write_number(row, 1, m.index.saturating_add(1) as f64).map_err(failed)?;
         sheet.write_string(row, 2, m.reading.kind.name()).map_err(failed)?;
@@ -33,4 +47,17 @@ pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String
     staged.as_file().sync_all().map_err(|e| e.to_string())?;
     staged.persist_noclobber(path).map_err(|e| format!("{}: {}", path.display(), e.error))?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn excel_row_bounds_allow_last_measurement_and_reject_overflow() {
+        assert_eq!(data_row(0).unwrap(), 1);
+        assert_eq!(data_row(MAX_DATA_ROWS - 1).unwrap(), 1_048_575);
+        assert!(data_row(MAX_DATA_ROWS).is_err());
+        assert!(data_row(usize::MAX).is_err());
+    }
 }
