@@ -338,5 +338,5 @@
 - [ ] **ENG-30.01 — Supported-platform release.** Package and smoke-test clean Windows, macOS, and Linux installations, including desktop takeoff and opt-in CLI/MCP.
 - [ ] **ENG-30.02 — Original release assets.** Complete allowed SimplyPDF artwork/attribution and verify coexistence with PdfCraft installations.
 - [ ] **ENG-30.03 — Capability and limitation guide.** Document invocation, automation tools, dependencies, and tested coverage for every completed item.
-- [ ] **ENG-30.04 — Scope boundaries.** Document configured RFI/submittal/punch/estimate workflows separately from dedicated management systems, CAD authoring, engineering solvers, and BIM clash detection.
+- [x] **ENG-30.04 — Scope boundaries.** Document configured RFI/submittal/punch/estimate workflows separately from dedicated management systems, CAD authoring, engineering solvers, and BIM clash detection.
 - [ ] **ENG-30.05 — Inventory reconciliation.** Reconcile all 28 reference categories and ten discipline workflows against these IDs, existing checkpoints, and evidence.
