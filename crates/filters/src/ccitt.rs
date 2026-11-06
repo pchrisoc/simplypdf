@@ -40,7 +40,7 @@ pub fn encode_g4(data: &[u8], columns: u32, rows: u32) -> Result<Vec<u8>, Filter
             if white { Color::White } else { Color::Black }
         });
         // `VecWriter` writes to memory: its error type has no values.
-        if let Err(never) = encoder.encode_line(pels, width) {
+        if let Err(never) = encoder.encode_line(pels, u32::from(width)) {
             match never {}
         }
     }
