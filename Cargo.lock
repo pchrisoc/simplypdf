@@ -6132,7 +6132,7 @@ name = "simplypdf-create"
 version = "0.18.1"
 dependencies = [
  "encoding_rs",
- "hayro-ccitt 0.5.0",
+ "hayro-ccitt",
  "hayro-syntax",
  "image",
  "png 0.18.1",
