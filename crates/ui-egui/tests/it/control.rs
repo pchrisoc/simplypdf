@@ -1784,6 +1784,59 @@ fn measurement_tools_draw_live_calibrate_save_and_export() {
 }
 
 #[test]
+fn measurement_csv_keeps_incomplete_export_warning_after_success() {
+    use simplypdf_cos::{Document, Object, SaveOptions};
+    use simplypdf_engine::measure::{Kind, NewMeasurement, Scale};
+
+    let mut session = simplypdf_engine::Session::new();
+    let source = session.open("source.pdf", None, Arc::new(fixture(1)), None).unwrap();
+    session
+        .apply(
+            source,
+            simplypdf_engine::Edit::AddMeasurement(NewMeasurement {
+                page: 0,
+                kind: Kind::Distance,
+                points: vec![[20.0, 20.0], [92.0, 20.0]],
+                scale: Scale::default(),
+                style: Default::default(),
+                label: "Imported scale".into(),
+                author: "Estimator".into(),
+                hvac: None,
+            }),
+        )
+        .unwrap();
+    let mut pdf = Document::open(session.save_bytes(source).unwrap()).unwrap();
+    let page = simplypdf_model::pages(&pdf).remove(0);
+    let annots = pdf.resolve(page.dict.get(b"Annots").unwrap());
+    let annot = annots.as_array().unwrap()[0].as_ref().unwrap();
+    // Retain the imported appearance, but simulate a scale the measurement reader cannot use.
+    pdf.update_dict(annot, |d| d.set(b"Measure".to_vec(), Object::Null)).unwrap();
+    let bytes = simplypdf_cos::write_full(&pdf, &SaveOptions::default()).unwrap();
+    let (mut h, c) = harness_pages(1);
+    h.state_mut().open_bytes("unsupported-scale.pdf", None, bytes.clone()).unwrap();
+    h.run_steps(3);
+    let doc = h.state().views.last().unwrap().id;
+    assert_eq!(h.state().session.get(doc).unwrap().measurements().unwrap().unsupported.len(), 1);
+    let dir = std::env::temp_dir().join(format!("simplypdf-incomplete-csv-{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&dir);
+    std::fs::create_dir_all(&dir).unwrap();
+    h.state_mut().export_dir_override = Some(dir.to_string_lossy().into());
+    ok(&mut h, &c, "ui.command", json!({"id":"measure.export"}));
+    h.run_steps(2);
+    let csv = std::fs::read_to_string(dir.join("measurements.csv")).unwrap();
+    assert_eq!(csv.lines().count(), 1, "unsupported row is excluded");
+    let notice = &h.state().toast.as_ref().unwrap().0;
+    assert!(notice.contains("incomplete") && notice.contains("omitted"), "{notice}");
+    assert_eq!(h.state().session.get(doc).unwrap().bytes.as_ref(), &bytes);
+    assert!(!h.state().session.get(doc).unwrap().dirty);
+    ok(&mut h, &c, "ui.command", json!({"id":"measure.export"}));
+    h.run_steps(2);
+    assert!(h.state().toast.as_ref().unwrap().0.contains("choose a new output path"));
+    assert_eq!(std::fs::read_to_string(dir.join("measurements.csv")).unwrap(), csv);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[test]
 fn a_1_to_50_scale_in_millimetres_measures_a_10_mm_line_as_500_mm() {
     // #2752: a plan drawn at 1:50 is "1 mm = 50 mm". The page side of the scale was fixed in
     // points, so this stored 1 pt = 50 mm, 72 / 25.4 = 2.835 times too big.

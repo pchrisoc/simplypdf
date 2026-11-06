@@ -8249,6 +8249,7 @@ fn takeoff_exports_declare_schema_and_share_identity_and_hvac_columns() {
         text.starts_with("Page,Index,Type,Value,Unit,Label,Author,Scale,Annotation ID,HVAC profile,Material,Nominal size,System,Schema version\r\n")
     );
     assert!(text.contains(&format!("\"{id}\",\"pipe\",\"Copper\",\"3 in\",\"HHW Supply\",1\r\n")));
+    assert!(text.contains("perimeter,1,\"in\""));
     let mut zip = zip::ZipArchive::new(std::fs::File::open(dir.join("takeoff.xlsx")).unwrap()).unwrap();
     let mut workbook = String::new();
     zip.by_name("xl/workbook.xml").unwrap().read_to_string(&mut workbook).unwrap();
@@ -8257,6 +8258,7 @@ fn takeoff_exports_declare_schema_and_share_identity_and_hvac_columns() {
     let mut sheet = String::new();
     zip.by_name("xl/worksheets/sheet1.xml").unwrap().read_to_string(&mut sheet).unwrap();
     assert!(sheet.contains(r#"<c r="N2"><v>1</v></c>"#));
+    assert!(sheet.contains(r#"<c r="D2"><v>1</v></c>"#), "same numeric quantity as CSV");
     let mut strings = String::new();
     zip.by_name("xl/sharedStrings.xml").unwrap().read_to_string(&mut strings).unwrap();
     for value in [id, "pipe", "Copper", "3 in", "HHW Supply", "Schema version"] {

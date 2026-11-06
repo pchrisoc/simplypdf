@@ -680,6 +680,14 @@ fn panel_body(app: &mut SimplyPDFApp, ui: &mut egui::Ui, t: &Tokens) {
     }
 }
 
+fn export_success_notice(listing: &measure::Listing) -> String {
+    if listing.truncated || !listing.unsupported.is_empty() {
+        tl!("Saved an incomplete takeoff export. Some measurements were omitted.").to_string()
+    } else {
+        tl!("Saved measurements.").to_string()
+    }
+}
+
 #[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn export_workbook(app: &mut SimplyPDFApp) {
     let Some((_, id)) = app.active_ids() else { return };
@@ -691,15 +699,13 @@ pub(crate) fn export_workbook(app: &mut SimplyPDFApp) {
             return;
         }
     };
+    let notice = export_success_notice(&listing);
     let write = move |app: &mut SimplyPDFApp, mut path: std::path::PathBuf| {
         if !path.extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("xlsx")) {
             path.set_extension("xlsx");
         }
         match measure::xlsx::write_new(&path, &listing.measurements) {
-            Ok(()) if listing.truncated || !listing.unsupported.is_empty() => {
-                app.notify(tl!("Saved an incomplete takeoff workbook. Some measurements were omitted."));
-            }
-            Ok(()) => app.notify(tl!("Saved measurements.")),
+            Ok(()) => app.notify(notice),
             Err(error) => app.notify(error),
         }
     };
@@ -741,19 +747,14 @@ pub(crate) fn export_csv(app: &mut SimplyPDFApp) {
         Err(e) => app.notify(&e),
         Ok(listing) => {
             let csv = measure::csv(&listing.measurements);
-            if !listing.unsupported.is_empty() {
-                app.notify(crate::i18n::fmt(
-                    tl!("{n} measurements use an unsupported format and are left out."),
-                    &[("n", &listing.unsupported.len().to_string())],
-                ));
-            }
+            let notice = export_success_notice(&listing);
             #[cfg(not(target_arch = "wasm32"))]
             {
                 let write = move |app: &mut SimplyPDFApp, path: std::path::PathBuf| match simplypdf_platform::staging::write_new_atomically(
                     &path,
                     csv.as_bytes(),
                 ) {
-                    Ok(()) => app.notify(tl!("Saved measurements.")),
+                    Ok(()) => app.notify(notice),
                     Err(e) => app.notify(e.to_string()),
                 };
                 match app.export_dir_override.as_ref().map(|d| std::path::PathBuf::from(d).join("measurements.csv")) {
@@ -765,8 +766,9 @@ pub(crate) fn export_csv(app: &mut SimplyPDFApp) {
                 }
             }
             #[cfg(target_arch = "wasm32")]
-            if let Err(e) = crate::editing::download("measurements.csv", csv.as_bytes()) {
-                app.notify(&e);
+            match crate::editing::download("measurements.csv", csv.as_bytes()) {
+                Ok(()) => app.notify(notice),
+                Err(e) => app.notify(&e),
             }
         }
     }
