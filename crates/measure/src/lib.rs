@@ -271,9 +271,11 @@ impl PageUnit {
 /// A side of a scale ratio as people write it: at most six decimals, no trailing zeros.
 fn ratio_number(v: f64) -> String {
     let fixed = format!("{v:.6}");
-    // Strip zeros from the fraction only, keeping significant integer zeros.
-    let short = fixed.trim_end_matches('0').trim_end_matches('.');
-    if short == "0" || short.len() > 24 { format!("{v:e}") } else { short.into() }
+    // Format with a dot first, so trimming zeros cannot erase integer digits.
+    let (integer, fraction) = fixed.split_once('.').unwrap_or((fixed.as_str(), ""));
+    let trimmed = fraction.trim_end_matches('0');
+    let short = if trimmed.is_empty() { integer.to_string() } else { format!("{integer}.{trimmed}") };
+    if short == "0" || short.len() > 24 { format!("{v:e}") } else { short }
 }
 pub(crate) fn check_points(points: &[Point]) -> Result<()> {
     if points.len() > MAX_POINTS || points.iter().flatten().any(|v| !v.is_finite() || v.abs() > MAX_COORD) {
