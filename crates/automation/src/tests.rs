@@ -550,3 +550,30 @@ fn tool_file_reads_refuse_inputs_exceeding_512_mib() {
     }
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn numbered_symbols_are_editable_and_undo_as_one_batch() {
+    let mut a = Automation::new();
+    let id = search_document(&mut a, 1);
+    let args = json!({"doc":id.0,"page":1,"positions":[[10.0,20.0],[40.0,50.0],[70.0,80.0]],"prefix":"HV-","start":7});
+    let added = json(&mut a, "numbered_symbols_add", args);
+    assert_eq!(added["numbered_symbols"]["labels"], json!(["HV-7", "HV-8", "HV-9"]));
+    assert_eq!(added["numbered_symbols"]["next"], 10);
+    let listed = json(&mut a, "comment_list", json!({"doc":id.0}));
+    assert_eq!(listed["count"], 3);
+    for (i, expected) in ["HV-7", "HV-8", "HV-9"].into_iter().enumerate() {
+        assert_eq!(listed["comments"][i]["contents"], expected);
+        assert_eq!(listed["comments"][i]["type"], "FreeText");
+    }
+    // A malformed second coordinate cannot leave a partial batch behind.
+    let rejected = a.call(
+        "numbered_symbols_add",
+        &json!({
+            "doc":id.0,"page":1,"positions":[[4.0,4.0],["bad",5.0]]
+        }),
+    );
+    assert!(rejected.is_err());
+    assert_eq!(json(&mut a, "comment_list", json!({"doc":id.0}))["count"], 3);
+    json(&mut a, "edit_undo", json!({"doc":id.0}));
+    assert_eq!(json(&mut a, "comment_list", json!({"doc":id.0}))["count"], 0);
+}

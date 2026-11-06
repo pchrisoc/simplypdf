@@ -776,6 +776,7 @@ impl Automation {
             "takeoff_export_xlsx" => self.takeoff_export_xlsx(&a)?,
             "comment_list" => self.comment_list(&a)?,
             "comment_add" => self.comment_add(&a)?,
+            "numbered_symbols_add" => self.numbered_symbols_add(&a)?,
             "stamp_custom" => self.stamp_custom(&a)?,
             "model_add" => self.model_add(&a)?,
             "comment_reply" => self.comment_reply(&a)?,
