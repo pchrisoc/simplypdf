@@ -1164,7 +1164,10 @@ mod revert_draft_tests {
         assert!(fill(&mut app, "李四"));
         crate::i18n::set_current(previous);
         let toast = app.toast.as_ref().map(|t| t.0.clone()).expect("a notice");
-        assert!(toast.contains("此字段的字体无法显示“李”（U+674E）"), "{toast}");
+        // The pinned catalog does not yet translate the rebranded notice.
+        // Its English fallback must still identify the glyph and explain that
+        // the saved field value is preserved for other PDF viewers.
+        assert!(toast.contains("“李” (U+674E)") && toast.contains("other PDF viewers redraw the field"), "{toast}");
         app.toast = None;
         assert!(fill(&mut app, "Ada"));
         assert!(app.toast.is_none(), "{:?}", app.toast);
