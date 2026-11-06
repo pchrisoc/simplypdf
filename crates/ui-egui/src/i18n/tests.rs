@@ -1284,7 +1284,10 @@ fn arabic_catalog_stays_logical() {
     needs_catalogs!();
     let ar = arabic();
     assert_eq!(tr(ar, "Save as…"), "حفظ باسم…");
-    assert_eq!(tr(ar, "About SimplyPDF"), "حول SimplyPDF");
+    // The pinned upstream craft-i18n checkout predates this fork's rebrand.
+    // A missing fork-specific catalog key must fall back to the English source
+    // instead of silently borrowing a different application's translation.
+    assert_eq!(tr(ar, "About SimplyPDF"), "About SimplyPDF");
     assert_eq!(tr(ar, "Name:"), "الاسم:");
     assert_eq!(tr(ar, "Issued by: "), "صادرة عن: ");
     // Placeholders survive in their logical positions.
