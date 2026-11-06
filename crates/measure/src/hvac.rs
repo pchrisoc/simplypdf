@@ -67,8 +67,10 @@ impl Takeoff {
         }
         let valid_size = if self.profile == "rectangular duct" {
             self.size.split_once('x').is_some_and(|(width, height)| {
-                let width = format!("{} in", width.trim());
-                let height = format!("{} in", height.trim().trim_end_matches(" in"));
+                let width = width.trim().strip_suffix(" in").unwrap_or(width.trim());
+                let height = height.trim().strip_suffix(" in").unwrap_or(height.trim());
+                let width = format!("{width} in");
+                let height = format!("{height} in");
                 ROUND_DUCT_SIZES.contains(&width.as_str()) && ROUND_DUCT_SIZES.contains(&height.as_str())
             })
         } else {
@@ -120,6 +122,20 @@ mod tests {
         for (index, color) in colors.iter().enumerate() {
             assert!(!colors.iter().skip(index + 1).any(|other| other == color));
         }
+    }
+
+    #[test]
+    fn rectangular_dimensions_reject_repeated_unit_suffixes() {
+        for size in ["4 in x 6 in in", "4 in x 6 in in in", "4 in in x 6 in", "4 x 6 in in"] {
+            let mut value = Takeoff::duct();
+            value.profile = "rectangular duct".into();
+            value.size = size.into();
+            assert!(value.validate().is_err(), "{size}");
+        }
+        let mut valid = Takeoff::duct();
+        valid.profile = "rectangular duct".into();
+        valid.size = "4 in x 6 in".into();
+        valid.validate().unwrap();
     }
 
     #[test]
