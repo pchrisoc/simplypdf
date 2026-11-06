@@ -6243,9 +6243,9 @@ dependencies = [
 name = "simplypdf-filters"
 version = "0.18.1"
 dependencies = [
- "fax 0.3.0",
+ "fax 0.2.7",
  "flate2",
- "hayro-ccitt 0.5.0",
+ "hayro-ccitt 0.3.0",
  "hayro-jbig2",
  "proptest",
  "thiserror 2.0.21",
