@@ -602,11 +602,8 @@ fn numbered_symbols_survive_save_reopen_without_renumbering() {
     std::fs::write(dir.join("source.pdf"), numbered_pages(1)).unwrap();
     let mut a = Automation::new().with_root(&dir).unwrap();
     let original = json(&mut a, "doc_open", json!({"path":"source.pdf"}))["doc"].as_u64().unwrap();
-    let placed = json(
-        &mut a,
-        "numbered_symbols_add",
-        json!({"doc":original,"page":1,"positions":[[10.0,20.0],[40.0,50.0]],"prefix":"HV-","start":7}),
-    );
+    let placed =
+        json(&mut a, "numbered_symbols_add", json!({"doc":original,"page":1,"positions":[[10.0,20.0],[40.0,50.0]],"prefix":"HV-","start":7}));
     assert_eq!(placed["numbered_symbols"]["next"], 9);
     json(&mut a, "doc_save", json!({"doc":original,"path":"numbered.pdf"}));
     json(&mut a, "doc_close", json!({"doc":original}));
