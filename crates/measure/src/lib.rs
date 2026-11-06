@@ -123,7 +123,15 @@ impl Scale {
         if !page.is_finite() || page <= 0.0 || !real.is_finite() || real <= 0.0 {
             return Err(invalid("both sides of a scale ratio must be finite and positive"));
         }
-        let mut out = Self::calibrate(a, b, real / (page * page_unit.points()), unit, precision)?;
+        let page_points = page * page_unit.points();
+        if !page_points.is_finite() || page_points <= 0.0 {
+            return Err(invalid("page distance exceeds the supported scale range"));
+        }
+        let real_per_point = real / page_points;
+        if !real_per_point.is_finite() || real_per_point <= 0.0 {
+            return Err(invalid("scale ratio is too small or large to represent"));
+        }
+        let mut out = Self::calibrate(a, b, real_per_point, unit, precision)?;
         out.ratio = format!("{} {} = {} {unit}", ratio_number(page), page_unit.label(), ratio_number(real));
         out.validate()?;
         Ok(out)
