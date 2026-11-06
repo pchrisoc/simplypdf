@@ -2344,6 +2344,11 @@ fn media_box_rejects_degenerate_or_overflowing_rectangles_atomically() {
             "invalid media box {rect:?} must be refused"
         );
         assert_eq!(page_boxes(&doc).unwrap(), before, "refusal must be atomic");
+        // Reopening both save formats must preserve the original valid geometry.
+        for saved in [write_full(&doc, &SaveOptions::default()).unwrap(), write_incremental(&doc, &SaveOptions::default()).unwrap()] {
+            let reopened = open(saved);
+            assert_eq!(page_boxes(&reopened).unwrap(), before, "invalid replacement must not affect saved page geometry");
+        }
     }
 }
 
