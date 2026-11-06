@@ -472,13 +472,3 @@ fn csv_escapes_formula_prefixes_after_leading_control_characters() {
     let output = csv(&list(&d).measurements);
     assert!(output.contains("\"'\u{0001}=HYPERLINK"), "control-prefixed formula must be escaped: {output:?}");
 }
-
-#[test]
-fn csv_escapes_formula_prefixes_after_leading_control_characters() {
-    let mut d = fixture("", "", &[]);
-    let mut m = new(Kind::Distance, vec![[0.0, 0.0], [72.0, 0.0]]);
-    m.label = "\u{0001}=HYPERLINK(\"https://example.test\")".into();
-    add(&mut d, &m, &Meta { date: None, id: "csv-safe".into() }).unwrap();
-    let output = csv(&list(&d).measurements);
-    assert!(output.contains("\"'\u{0001}=HYPERLINK"), "control-prefixed formula must be escaped: {output:?}");
-}
