@@ -1474,7 +1474,8 @@ fn long_german_tool_labels_stay_within_the_sidebar() {
         painted_text(&h).into_iter().find(|(s, ..)| s.starts_with("Ausfüllen und")).expect("translated heading is painted, whole or elided");
     // Compare to the actual Close control, not a fixed screen coordinate:
     // the independent tool navigator now takes the first 52 pt on the left.
-    let close = h.get_by_label("Close panel").rect();
+    // The accessibility label is localized with the rest of the German tool panel.
+    let close = h.get_by_label("Bereich schließen").rect();
     assert!(heading.2.right() <= close.left(), "translated heading overlaps Close: {:?} vs {close:?}", heading.2);
     // A long sub-tool name must stop before its status chip, not paint over the PDF.
     h.state_mut().left = LeftPanel::Tool("protect");
