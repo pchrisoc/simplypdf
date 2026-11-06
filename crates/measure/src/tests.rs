@@ -469,6 +469,9 @@ fn scale_ratio_preserves_integer_trailing_zeroes() {
         let scale = Scale::ratio([0.0, 0.0], [72.0 * page, 0.0], page, PageUnit::In, real, "ft", 2).unwrap();
         assert_eq!(scale.ratio, expected);
     }
+    for (number, expected) in [(10.0, "10"), (1000.0, "1000"), (1.25, "1.25"), (0.125, "0.125")] {
+        assert_eq!(ratio_number(number), expected);
+    }
     let scale = Scale::new(1.0, "ft", 2).unwrap().with_vertical_multiplier([0.0, 0.0], [1.0, 0.0], 10.0).unwrap();
     assert!(scale.ratio.contains("vertical × 10)"), "{}", scale.ratio);
 }

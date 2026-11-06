@@ -271,8 +271,8 @@ impl PageUnit {
 /// A side of a scale ratio as people write it: at most six decimals, no trailing zeros.
 fn ratio_number(v: f64) -> String {
     let fixed = format!("{v:.6}");
-    // Keep integer trailing zeros: only the decimal portion may be trimmed.
-    let short = if fixed.contains('.') { fixed.trim_end_matches('0').trim_end_matches('.') } else { fixed.as_str() };
+    // Strip zeros from the fraction only, keeping significant integer zeros.
+    let short = fixed.trim_end_matches('0').trim_end_matches('.');
     if short == "0" || short.len() > 24 { format!("{v:e}") } else { short.into() }
 }
 pub(crate) fn check_points(points: &[Point]) -> Result<()> {
