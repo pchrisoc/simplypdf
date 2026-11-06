@@ -1,6 +1,8 @@
 # SimplyPDF — Project guide and acceptance criteria
 
 The canonical task statuses and checklist are in [README.md](../../README.md). This guide preserves the detailed instructions, acceptance criteria, background, usage examples, and project history.
+
+For verified product claims, excluded system responsibilities, and RFI/submittal/punch/estimating/CAD/BIM limits, see the [scope boundaries](scope-boundaries.md).
 SimplyPDF is a Rust desktop PDF workbench for construction takeoff and estimating, based on
 [PdfCraft](https://github.com/storytold/pdfcraft). The desktop targets Windows, macOS, and Linux.
 Agents can use the same measurement tools through the CLI or an opt-in MCP server.
