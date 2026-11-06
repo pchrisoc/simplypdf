@@ -462,3 +462,23 @@ fn a_stream_over_the_byte_budget_uses_it_up_once() {
     assert!(g.truncated);
     assert_eq!(g.segments.len(), 1, "the parts before it still snap");
 }
+
+#[test]
+fn csv_escapes_formula_prefixes_after_leading_control_characters() {
+    let mut d = fixture("", "", &[]);
+    let mut m = new(Kind::Distance, vec![[0.0, 0.0], [72.0, 0.0]]);
+    m.label = "\u{0001}=HYPERLINK(\"https://example.test\")".into();
+    add(&mut d, &m, &Meta { date: None, id: "csv-safe".into() }).unwrap();
+    let output = csv(&list(&d).measurements);
+    assert!(output.contains("\"'\u{0001}=HYPERLINK"), "control-prefixed formula must be escaped: {output:?}");
+}
+
+#[test]
+fn csv_escapes_formula_prefixes_after_leading_control_characters() {
+    let mut d = fixture("", "", &[]);
+    let mut m = new(Kind::Distance, vec![[0.0, 0.0], [72.0, 0.0]]);
+    m.label = "\u{0001}=HYPERLINK(\"https://example.test\")".into();
+    add(&mut d, &m, &Meta { date: None, id: "csv-safe".into() }).unwrap();
+    let output = csv(&list(&d).measurements);
+    assert!(output.contains("\"'\u{0001}=HYPERLINK"), "control-prefixed formula must be escaped: {output:?}");
+}

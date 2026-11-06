@@ -763,7 +763,11 @@ pub const TAKEOFF_COLUMNS: [&str; 14] = [
 pub fn csv(measurements: &[Measurement]) -> String {
     // Prefix spreadsheet formula triggers; quoting alone does not prevent evaluation.
     let field = |s: &str| {
-        let prefix = if s.trim_start().starts_with(['=', '+', '-', '@']) || s.starts_with(['\t', '\r']) { "'" } else { "" };
+        // Tabs, newlines, and other leading control characters may be stripped by
+        // spreadsheet importers before formula detection. Prefix them as well.
+        let risky = s.chars().next().is_some_and(char::is_control)
+            || s.trim_start_matches(|c: char| c.is_whitespace() || c.is_control()).starts_with(['=', '+', '-', '@']);
+        let prefix = if risky { "'" } else { "" };
         format!("\"{prefix}{}\"", s.replace('"', "\"\""))
     };
     let mut out = TAKEOFF_COLUMNS.join(",");
