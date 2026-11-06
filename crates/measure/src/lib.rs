@@ -684,6 +684,9 @@ pub fn scale_at(doc: &Document, page_index: usize, at: Point) -> Result<Scale> {
 /// are `per_point` in a PDF point (25.4 / 72 for millimetres).
 pub fn scale_at_or(doc: &Document, page_index: usize, at: Point, per_point: f64, unit: &str) -> Result<Scale> {
     check_points(&[at])?;
+    if !per_point.is_finite() || per_point <= 0.0 {
+        return Err(invalid("measurement scale must be finite and positive"));
+    }
     let p = page(doc, page_index)?;
     if let Some(o) = p.dict.get(b"VP") {
         let o = doc.resolve(o);

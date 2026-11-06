@@ -219,6 +219,16 @@ fn coordinates_roundtrip_for_crop_rotation_and_user_unit() {
 }
 
 #[test]
+fn fallback_scale_rejects_invalid_units_per_point_with_or_without_viewports() {
+    let mut doc = fixture("", "", &[]);
+    for value in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+        assert!(scale_at_or(&doc, 0, [10.0, 10.0], value, "m").is_err());
+    }
+    set_scale(&mut doc, 0, [0.0, 0.0, 100.0, 100.0], "detail", &Scale::default()).unwrap();
+    assert!(scale_at_or(&doc, 0, [20.0, 20.0], f64::NAN, "m").is_err());
+}
+
+#[test]
 fn zero_decimal_scale_uses_standard_rounding_format() {
     let d = fixture("", "", &[]);
     let scale = Scale::new(1.0, "m", 0).unwrap();
