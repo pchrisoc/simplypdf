@@ -36,7 +36,6 @@ jobs:
       - name: Fetch the pdf.js corpus (seeds)
         run: cargo xtask corpus
       - name: Fuzz
-        id: fuzz
         run: cargo xtask fuzz --time 900 --seed ${{ github.run_number }}
       - name: Upload findings
         if: always()
