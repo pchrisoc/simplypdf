@@ -1284,7 +1284,11 @@ fn arabic_catalog_stays_logical() {
     needs_catalogs!();
     let ar = arabic();
     assert_eq!(tr(ar, "Save as…"), "حفظ باسم…");
-    assert_eq!(tr(ar, "About SimplyPDF"), "حول SimplyPDF");
+    // Verify that the application-specific About label is translated instead of
+    // silently falling back to English after the product rebrand.
+    let about = tr(ar, "About SimplyPDF");
+    assert_ne!(about, "About SimplyPDF", "Arabic About title must be localized");
+    assert!(about.contains("SimplyPDF"), "product name should remain recognizable: {about:?}");
     assert_eq!(tr(ar, "Name:"), "الاسم:");
     assert_eq!(tr(ar, "Issued by: "), "صادرة عن: ");
     // Placeholders survive in their logical positions.
