@@ -793,6 +793,21 @@ mod tests {
 
     use super::*;
 
+    #[test]
+    fn takeoff_export_success_notice_reports_incomplete_scans() {
+        let complete = measure::Listing::default();
+        assert!(!export_success_notice(&complete).contains("incomplete"));
+
+        let truncated = measure::Listing { truncated: true, ..Default::default() };
+        assert!(export_success_notice(&truncated).contains("incomplete"));
+
+        let unsupported = measure::Listing {
+            unsupported: vec![measure::Unsupported { page: 0, index: 0, reason: "synthetic unsupported annotation".to_owned() }],
+            ..Default::default()
+        };
+        assert!(export_success_notice(&unsupported).contains("incomplete"));
+    }
+
     /// What Apply scale builds from the panel's fields, then a distance read with it.
     fn measured(state: &MeasureView, from: Point, to: Point) -> f64 {
         let page_unit = page_unit_of(state.page_unit, &state.unit, crate::units::Unit::Points);

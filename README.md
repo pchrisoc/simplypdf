@@ -427,8 +427,12 @@ rewrite history on subsequent iterations. Upstream contributions still use PRs.
   Partial audit: shared schema/empty-export coverage is recorded under ENG-08.01. CSV and
   XLSX share the engine copying-permission guard and fresh-output-path policy. CSV now
   uses the shared platform no-replacement writer, including when a competing output appears
-  during staging. Remaining audit: CSV's success toast must retain unsupported/truncated-scan
-  warnings instead of replacing them with an unqualified success message.
+  during staging. Linux regression: `cargo test -p simplypdf-ui-egui --lib
+  takeoff_export_success_notice_reports_incomplete_scans --locked` passed (one test):
+  normal exports retain their success notice and truncated/unsupported scans report
+  an incomplete export. Linux `cargo test -p simplypdf-platform --locked fresh_output`
+  passed (three no-replacement/symlink/sync-failure tests). Full CI and remaining
+  cross-platform acceptance still need verification, so this item stays unchecked.
   Fresh-path evidence on macOS: `cargo test -p simplypdf-platform -j 2 fresh_output` (three
   race/sync/symlink cases) and `cargo test -p simplypdf-automation -j 2 takeoff_` (seven
   cases, including `takeoff_csv_snapshot_never_replaces_existing_files`) pass. The rebuilt
