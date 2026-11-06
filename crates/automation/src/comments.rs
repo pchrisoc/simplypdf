@@ -283,7 +283,10 @@ impl Automation {
                 return Err(ToolError::InvalidArgs("position coordinates must be finite and within 1e7 points".into()));
             }
             let label = format!("{prefix}{}", first + i as i64);
-            let width = (label.chars().count() as f64 * size * 0.68 + 8.0).max(24.0);
+            // Use the same standard-14 Helvetica advances as the FreeText appearance.
+            // A fixed width per character clips wide prefixes (such as repeated W).
+            // Twelve extra points cover the appearance's inner padding and border.
+            let width = (simplypdf_engine::annot_text::text_width(&label, size) + 12.0).max(24.0);
             let rect = rect_to_user(&info, [x, y, x + width, y + size * 1.8]);
             let shape = Shape::TextBox { rect, font_size: size };
             let style = Style::default_for(&shape);

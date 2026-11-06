@@ -552,6 +552,24 @@ fn tool_file_reads_refuse_inputs_exceeding_512_mib() {
 }
 
 #[test]
+fn numbered_symbols_fit_wide_helvetica_prefixes_on_one_line() {
+    let mut a = Automation::new();
+    let id = search_document(&mut a, 1);
+    let prefix = "WWWWWWWWWW";
+    let size = 20.0;
+    let label = format!("{prefix}1");
+    json(&mut a, "numbered_symbols_add", json!({"doc": id.0, "page": 1, "positions": [[10.0, 20.0]], "prefix": prefix, "font_size": size}));
+    let listed = json(&mut a, "comment_list", json!({"doc": id.0}));
+    assert_eq!(listed["comments"][0]["contents"], label);
+    let rect = listed["comments"][0]["rect"].as_array().expect("annotation rectangle");
+    let width = rect[2].as_f64().expect("right edge") - rect[0].as_f64().expect("left edge");
+    let measured = simplypdf_engine::annot_text::text_width(&label, size);
+    // Appearance uses two-point padding plus any border; the annotation must
+    // remain wide enough to prevent the generated Helvetica text from wrapping.
+    assert!(width >= measured + 8.0, "annotation width {width} is too narrow for Helvetica text width {measured}");
+}
+
+#[test]
 fn numbered_symbols_are_editable_and_undo_as_one_batch() {
     let mut a = Automation::new();
     let id = search_document(&mut a, 1);
