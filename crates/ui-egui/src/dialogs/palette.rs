@@ -43,6 +43,26 @@ fn score_for_direction(hay: &str, needle: &str, rtl: bool) -> Option<usize> {
     needle.chars().all(|c| it.any(|x| x == c)).then_some(100)
 }
 
+/// Move selection across runnable results only. Disabled entries remain visible, but keyboard
+/// navigation should not strand the user on an action that cannot execute.
+fn move_selection(ready: &[bool], current: usize, direction: i8) -> usize {
+    if ready.is_empty() {
+        return 0;
+    }
+    let current = current.min(ready.len() - 1);
+    if direction > 0 {
+        (current + 1..ready.len()).find(|&i| ready[i]).unwrap_or(current)
+    } else if direction < 0 {
+        (0..current).rev().find(|&i| ready[i]).unwrap_or(current)
+    } else {
+        current
+    }
+}
+
+fn initial_selection(ready: &[bool]) -> usize {
+    ready.iter().position(|&enabled| enabled).unwrap_or(0)
+}
+
 /// Draw the command palette and dispatch the chosen command or tool group.
 pub fn show(app: &mut SimplyPDFApp, ctx: &egui::Context) {
     let palette_rect_id = egui::Id::unique("palette_rect");
@@ -112,20 +132,25 @@ pub fn show(app: &mut SimplyPDFApp, ctx: &egui::Context) {
             }
         }
     }
-    hits.sort_by_key(|(s, h)| (*s, !h.ready));
+    hits.sort_by_key(|(s, h)| (!h.ready, *s));
     hits.truncate(12);
+    let ready: Vec<bool> = hits.iter().map(|(_, hit)| hit.ready).collect();
     let (down, up) = ctx.input(|i| (i.key_pressed(egui::Key::ArrowDown), i.key_pressed(egui::Key::ArrowUp)));
     let selected = ctx.data_mut(|data| {
         let id = egui::Id::unique("palette_selected");
         let query_id = egui::Id::unique("palette_selected_query");
         let previous_query = data.get_temp::<String>(query_id);
-        let selected =
-            if previous_query.as_deref() == Some(&q) { data.get_temp::<usize>(id).unwrap_or(0) } else { 0 }.min(hits.len().saturating_sub(1));
+        let selected = if previous_query.as_deref() == Some(&q) {
+            data.get_temp::<usize>(id).unwrap_or_else(|| initial_selection(&ready))
+        } else {
+            initial_selection(&ready)
+        }
+        .min(hits.len().saturating_sub(1));
         data.insert_temp(query_id, q.clone());
         let selected = if down {
-            selected.saturating_add(1).min(hits.len().saturating_sub(1))
+            move_selection(&ready, selected, 1)
         } else if up {
-            selected.saturating_sub(1)
+            move_selection(&ready, selected, -1)
         } else {
             selected
         };
@@ -170,6 +195,7 @@ pub fn show(app: &mut SimplyPDFApp, ctx: &egui::Context) {
                     if (r.has_focus() || r.lost_focus())
                         && ui.input(|i| i.key_pressed(egui::Key::Enter))
                         && let Some((_, h)) = hits.get(selected)
+                        && h.ready
                     {
                         chosen = Some((h.command, h.group));
                     }
@@ -203,7 +229,7 @@ pub fn show(app: &mut SimplyPDFApp, ctx: &egui::Context) {
                         fg,
                         (rect.width() - 36.0 - detail_w - 24.0).max(0.0),
                     );
-                    if theme::hand(resp).clicked() {
+                    if theme::hand(resp).clicked() && h.ready {
                         chosen = Some((h.command, h.group));
                     }
                 }
@@ -233,7 +259,22 @@ pub fn show(app: &mut SimplyPDFApp, ctx: &egui::Context) {
 
 #[cfg(test)]
 mod search {
-    use super::{score, score_for_direction};
+    use super::{initial_selection, move_selection, score, score_for_direction};
+
+    #[test]
+    fn palette_keyboard_skips_disabled_commands_and_stays_bounded() {
+        let ready = [false, true, false, true, false];
+        assert_eq!(initial_selection(&ready), 1);
+        assert_eq!(move_selection(&ready, 1, 1), 3);
+        assert_eq!(move_selection(&ready, 3, -1), 1);
+        assert_eq!(move_selection(&ready, 3, 1), 3);
+        assert_eq!(move_selection(&ready, 1, -1), 1);
+        assert_eq!(move_selection(&ready, 999, 1), 4);
+        assert_eq!(initial_selection(&[false, false]), 0);
+        assert_eq!(move_selection(&[false, false], 0, 1), 0);
+        assert_eq!(move_selection(&[], 0, -1), 0);
+    }
+
     use simplypdf_render::text::fold_case;
 
     /// Word-order tolerance is RTL-only and still requires every requested word.
