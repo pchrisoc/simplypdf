@@ -779,7 +779,7 @@ pub fn csv(measurements: &[Measurement]) -> String {
         // Some spreadsheet importers ignore leading control characters before
         // interpreting a formula. Treat any leading control code as unsafe.
         let dangerous = s.chars().next().is_some_and(char::is_control)
-            || s.chars().skip_while(|ch| ch.is_whitespace() || ch.is_control()).next().is_some_and(|ch| matches!(ch, '=' | '+' | '-' | '@'));
+            || s.chars().find(|ch| !ch.is_whitespace() && !ch.is_control()).is_some_and(|ch| matches!(ch, '=' | '+' | '-' | '@'));
         let prefix = if dangerous { "'" } else { "" };
         format!("\"{prefix}{}\"", s.replace('"', "\"\""))
     };
