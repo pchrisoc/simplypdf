@@ -140,6 +140,28 @@ fn snap_paths_endpoints_midpoints_and_intersections() {
     assert!(paths.snap([f64::NAN, 0.0], 3.0, opts).is_err());
 }
 #[test]
+fn snap_intersection_rejects_overflow_and_never_returns_non_finite_points() {
+    let huge = 1.0e308;
+    assert!(snap::intersection([-huge, -huge], [huge, huge], [-huge, huge], [huge, -huge]).is_none());
+    assert_eq!(
+        snap::intersection([0.0, 0.0], [10.0, 10.0], [0.0, 10.0], [10.0, 0.0]),
+        Some([5.0, 5.0]),
+    );
+}
+
+#[test]
+fn snap_ignores_non_finite_candidates_and_keeps_valid_path_hits() {
+    let mut geometry = snap::Geometry::default();
+    geometry.endpoints.push([f64::NAN, 0.0]);
+    geometry.midpoints.push([f64::INFINITY, 0.0]);
+    geometry.segments.push([[0.0, 0.0], [10.0, 0.0]]);
+    let hit = geometry.snap([5.0, 1.0], 2.0, snap::SnapOptions::default()).unwrap().unwrap();
+    assert_eq!(hit.kind, snap::SnapKind::Path);
+    assert_eq!(hit.point, [5.0, 0.0]);
+    assert!(hit.distance.is_finite());
+}
+
+#[test]
 fn filled_open_subpath_offers_the_same_snap_edges_as_explicit_close() {
     let open = fixture("40 50 m 160 50 l 100 170 l f", "", &[]);
     let closed = fixture("40 50 m 160 50 l 100 170 l h f", "", &[]);
