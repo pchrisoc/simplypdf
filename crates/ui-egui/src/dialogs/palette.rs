@@ -50,6 +50,9 @@ fn move_selection(ready: &[bool], current: usize, direction: i8) -> usize {
         return 0;
     }
     let current = current.min(ready.len() - 1);
+    if !ready[current] && ready.iter().any(|&enabled| enabled) {
+        return initial_selection(ready);
+    }
     if direction > 0 {
         (current + 1..ready.len()).find(|&i| ready[i]).unwrap_or(current)
     } else if direction < 0 {
@@ -269,7 +272,8 @@ mod search {
         assert_eq!(move_selection(&ready, 3, -1), 1);
         assert_eq!(move_selection(&ready, 3, 1), 3);
         assert_eq!(move_selection(&ready, 1, -1), 1);
-        assert_eq!(move_selection(&ready, 999, 1), 4);
+        assert_eq!(move_selection(&ready, 999, 1), 1);
+        assert_eq!(move_selection(&ready, 0, -1), 1);
         assert_eq!(initial_selection(&[false, false]), 0);
         assert_eq!(move_selection(&[false, false], 0, 1), 0);
         assert_eq!(move_selection(&[], 0, -1), 0);
