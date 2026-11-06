@@ -356,7 +356,11 @@ fn arrow_keys_move_by_card_and_by_row_and_shift_extends() {
     // Narrow enough for several rows.
     let mut h = grid_of(named.iter().map(|(n, p)| (*n, fixture(*p))).collect(), vec2(760.0, 1200.0));
     let top = card(&h, "f0.pdf").top();
-    let cols = (0..9).filter(|i| (card(&h, &format!("f{i}.pdf")).top() - top).abs() < 1.0).count();
+    // The grid only exposes on-screen cards to the accessibility tree. Read the
+    // visible rows; off-screen cards remain in the model for keyboard selection.
+    let visible: Vec<_> = (0..9).filter_map(|i| h.query_by_label(&format!("f{i}.pdf")).map(|node| node.rect())).collect();
+    let cols = visible.iter().filter(|r| (r.top() - top).abs() < 1.0).count();
+    assert!(visible.len() > cols, "at least two card rows must be visible: {visible:?}");
     assert!((2..9).contains(&cols), "several cards per row and several rows ({cols} per row)");
     h.get_by_label("f0.pdf").click();
     h.run_steps(1);

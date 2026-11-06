@@ -51,7 +51,9 @@ fn rail_is_outermost_then_tools_then_the_side_panel_then_the_page() {
     let (r, s, t) = (rail(&h), side(&h), tools(&h));
     assert!(r.right() > WIDTH - 12.0, "{r:?}");
     assert!(s.right() < r.left() && s.left() > WIDTH - 48.0 - 340.0, "{s:?} {r:?}");
-    assert!(t.left() < 48.0, "{t:?}");
+    // The separate 52-pt tool navigator sits at the outside edge; the Tools
+    // settings pane starts immediately after it, not at the window boundary.
+    assert!((52.0..104.0).contains(&t.left()) && t.right() < s.left(), "{t:?}");
     // Tools on the right: rail, Tools, side panel, page.
     let h = harness(|app| {
         app.set_option("tools-side", "right").unwrap();
