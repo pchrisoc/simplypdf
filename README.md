@@ -8,6 +8,27 @@ Agents can use the same measurement tools through the CLI or an opt-in MCP serve
 ArtCraft team and PDFCraft contributors. [Planned project website](https://pdf.simplyhost.org)
 (not live yet).
 
+## Project status
+
+SimplyPDF is under active development. It is **not yet a verified cross-platform release**. The desktop measurement and takeoff workflows described below are implemented, but the live Calc publisher, complete engineering feature inventory, and clean-install acceptance tests remain unfinished.
+
+| Area | Current status | Remaining acceptance work |
+| --- | --- | --- |
+| PDF measurements and HVAC route takeoffs | Implemented | Additional advanced quantities and multi-sheet workflows |
+| Searchable, editable takeoff table | Implemented | Grouped summaries, custom columns, and broader markup coverage |
+| CSV/XLSX takeoff export | Snapshot export implemented | Managed live Calc publishing and cross-platform formula refresh |
+| Desktop, CLI, and opt-in MCP | Available in source | Clean-install and end-to-end release verification |
+| SimplyPDF branding | In progress | Installed assets and coexistence checks on all target platforms |
+| Engineering feature inventory | In progress | Complete each `ENG-*` acceptance test individually |
+
+**Verification rule:** `[x]` means the stated acceptance scope has evidence of completion; `[ ]` means incomplete, partially implemented, blocked, or not yet verified. A merged patch or passing unit test for one subtask does **not** automatically complete its parent checklist item. Never mark a task complete solely because an agent claimed it or a pull request was opened.
+
+**Where to look:** [First-release checkpoints](#simplypdf-roadmap) · [Full engineering checklist](#engineering-feature-checklist) · [Build and run](#build-and-run) · [Open issues](https://github.com/pchrisoc/simplypdf/issues) · [Pull requests](https://github.com/pchrisoc/simplypdf/pulls) · [CI runs](https://github.com/pchrisoc/simplypdf/actions) · [Releases](https://github.com/pchrisoc/simplypdf/releases).
+
+### Current QA follow-up
+
+The tracked UI regressions in [issue #10](https://github.com/pchrisoc/simplypdf/issues/10), including localization subtasks [#15](https://github.com/pchrisoc/simplypdf/issues/15) and [#23](https://github.com/pchrisoc/simplypdf/issues/23), require verification against the latest `main` CI before they can be declared resolved. Other tracked reliability work includes [snap robustness #16](https://github.com/pchrisoc/simplypdf/issues/16), [version validation #20](https://github.com/pchrisoc/simplypdf/issues/20), and [export hardening #2](https://github.com/pchrisoc/simplypdf/issues/2) / [#3](https://github.com/pchrisoc/simplypdf/issues/3). Issue references are tracking links, **not** evidence that the failures are still present or that fixes are already merged.
+
 ## What works today
 
 - Calibrate a drawing from two points or a scale ratio, then measure distance, perimeter, and area.
@@ -225,8 +246,7 @@ workflow inventory discussed on 2026-11-05. Bluebeam is a functional reference, 
 or a source of code, artwork, or assets. Use public documentation, PDF specifications, and
 synthetic black-box observations. Implement original Rust behavior and our existing shared UI.
 
-**Status:** every new `ENG-*` item starts unchecked because this expanded inventory has not been
-audited end to end. An unchecked item can already have a partial or inherited implementation:
+**Status:** an `ENG-*` item stays unchecked until its full acceptance criteria are verified. An unchecked item can already have a partial or inherited implementation:
 inspect and extend it rather than duplicate it. Existing checked first-release checkpoints above
 remain historical records. Checking an engineering item requires the evidence below, including
 for inherited code. These boxes are not a claim of Bluebeam parity or release readiness.
