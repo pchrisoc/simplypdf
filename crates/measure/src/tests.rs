@@ -143,10 +143,7 @@ fn snap_paths_endpoints_midpoints_and_intersections() {
 fn snap_intersection_rejects_overflow_and_never_returns_non_finite_points() {
     let huge = 1.0e308;
     assert!(snap::intersection([-huge, -huge], [huge, huge], [-huge, huge], [huge, -huge]).is_none());
-    assert_eq!(
-        snap::intersection([0.0, 0.0], [10.0, 10.0], [0.0, 10.0], [10.0, 0.0]),
-        Some([5.0, 5.0]),
-    );
+    assert_eq!(snap::intersection([0.0, 0.0], [10.0, 10.0], [0.0, 10.0], [10.0, 0.0]), Some([5.0, 5.0]),);
 }
 
 #[test]

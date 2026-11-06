@@ -59,6 +59,7 @@ mod tests {
         assert_eq!(data_row(MAX_DATA_ROWS - 1).unwrap(), 1_048_575);
         assert!(data_row(MAX_DATA_ROWS).is_err());
         assert!(data_row(usize::MAX).is_err());
+    }
 
     #[test]
     fn empty_snapshot_is_a_valid_xlsx_and_never_replaces_an_existing_file() {
