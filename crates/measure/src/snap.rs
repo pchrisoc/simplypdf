@@ -63,7 +63,12 @@ pub fn intersection(a: Point, b: Point, c: Point, d: Point) -> Option<Point> {
     }
     let t = cross(sub(c, a), s) / denominator;
     let u = cross(sub(c, a), r) / denominator;
-    if (0.0..=1.0).contains(&t) && (0.0..=1.0).contains(&u) { Some([a[0] + t * r[0], a[1] + t * r[1]]) } else { None }
+    if (0.0..=1.0).contains(&t) && (0.0..=1.0).contains(&u) {
+        let point = [a[0] + t * r[0], a[1] + t * r[1]];
+        point.iter().all(|coordinate| coordinate.is_finite()).then_some(point)
+    } else {
+        None
+    }
 }
 fn nearest(p: Point, a: Point, b: Point) -> Point {
     let v = sub(b, a);
@@ -102,7 +107,7 @@ impl Geometry {
         let consider = |best: &mut Option<Snap>, p: Point, kind: SnapKind| {
             let distance = distance(at, p);
             // Discrete targets take precedence over projections at the same distance.
-            if distance <= tolerance && best.is_none_or(|b| distance < b.distance - 1e-9) {
+            if distance.is_finite() && distance <= tolerance && best.is_none_or(|b| distance < b.distance - 1e-9) {
                 *best = Some(Snap { point: p, kind, distance });
             }
         };
