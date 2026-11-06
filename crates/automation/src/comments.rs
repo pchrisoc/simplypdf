@@ -245,6 +245,58 @@ impl Automation {
         Ok(json!({ "count": roots.len(), "comments": roots }))
     }
 
+    /// Create a numbered run of editable PDF text annotations in one undoable edit.
+    /// Positions use the same top-left display coordinates as comment_add.
+    pub(crate) fn numbered_symbols_add(&mut self, a: &Args) -> Result<Value> {
+        let page = self.page(a)?;
+        let info = self.doc(a)?.info.pages.get(page).ok_or_else(|| failed("page is out of range"))?.clone();
+        let positions = a
+            .get("positions")
+            .and_then(Value::as_array)
+            .ok_or_else(|| ToolError::InvalidArgs("positions must be an array of [x,y] coordinates".into()))?;
+        if positions.is_empty() || positions.len() > 200 {
+            return Err(ToolError::InvalidArgs("positions must contain between 1 and 200 points".into()));
+        }
+        let prefix = a.opt_str("prefix")?.unwrap_or("");
+        if prefix.len() > 64 || prefix.chars().any(char::is_control) {
+            return Err(ToolError::InvalidArgs("prefix must be at most 64 bytes without control characters".into()));
+        }
+        let first = a.opt_int("start")?.unwrap_or(1);
+        if !(1..=999_999).contains(&first) || first.checked_add(positions.len() as i64 - 1).is_none_or(|n| n > 999_999) {
+            return Err(ToolError::InvalidArgs("numbered sequence must stay between 1 and 999999".into()));
+        }
+        let size = a.opt_num("font_size")?.unwrap_or(12.0);
+        if !size.is_finite() || !(4.0..=72.0).contains(&size) {
+            return Err(ToolError::InvalidArgs("font_size must be between 4 and 72".into()));
+        }
+        let author = a.opt_str("author")?.unwrap_or(DEFAULT_AUTHOR);
+        if author.len() > 512 || author.chars().any(char::is_control) {
+            return Err(ToolError::InvalidArgs("author must be at most 512 printable bytes".into()));
+        }
+        let mut edits = Vec::with_capacity(positions.len());
+        let mut labels = Vec::with_capacity(positions.len());
+        for (i, point) in positions.iter().enumerate() {
+            let pair = point.as_array().filter(|p| p.len() == 2).ok_or_else(|| ToolError::InvalidArgs("each position must be [x,y]".into()))?;
+            let x = pair.first().and_then(Value::as_f64).ok_or_else(|| ToolError::InvalidArgs("position x must be a number".into()))?;
+            let y = pair.get(1).and_then(Value::as_f64).ok_or_else(|| ToolError::InvalidArgs("position y must be a number".into()))?;
+            if !x.is_finite() || !y.is_finite() || x.abs() > 1e7 || y.abs() > 1e7 {
+                return Err(ToolError::InvalidArgs("position coordinates must be finite and within 1e7 points".into()));
+            }
+            let label = format!("{prefix}{}", first + i as i64);
+            let width = (label.chars().count() as f64 * size * 0.68 + 8.0).max(24.0);
+            let rect = rect_to_user(&info, [x, y, x + width, y + size * 1.8]);
+            let shape = Shape::TextBox { rect, font_size: size };
+            let style = Style::default_for(&shape);
+            edits.push(Edit::AddAnnotation(NewAnnotation { page, shape, style, contents: label.clone(), author: author.to_string() }));
+            labels.push(label);
+        }
+        let count = edits.len();
+        let edit = Edit::Batch { label: "Add numbered symbols".into(), edits };
+        let mut result = self.apply(a, edit)?;
+        result["numbered_symbols"] = json!({"count": count, "labels": labels, "next": first + count as i64, "page": page + 1});
+        Ok(result)
+    }
+
     pub(crate) fn comment_add(&mut self, a: &Args) -> Result<Value> {
         let page = self.page(a)?;
         let info = self.doc(a)?.info.pages[page].clone();
