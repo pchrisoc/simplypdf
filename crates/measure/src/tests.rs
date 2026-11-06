@@ -219,6 +219,16 @@ fn coordinates_roundtrip_for_crop_rotation_and_user_unit() {
 }
 
 #[test]
+fn vertical_multiplier_rejects_invalid_values_and_invalid_base_scales() {
+    let base = Scale::new(1.0, "m", 2).unwrap();
+    for value in [f64::NAN, f64::INFINITY, 0.0, -1.0] {
+        assert!(base.clone().with_vertical_multiplier([0.0, 0.0], [10.0, 0.0], value).is_err());
+    }
+    let invalid = Scale { x: f64::NAN, ..base };
+    assert!(invalid.with_vertical_multiplier([0.0, 0.0], [10.0, 0.0], 1.0).is_err());
+}
+
+#[test]
 fn zero_decimal_scale_uses_standard_rounding_format() {
     let d = fixture("", "", &[]);
     let scale = Scale::new(1.0, "m", 0).unwrap();

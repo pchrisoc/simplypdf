@@ -132,6 +132,10 @@ impl Scale {
     /// are the user-space ends of a horizontal display segment, so rotation selects the axis.
     pub fn with_vertical_multiplier(mut self, a: Point, b: Point, multiplier: f64) -> Result<Self> {
         check_points(&[a, b])?;
+        self.validate()?;
+        if !multiplier.is_finite() || multiplier <= 0.0 {
+            return Err(invalid("vertical scale multiplier must be finite and positive"));
+        }
         if multiplier == 1.0 {
             return Ok(self);
         }
