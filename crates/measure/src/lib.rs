@@ -772,9 +772,17 @@ pub const TAKEOFF_COLUMNS: [&str; 14] = [
 ];
 
 pub fn csv(measurements: &[Measurement]) -> String {
-    // Prefix spreadsheet formula triggers; quoting alone does not prevent evaluation.
+    // A spreadsheet may ignore leading whitespace and control characters when
+    // deciding whether a quoted CSV cell starts a formula. Escape the *first*
+    // dangerous non-whitespace character rather than trusting CSV quoting.
     let field = |s: &str| {
-        let prefix = if s.trim_start().starts_with(['=', '+', '-', '@']) || s.starts_with(['\t', '\r']) { "'" } else { "" };
+        let prefix = if s.chars().skip_while(|ch| ch.is_whitespace() || ch.is_control()).next().is_some_and(|ch| matches!(ch, '=' | '+' | '-' | '@'))
+            || s.starts_with(['\t', '\r'])
+        {
+            "'"
+        } else {
+            ""
+        };
         format!("\"{prefix}{}\"", s.replace('"', "\"\""))
     };
     let mut out = TAKEOFF_COLUMNS.join(",");
