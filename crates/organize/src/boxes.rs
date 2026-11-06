@@ -107,7 +107,7 @@ pub fn set_page_box(doc: &mut Document, pages: &[usize], which: PageBox, spec: B
             }
         };
         if let Some(r) = rect
-            && (r[2] - r[0] < 1.0 || r[3] - r[1] < 1.0)
+            && (!((r[2] - r[0]).is_finite() && (r[3] - r[1]).is_finite()) || r[2] - r[0] < 1.0 || r[3] - r[1] < 1.0)
         {
             return Err(bad(&format!("page {} would be smaller than a point", i + 1)));
         }

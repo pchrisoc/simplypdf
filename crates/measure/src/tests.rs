@@ -140,6 +140,25 @@ fn snap_paths_endpoints_midpoints_and_intersections() {
     assert!(paths.snap([f64::NAN, 0.0], 3.0, opts).is_err());
 }
 #[test]
+fn snap_intersection_rejects_overflow_and_never_returns_non_finite_points() {
+    let huge = 1.0e308;
+    assert!(snap::intersection([-huge, -huge], [huge, huge], [-huge, huge], [huge, -huge]).is_none());
+    assert_eq!(snap::intersection([0.0, 0.0], [10.0, 10.0], [0.0, 10.0], [10.0, 0.0]), Some([5.0, 5.0]),);
+}
+
+#[test]
+fn snap_ignores_non_finite_candidates_and_keeps_valid_path_hits() {
+    let mut geometry = snap::Geometry::default();
+    geometry.endpoints.push([f64::NAN, 0.0]);
+    geometry.midpoints.push([f64::INFINITY, 0.0]);
+    geometry.segments.push([[0.0, 0.0], [10.0, 0.0]]);
+    let hit = geometry.snap([5.0, 1.0], 2.0, snap::SnapOptions::default()).unwrap().unwrap();
+    assert_eq!(hit.kind, snap::SnapKind::Path);
+    assert_eq!(hit.point, [5.0, 0.0]);
+    assert!(hit.distance.is_finite());
+}
+
+#[test]
 fn filled_open_subpath_offers_the_same_snap_edges_as_explicit_close() {
     let open = fixture("40 50 m 160 50 l 100 170 l f", "", &[]);
     let closed = fixture("40 50 m 160 50 l 100 170 l h f", "", &[]);
@@ -202,6 +221,18 @@ fn measurement_csv_quotes_newlines_and_blocks_formula_cells() {
 }
 
 #[test]
+fn csv_formula_cells_with_embedded_control_prefixes_are_escaped() {
+    let mut d = fixture("", "", &[]);
+    let mut m = new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]);
+    m.label = "\u{2003}\u{0001}=2+2".into();
+    m.author = "\n\t@SUM(A1:A9)".into();
+    add(&mut d, &m, &Meta::default()).unwrap();
+    let text = csv(&list(&d).measurements);
+    assert!(text.contains("\"'\u{2003}\u{0001}=2+2\""));
+    assert!(text.contains("\"'\n\t@SUM(A1:A9)\""));
+}
+
+#[test]
 fn coordinates_roundtrip_for_crop_rotation_and_user_unit() {
     for rotation in [0, 90, 180, 270] {
         let d = fixture("", &format!("/UserUnit 2 /Rotate {rotation} /CropBox [10 20 210 320]"), &[]);
@@ -216,6 +247,34 @@ fn coordinates_roundtrip_for_crop_rotation_and_user_unit() {
         let scale = scale_at(&d, 0, a).unwrap();
         close(reading(Kind::Distance, &[a, b], &scale).unwrap().value, 100.0 / 72.0);
     }
+}
+
+#[test]
+fn scale_ratio_rejects_unrepresentable_page_and_real_distances() {
+    let a = [0.0, 0.0];
+    let b = [72.0, 0.0];
+    assert!(Scale::ratio(a, b, f64::MAX, PageUnit::In, 1.0, "m", 2).is_err());
+    assert!(Scale::ratio(a, b, 1.0, PageUnit::In, f64::MIN_POSITIVE, "m", 2).is_err());
+}
+
+#[test]
+fn fallback_scale_rejects_invalid_units_per_point_with_or_without_viewports() {
+    let mut doc = fixture("", "", &[]);
+    for value in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+        assert!(scale_at_or(&doc, 0, [10.0, 10.0], value, "m").is_err());
+    }
+    set_scale(&mut doc, 0, [0.0, 0.0, 100.0, 100.0], "detail", &Scale::default()).unwrap();
+    assert!(scale_at_or(&doc, 0, [20.0, 20.0], f64::NAN, "m").is_err());
+}
+
+#[test]
+fn vertical_multiplier_rejects_invalid_values_and_invalid_base_scales() {
+    let base = Scale::new(1.0, "m", 2).unwrap();
+    for value in [f64::NAN, f64::INFINITY, 0.0, -1.0] {
+        assert!(base.clone().with_vertical_multiplier([0.0, 0.0], [10.0, 0.0], value).is_err());
+    }
+    let invalid = Scale { x: f64::NAN, ..base };
+    assert!(invalid.with_vertical_multiplier([0.0, 0.0], [10.0, 0.0], 1.0).is_err());
 }
 
 #[test]
@@ -461,4 +520,27 @@ fn a_stream_over_the_byte_budget_uses_it_up_once() {
     assert_eq!(g.unreadable, 1);
     assert!(g.truncated);
     assert_eq!(g.segments.len(), 1, "the parts before it still snap");
+}
+
+#[test]
+fn scale_ratio_preserves_integer_trailing_zeroes() {
+    for (page, real, expected) in [(10.0, 1000.0, "10 in = 1000 ft"), (1.25, 50.0, "1.25 in = 50 ft")] {
+        let scale = Scale::ratio([0.0, 0.0], [72.0 * page, 0.0], page, PageUnit::In, real, "ft", 2).unwrap();
+        assert_eq!(scale.ratio, expected);
+    }
+    for (number, expected) in [(10.0, "10"), (1000.0, "1000"), (1.25, "1.25"), (0.125, "0.125")] {
+        assert_eq!(ratio_number(number), expected);
+    }
+    let scale = Scale::new(1.0, "ft", 2).unwrap().with_vertical_multiplier([0.0, 0.0], [1.0, 0.0], 10.0).unwrap();
+    assert!(scale.ratio.contains("vertical × 10)"), "{}", scale.ratio);
+}
+
+#[test]
+fn csv_escapes_formula_prefixes_after_leading_control_characters() {
+    let mut d = fixture("", "", &[]);
+    let mut m = new(Kind::Distance, vec![[0.0, 0.0], [72.0, 0.0]]);
+    m.label = "\u{0001}=HYPERLINK(\"https://example.test\")".into();
+    add(&mut d, &m, &Meta { date: None, id: "csv-safe".into() }).unwrap();
+    let output = csv(&list(&d).measurements);
+    assert!(output.contains("\"'\u{0001}=HYPERLINK"), "control-prefixed formula must be escaped: {output:?}");
 }

@@ -211,7 +211,7 @@ fn typing_moving_styling_and_deleting_added_content() {
     let mut h = harness();
     assert!(h.state_mut().execute("edit.text"));
     h.run_steps(2);
-    h.get_by_label("Edit a PDF");
+    h.get_by_role_and_label(egui::accesskit::Role::Button, "Edit a PDF");
     let p = at(&h, 40.0, 300.0);
     click(&mut h, p);
     assert!(h.state().views[0].content.draft.is_some(), "the editor opened");

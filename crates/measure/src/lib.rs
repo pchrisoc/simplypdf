@@ -123,7 +123,15 @@ impl Scale {
         if !page.is_finite() || page <= 0.0 || !real.is_finite() || real <= 0.0 {
             return Err(invalid("both sides of a scale ratio must be finite and positive"));
         }
-        let mut out = Self::calibrate(a, b, real / (page * page_unit.points()), unit, precision)?;
+        let page_points = page * page_unit.points();
+        if !page_points.is_finite() || page_points <= 0.0 {
+            return Err(invalid("page distance exceeds the supported scale range"));
+        }
+        let real_per_point = real / page_points;
+        if !real_per_point.is_finite() || real_per_point <= 0.0 {
+            return Err(invalid("scale ratio is too small or large to represent"));
+        }
+        let mut out = Self::calibrate(a, b, real_per_point, unit, precision)?;
         out.ratio = format!("{} {} = {} {unit}", ratio_number(page), page_unit.label(), ratio_number(real));
         out.validate()?;
         Ok(out)
@@ -132,6 +140,10 @@ impl Scale {
     /// are the user-space ends of a horizontal display segment, so rotation selects the axis.
     pub fn with_vertical_multiplier(mut self, a: Point, b: Point, multiplier: f64) -> Result<Self> {
         check_points(&[a, b])?;
+        self.validate()?;
+        if !multiplier.is_finite() || multiplier <= 0.0 {
+            return Err(invalid("vertical scale multiplier must be finite and positive"));
+        }
         if multiplier == 1.0 {
             return Ok(self);
         }
@@ -271,8 +283,11 @@ impl PageUnit {
 /// A side of a scale ratio as people write it: at most six decimals, no trailing zeros.
 fn ratio_number(v: f64) -> String {
     let fixed = format!("{v:.6}");
-    let short = fixed.trim_end_matches('0').trim_end_matches('.');
-    if short == "0" || short.len() > 24 { format!("{v:e}") } else { short.into() }
+    // Format with a dot first, so trimming zeros cannot erase integer digits.
+    let (integer, fraction) = fixed.split_once('.').unwrap_or((fixed.as_str(), ""));
+    let trimmed = fraction.trim_end_matches('0');
+    let short = if trimmed.is_empty() { integer.to_string() } else { format!("{integer}.{trimmed}") };
+    if short == "0" || short.len() > 24 { format!("{v:e}") } else { short }
 }
 pub(crate) fn check_points(points: &[Point]) -> Result<()> {
     if points.len() > MAX_POINTS || points.iter().flatten().any(|v| !v.is_finite() || v.abs() > MAX_COORD) {
@@ -684,6 +699,9 @@ pub fn scale_at(doc: &Document, page_index: usize, at: Point) -> Result<Scale> {
 /// are `per_point` in a PDF point (25.4 / 72 for millimetres).
 pub fn scale_at_or(doc: &Document, page_index: usize, at: Point, per_point: f64, unit: &str) -> Result<Scale> {
     check_points(&[at])?;
+    if !per_point.is_finite() || per_point <= 0.0 {
+        return Err(invalid("measurement scale must be finite and positive"));
+    }
     let p = page(doc, page_index)?;
     if let Some(o) = p.dict.get(b"VP") {
         let o = doc.resolve(o);
@@ -761,9 +779,15 @@ pub const TAKEOFF_COLUMNS: [&str; 14] = [
 ];
 
 pub fn csv(measurements: &[Measurement]) -> String {
-    // Prefix spreadsheet formula triggers; quoting alone does not prevent evaluation.
+    // A spreadsheet may ignore leading whitespace and control characters when
+    // deciding whether a quoted CSV cell starts a formula. Escape the *first*
+    // dangerous non-whitespace character rather than trusting CSV quoting.
     let field = |s: &str| {
-        let prefix = if s.trim_start().starts_with(['=', '+', '-', '@']) || s.starts_with(['\t', '\r']) { "'" } else { "" };
+        // Some spreadsheet importers ignore leading control characters before
+        // interpreting a formula. Treat any leading control code as unsafe.
+        let dangerous = s.chars().next().is_some_and(char::is_control)
+            || s.chars().find(|ch| !ch.is_whitespace() && !ch.is_control()).is_some_and(|ch| matches!(ch, '=' | '+' | '-' | '@'));
+        let prefix = if dangerous { "'" } else { "" };
         format!("\"{prefix}{}\"", s.replace('"', "\"\""))
     };
     let mut out = TAKEOFF_COLUMNS.join(",");

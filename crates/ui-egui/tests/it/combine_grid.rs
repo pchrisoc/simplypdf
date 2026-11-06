@@ -353,10 +353,15 @@ fn a_drop_that_changes_nothing_or_lands_outside_the_grid_leaves_no_undo_step() {
 fn arrow_keys_move_by_card_and_by_row_and_shift_extends() {
     let files: Vec<(String, usize)> = (0..9).map(|i| (format!("f{i}.pdf"), 1)).collect();
     let named: Vec<(&str, usize)> = files.iter().map(|(n, p)| (n.as_str(), *p)).collect();
-    // Narrow enough for several rows.
-    let mut h = grid_of(named.iter().map(|(n, p)| (*n, fixture(*p))).collect(), vec2(760.0, 1200.0));
+    // Allow two or more cards per row despite the independent tool navigator
+    // and settings pane; keep nine files so the grid spans several rows.
+    let mut h = grid_of(named.iter().map(|(n, p)| (*n, fixture(*p))).collect(), vec2(1100.0, 1200.0));
     let top = card(&h, "f0.pdf").top();
-    let cols = (0..9).filter(|i| (card(&h, &format!("f{i}.pdf")).top() - top).abs() < 1.0).count();
+    // The grid only exposes on-screen cards to the accessibility tree. Read the
+    // visible rows; off-screen cards remain in the model for keyboard selection.
+    let visible: Vec<_> = (0..9).filter_map(|i| h.query_by_label(&format!("f{i}.pdf")).map(|node| node.rect())).collect();
+    let cols = visible.iter().filter(|r| (r.top() - top).abs() < 1.0).count();
+    assert!(visible.len() > cols, "at least two card rows must be visible: {visible:?}");
     assert!((2..9).contains(&cols), "several cards per row and several rows ({cols} per row)");
     h.get_by_label("f0.pdf").click();
     h.run_steps(1);

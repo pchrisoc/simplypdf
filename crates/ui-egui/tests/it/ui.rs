@@ -1472,13 +1472,17 @@ fn long_german_tool_labels_stay_within_the_sidebar() {
     h.run_steps(4);
     let heading =
         painted_text(&h).into_iter().find(|(s, ..)| s.starts_with("Ausfüllen und")).expect("translated heading is painted, whole or elided");
-    assert!(heading.2.right() <= 272.0, "translated heading runs past the sidebar: {:?}", heading.2);
+    // Compare to the actual Close control, not a fixed screen coordinate:
+    // the independent tool navigator now takes the first 52 pt on the left.
+    // The accessibility label is localized with the rest of the German tool panel.
+    let close = h.get_by_label("Bereich schließen").rect();
+    assert!(heading.2.right() <= close.left(), "translated heading overlaps Close: {:?} vs {close:?}", heading.2);
     // A long sub-tool name must stop before its status chip, not paint over the PDF.
     h.state_mut().left = LeftPanel::Tool("protect");
     h.run_steps(4);
     let item =
         painted_text(&h).into_iter().find(|(s, ..)| s == "Ausgeblendete Informationen entfernen").expect("long translated sub-tool is painted");
-    assert!(item.2.right() <= 272.0, "translated tool item runs past the sidebar: {:?}", item.2);
+    assert!(item.2.right() <= close.right() + 14.0, "translated tool item runs past the sidebar: {:?}", item.2);
 }
 
 #[test]
@@ -1736,7 +1740,8 @@ fn short_window_rail_buttons_scroll_clear_of_page_navigation() {
         });
         crate::support::settle(&mut h);
         let in_rail = |r: egui::Rect| match side {
-            ToolsSide::Left => r.right() <= 48.0,
+            // A collapsed tool navigator occupies x=0..52 before the navigation rail.
+            ToolsSide::Left => r.left() >= 52.0 && r.right() <= 101.0,
             ToolsSide::Right => r.left() >= width - 48.0,
         };
         let rail = |h: &Harness<'static, SimplyPDFApp>, label: &str| {

@@ -861,6 +861,16 @@ pub fn tools() -> Vec<ToolDef> {
             }),
             &["doc", "page", "type"],
         )),
+        t("numbered_symbols_add", "Add sequential numbered symbols",
+            "Place a sequence of editable PDF text annotations at display points. Supports prefix, starting number, and font size. All placements are one undoable batch. Returns labels and the next number. This is the headless milestone of ENG-03.04.")
+            .with(schema(json!({
+                "doc": doc(), "page": {"type":"integer","minimum":1},
+                "positions": {"type":"array","items":point(),"minItems":1,"maxItems":200},
+                "prefix": {"type":"string","maxLength":64},
+                "start": {"type":"integer","minimum":1,"maximum":999999},
+                "font_size": {"type":"number","minimum":4,"maximum":72},
+                "author": {"type":"string","maxLength":512}
+            }), &["doc","page","positions"])),
         t("comment_reply", "Reply to a comment", "Add a reply to a comment's thread. Undoable.").with(schema(
             comment_ref(json!({ "text": { "type": "string", "minLength": 1 }, "author": { "type": "string" } })),
             &["doc", "text"],
