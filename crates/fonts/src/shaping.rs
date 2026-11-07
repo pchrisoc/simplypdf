@@ -2,7 +2,7 @@
 
 use std::sync::OnceLock;
 
-use harfrust::{FontRef as HarfFontRef, BufferClusterLevel, Direction, ShapeOptions, ShaperData, UnicodeBuffer, script};
+use harfrust::{BufferClusterLevel, Direction, FontRef as HarfFontRef, ShapeOptions, ShaperData, UnicodeBuffer, script};
 use skrifa::instance::{LocationRef, Size};
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId, MetadataProvider};

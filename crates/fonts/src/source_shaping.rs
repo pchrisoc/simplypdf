@@ -1,5 +1,5 @@
 //! Shaping an explicitly selected source/document face, with OpenType features and UAX #9.
-use harfrust::{FontRef as HarfFontRef, BufferClusterLevel, Direction, ShapeOptions, ShaperData, UnicodeBuffer};
+use harfrust::{BufferClusterLevel, Direction, FontRef as HarfFontRef, ShapeOptions, ShaperData, UnicodeBuffer};
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId};
 use unicode_bidi::{Level, ParagraphBidiInfo};
