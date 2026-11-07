@@ -213,3 +213,20 @@ M2 (renderer), M7 (content editing), M10 (OCR and Office), M11 (Preflight and st
   `cargo check --locked --target wasm32-unknown-unknown` for the same three crates.
   Native tests used Homebrew Rust 1.99.1; WASM used rustup Rust 1.98.1 with its
   installed WASM standard library. Full hosted platform reruns remain pending.
+
+- 2026-11-06 (sandbox coding environment): PR #40 is merged as `87851d8c`; its
+  GitHub CI, FreeBSD, Windows ARM64 and Nix checks passed. Installed the private,
+  manual-only n8n Sandbox Coding Gateway and Doctor in the owner's personal project.
+  Fixed non-login Rust PATH, provisioned missing build/oracle tools and the WASM
+  target, freed 3.6 GiB of idle generated `/tmp` build output, and added isolated
+  task checkouts, pinned build inputs, disk-backed temp/target directories, bounded
+  serialized commands, SHA-checked edits, and explicit test results. Existing dirty
+  checkouts and the separate experimental scheduler were preserved.
+  Evidence: ten helper regressions pass locally and on the Debian VM; n8n input/output
+  tests cover SSH failure reporting; real prepare/read calls pass. Gateway job
+  `job-d6363c881dda` finished `done` with `ok=true` on source `87851d8c`, passing
+  formatting, strict all-target Clippy, 116 filter/property/doc tests, layers (39
+  crates), assets (252 repository / 6 bundled / 22 fetched), and scoped WASM checking.
+  A source-change-during-verification regression was observed failing before its
+  guard was added. Usage: [sandbox coding guide](sandbox-coding.md). This improves the VM
+  workflow; product feature completion and parity estimates are unchanged.

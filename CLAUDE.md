@@ -4,6 +4,7 @@ PdfCraft is a clean-room, open-source, Rust-native PDF application targeting Ado
 
 ## Keeping context focused
 
+- For regular chats using the n8n sandbox VM, follow [the coding gateway guide](docs/sandbox-coding.md).
 - Read the SimplyPDF checklist in `README.md`; use `docs/project-guide.md` only for the
   current task's acceptance criteria, evidence, and build instructions. Read relevant sections
   and crate READMEs rather than loading entire documentation trees or source files.
