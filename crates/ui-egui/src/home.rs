@@ -316,21 +316,24 @@ mod tests {
 
     #[test]
     fn recent_files_and_pinned_locations_round_trip_independently() {
+        let folder = std::env::temp_dir().join(format!("simplypdf-pinned-{}", std::process::id()));
+        std::fs::create_dir_all(&folder).unwrap();
+        let folder_path = folder.to_string_lossy().into_owned();
         let mut app = SimplyPDFApp::new();
         app.recent.push(crate::state::RecentFile { name: "drawing.pdf".into(), path: "/private/drawing.pdf".into(), pages: 2, size: 123 });
-        app.pinned.folders.push("/private/project".into());
+        app.pinned.folders.push(folder_path.clone());
         let saved = app.persist();
         let mut restored = SimplyPDFApp::new();
         restored.restore(&saved);
         assert_eq!(restored.recent.len(), 1);
         assert_eq!(restored.recent[0].path, "/private/drawing.pdf");
-        assert_eq!(restored.pinned.folders, vec!["/private/project"]);
+        assert_eq!(restored.pinned.folders, vec![folder_path.clone()]);
 
         restored.execute("file.clear_recent");
         let mut cleared = SimplyPDFApp::new();
         cleared.restore(&restored.persist());
         assert!(cleared.recent.is_empty());
-        assert_eq!(cleared.pinned.folders, vec!["/private/project"]);
+        assert_eq!(cleared.pinned.folders, vec![folder_path.clone()]);
 
         // A zero history limit must not write private file paths into preferences.
         app.recent_limit = 0;
@@ -340,7 +343,8 @@ mod tests {
         no_history.restore(&private_free);
         assert_eq!(no_history.recent_limit, 0);
         assert!(no_history.recent.is_empty());
-        assert_eq!(no_history.pinned.folders, vec!["/private/project"]);
+        assert_eq!(no_history.pinned.folders, vec![folder_path.clone()]);
+        std::fs::remove_dir_all(folder).unwrap();
     }
 
     #[test]
