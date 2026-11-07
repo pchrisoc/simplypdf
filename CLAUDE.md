@@ -2,6 +2,17 @@
 
 PdfCraft is a clean-room, open-source, Rust-native PDF application targeting Adobe Acrobat Pro parity. It runs natively on macOS, Windows, Linux and FreeBSD, and on the web via WASM. It is the sibling of `../photocraft` (a Photoshop-class editor) and follows the same conventions.
 
+## Keeping context focused
+
+- Read the SimplyPDF checklist in `README.md`; use `docs/project-guide.md` only for the
+  current task's acceptance criteria, evidence, and build instructions. Read relevant sections
+  and crate READMEs rather than loading entire documentation trees or source files.
+- Default `rg` searches honor `.ignore`, excluding vendored sources, generated inventories,
+  and local outputs. Search an explicit path when needed (for example, `rg pattern vendor/hayro`
+  or `rg package Cargo.lock`). These files are still required by builds and provenance checks.
+- Roadmap patch history is retained in Git. For pre-cleanup evidence, use
+  `git show 153b223d:ROADMAP.md` or `git show 153b223d:docs/roadmap.md`, scoped to the task.
+
 ## Start every session here
 1. Read `plan/STATUS.md`: the current milestone, the next unchecked task and any blockers. `ROADMAP.md` is the one-page summary (stage, numbers, progress log) and `docs/roadmap.md` the milestone table; at the end of every session update the milestone row and add a line to the ROADMAP.md progress log.
    - Read `docs/gaps.md` (the ranked gaps: Acrobat interop, the open-issue backlog, the renderer and a fidelity harness, editing existing content, Pro workflows, 1.0 polish) and `docs/target-app-parity.md` (the numbers and how they are measured) before choosing work. Prefer the gaps over new P2/P3 features, and keep both documents true when things change (`docs/` progress docs carry a status line and a revision history).

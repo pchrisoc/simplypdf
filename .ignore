@@ -1,0 +1,14 @@
+# Keep default rg/file discovery focused on first-party implementation.
+# Explicit paths remain searchable, e.g. rg pattern vendor/hayro.
+# This affects search only; Cargo and Git still use/track required files.
+/vendor/
+/target/
+/dist/
+/corpus/
+/fuzz-out/
+/plan/
+/log/
+/craft-fonts/
+# Generated dependency/asset inventories; inspect explicitly when relevant.
+/Cargo.lock
+/ATTRIBUTION.md
