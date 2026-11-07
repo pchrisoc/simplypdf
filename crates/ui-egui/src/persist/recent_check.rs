@@ -111,6 +111,27 @@ mod tests {
     }
 
     #[test]
+    fn restored_recent_files_drop_missing_paths_without_losing_existing_files() {
+        let dir = std::env::temp_dir().join(format!("simplypdf-restored-recent-{}-{:?}", std::process::id(), std::thread::current().id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let existing = dir.join("existing.pdf");
+        let missing = dir.join("missing.pdf");
+        std::fs::write(&existing, b"%PDF-1.7").unwrap();
+
+        let mut app = SimplyPDFApp::new();
+        app.run_inline = true;
+        app.recent = vec![
+            crate::state::RecentFile { name: "existing.pdf".into(), path: existing.to_string_lossy().into_owned(), pages: 1, size: 8 },
+            crate::state::RecentFile { name: "missing.pdf".into(), path: missing.to_string_lossy().into_owned(), pages: 1, size: 8 },
+        ];
+        app.recent_check.restored(app.recent.iter().map(|r| r.path.clone()).collect());
+        app.check_restored_recent();
+        assert_eq!(app.recent.len(), 1);
+        assert_eq!(app.recent[0].path, existing.to_string_lossy());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
     fn only_a_path_known_to_be_missing_is_gone() {
         let dir = std::env::temp_dir().join(format!("simplypdf-recent-check-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
