@@ -276,6 +276,74 @@ mod tests {
     }
 
     #[test]
+    fn recent_files_are_not_exposed_when_history_is_disabled() {
+        use egui_kittest::kittest::Queryable;
+        crate::i18n::set_current(crate::i18n::Lang::EN);
+        let mut app = SimplyPDFApp::new();
+        app.recent_limit = 0;
+        app.recent.push(crate::state::RecentFile {
+            name: "private-drawing.pdf".into(),
+            path: "/private/project/private-drawing.pdf".into(),
+            pages: 1,
+            size: 42,
+        });
+        let mut fonts = false;
+        let mut h = egui_kittest::Harness::builder().with_size(vec2(1500.0, 1200.0)).build_ui_state(
+            move |ui, app| {
+                if !fonts {
+                    ui.ctx().set_fonts(theme::font_definitions());
+                    fonts = true;
+                }
+                show(app, ui);
+            },
+            app,
+        );
+        h.run_steps(3);
+        assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| h.get_all_by_label("private-drawing.pdf"))).is_err());
+        assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| h.get_all_by_label("/private/project/private-drawing.pdf"))).is_err());
+        assert!(std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| h.get_all_by_label("Clear Recent Files"))).is_err());
+    }
+
+    #[test]
+    fn clearing_recent_history_keeps_pinned_locations() {
+        let mut app = SimplyPDFApp::new();
+        app.recent.push(crate::state::RecentFile { name: "drawing.pdf".into(), path: "/private/drawing.pdf".into(), pages: 1, size: 42 });
+        app.pinned.folders.push("/private/project".into());
+        app.execute("file.clear_recent");
+        assert!(app.recent.is_empty());
+        assert_eq!(app.pinned.folders, vec!["/private/project"]);
+    }
+
+    #[test]
+    fn recent_files_and_pinned_locations_round_trip_independently() {
+        let mut app = SimplyPDFApp::new();
+        app.recent.push(crate::state::RecentFile { name: "drawing.pdf".into(), path: "/private/drawing.pdf".into(), pages: 2, size: 123 });
+        app.pinned.folders.push("/private/project".into());
+        let saved = app.persist();
+        let mut restored = SimplyPDFApp::new();
+        restored.restore(&saved);
+        assert_eq!(restored.recent.len(), 1);
+        assert_eq!(restored.recent[0].path, "/private/drawing.pdf");
+        assert_eq!(restored.pinned.folders, vec!["/private/project"]);
+
+        restored.execute("file.clear_recent");
+        let mut cleared = SimplyPDFApp::new();
+        cleared.restore(&restored.persist());
+        assert!(cleared.recent.is_empty());
+        assert_eq!(cleared.pinned.folders, vec!["/private/project"]);
+
+        // A zero history limit must not write private file paths into preferences.
+        app.recent_limit = 0;
+        let private_free = app.persist();
+        assert!(!private_free.contains("/private/drawing.pdf"));
+        let mut no_history = SimplyPDFApp::new();
+        no_history.restore(&private_free);
+        assert_eq!(no_history.recent_limit, 0);
+        assert!(no_history.recent.is_empty());
+        assert_eq!(no_history.pinned.folders, vec!["/private/project"]);
+    }
+
+    #[test]
     fn review_pinned_recommended_tools_appear_once() {
         use egui_kittest::kittest::Queryable;
         let mut h = review_home_harness();
