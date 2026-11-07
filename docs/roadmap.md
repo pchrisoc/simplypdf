@@ -203,3 +203,13 @@ M2 (renderer), M7 (content editing), M10 (OCR and Office), M11 (Preflight and st
   `git diff --check`, preservation of all pre-history table/section lines, and default `rg`
   exclusion checks passed. Removed ignored Cargo build output and Finder metadata;
   no Rust code changed, so compilation and runtime tests were not repeated.
+
+- 2026-11-06 (PR-40 dependency repair): Fixed the reproduced font-import formatting
+  failure and kept `rten = 0.26.0` aligned with `ocrs 0.13.1`, removing the incompatible
+  0.27 runtime family from the lockfile. No feature or parity claims changed.
+  Passing validation: `cargo fmt --check`; `cargo test --locked -p simplypdf-ocr
+  -p simplypdf-fonts -p simplypdf-filters -j 2` (223 tests); scoped all-target Clippy
+  with `-D warnings`; `cargo xtask layers`; `cargo xtask assets`; and scoped
+  `cargo check --locked --target wasm32-unknown-unknown` for the same three crates.
+  Native tests used Homebrew Rust 1.99.1; WASM used rustup Rust 1.98.1 with its
+  installed WASM standard library. Full hosted platform reruns remain pending.

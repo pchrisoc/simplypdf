@@ -13,7 +13,8 @@ workspace = true
 [dependencies]
 simplypdf-fonts = { workspace = true }
 ocrs = { version = "0.13.1", default-features = false, features = ["rten"] }
-rten = { version = "0.26.0", default-features = false, features = ["onnx_format", "rten_format"] }
+# ocrs 0.13 passes rten Model values across this API; keep both on 0.26.
+rten = { version = "=0.26.0", default-features = false, features = ["onnx_format", "rten_format"] }
 thiserror.workspace = true
 
 [dev-dependencies]

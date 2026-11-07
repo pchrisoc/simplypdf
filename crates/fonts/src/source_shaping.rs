@@ -1,5 +1,5 @@
 //! Shaping an explicitly selected source/document face, with OpenType features and UAX #9.
-use harfrust::{BufferClusterLevel, Direction, ShapeOptions, ShaperData, UnicodeBuffer};
+use harfrust::{BufferClusterLevel, Direction, FontRef as HarfFontRef, ShapeOptions, ShaperData, UnicodeBuffer};
 use skrifa::raw::TableProvider;
 use skrifa::{FontRef, GlyphId};
 use unicode_bidi::{Level, ParagraphBidiInfo};
@@ -33,8 +33,9 @@ pub fn shape(bytes: &[u8], text: &str) -> Result<ShapedRun, String> {
     if text.chars().any(|c| matches!(u32::from(c), 0x0600..=0x06ff | 0x0750..=0x077f | 0x08a0..=0x0fff | 0x1780..=0x17ff)) && face.gsub().is_err() {
         return Err("the source subset has no contextual substitution tables; select its full font".into());
     }
-    let data = ShaperData::new(&face);
-    let shaper = data.shaper(&face).build();
+    let harf_face = HarfFontRef::new(bytes).map_err(|e| e.to_string())?;
+    let data = ShaperData::new(&harf_face);
+    let shaper = data.shaper(&harf_face).build();
     let em = f64::from(shaper.units_per_em().max(1));
     let base = if unicode_bidi::get_base_direction(text) == unicode_bidi::Direction::Rtl { Level::rtl() } else { Level::ltr() };
     let bidi = ParagraphBidiInfo::new(text, Some(base));
