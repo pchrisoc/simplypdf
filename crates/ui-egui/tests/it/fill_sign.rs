@@ -2001,5 +2001,9 @@ fn fill_sign_enter_adds_lines_outside_click_commits_and_escape_cancels() {
     // Saving may refresh /ModDate when the clock crosses a second; compare the
     // persisted annotations rather than the resulting compressed PDF bytes.
     let after = session.open("after.pdf", None, h.state().session.save_bytes(id).unwrap(), None).unwrap();
-    assert_eq!(session.get(after).unwrap().info.annotations, session.get(reopened).unwrap().info.annotations, "Escape cancels without changing annotations");
+    assert_eq!(
+        session.get(after).unwrap().info.annotations,
+        session.get(reopened).unwrap().info.annotations,
+        "Escape cancels without changing annotations"
+    );
 }
