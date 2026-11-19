@@ -2521,7 +2521,7 @@ licence = "MIT OR Apache-2.0"
 licence_file = "assets/app-icon/LICENSE.txt"
 kind = "icon"
 usage = "Master artwork; every other app-icon file is rendered from it (packaging/icons.sh)"
-sha256 = "c788a1fdefe87b01d0ac3daf76ecc7c91d5933d001b8a4fb2bac5febc8c03695"
+sha256 = "b438b6b8ecd767f9771db4cc3af4917759c52637a22831f1d3c89d0cf51684cf"
 
 [[asset]]
 path = "assets/app-icon/simplypdf-small.svg"
@@ -2532,7 +2532,7 @@ licence = "MIT OR Apache-2.0"
 licence_file = "assets/app-icon/LICENSE.txt"
 kind = "icon"
 usage = "README header and assets/app-icon/README.md"
-sha256 = "c788a1fdefe87b01d0ac3daf76ecc7c91d5933d001b8a4fb2bac5febc8c03695"
+sha256 = "b438b6b8ecd767f9771db4cc3af4917759c52637a22831f1d3c89d0cf51684cf"
 
 [[asset]]
 path = "assets/app-icon/simplypdf-1024.png"
@@ -2686,7 +2686,7 @@ licence = "MIT OR Apache-2.0"
 licence_file = "assets/app-icon/LICENSE.txt"
 kind = "icon"
 usage = "Linux hicolor theme icon (packaging/linux/ai.storyteller.simplypdf.desktop)"
-sha256 = "c788a1fdefe87b01d0ac3daf76ecc7c91d5933d001b8a4fb2bac5febc8c03695"
+sha256 = "b438b6b8ecd767f9771db4cc3af4917759c52637a22831f1d3c89d0cf51684cf"
 
 [[asset]]
 path = "docs/images/pdfcraft-bookmarks.png"
@@ -3122,7 +3122,7 @@ licence = "MIT OR Apache-2.0"
 licence_file = "assets/app-icon/LICENSE.txt"
 kind = "icon"
 usage = "Dark theme logo master"
-sha256 = "83123a1b037ca7a1487f9ffd721f07e5589de4cb94b1ca91a9807775700b07f7"
+sha256 = "fc15b211ecfbf48083efa178b27fbc2dbe396d7bbd45f2b0879fb666211a51ff"
 
 [[asset]]
 path = "assets/app-icon/simplypdf-dark-128.png"
