@@ -126,3 +126,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Source commit `40387d1869e9fe59cf9489c48845a7a3222a0db9` validates finite, bounded transformed output from `user_to_view`; test commit `d6a03b4b7b9f6e08d5f0f9b2f24787dde2bbc78f` adds a `/UserUnit 2` boundary regression and ordinary-coordinate check in `crates/measure/src/tests.rs`.
 - PR-head GitHub Actions CI run `44595279636` and SonarCloud run `44595279709` both completed with `success` before the guarded merge. No local Cargo test or post-merge `main` CI result is claimed.
 - ENG-06.08 remains unchecked because this is only a coordinate-validation hardening change; ENG-08.01 downstream integration and managed workbook publishing remain incomplete. PR #62 has failing CI and is not mergeable at the time of this entry; investigate independently before merging.
+
+## GitHub-only CSV BOM fix rebased on current main — 2026-11-19 PST
+
+- PR #62 was based on an older main and its latest formatting commit `03ac7d46db69f30240c809123355dc79f0570350` had no GitHub Actions runs returned; earlier head `ffd5de15ec1093ef099fda60ee60fe27069b2dac` failed CI. Do not treat either as verified.
+- A new branch `fix/measure-csv-bom-formula-rebased-20261119` starts from current main after PR #63. Source commit `7c319abee8462953f348f917323ae0807b1ee9fe` updates `crates/measure/src/lib.rs` CSV formula-prefix detection to skip Unicode BOM. Test commit `c3b794f1a1765f5b9acea2b15ae7f2fe3e12b64e` adds `csv_escapes_formula_prefixes_after_unicode_bom` in `crates/measure/src/tests.rs`.
+- PR-head GitHub Actions and SonarCloud verification remain pending at documentation time. No README checkbox changed. ENG-08.01 and managed workbook publishing remain unfinished.
