@@ -76,3 +76,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - `cargo clippy --locked -p simplypdf-measure -j 1 --all-targets -- -D warnings` sandbox job `job-5566c64f857a` **passed**, `ok:true`, after 46.83s.
 - Fetched formatted PR #53 head and reran `cargo fmt --check` sandbox job `job-9f79188ccefb` **passed**, `ok:true`.
 - Together with 43 passing package tests and passing SonarCloud, the scoped local gates have succeeded. GitHub CI `44474007793` must still conclude success and mergeability must be rechecked against current `main` (which also received PR #47) before PR #53 is merged.
+
+## Measurement ID normalization integration — 2026-11-18 PST
+
+- Resumed unfinished PR #53. Head `8dc3c769b5c7c2a6f35252132440f25275c41be8` had completed successful GitHub CI run [44474007793](https://github.com/pchrisoc/simplypdf/actions/runs/44474007793) and SonarCloud run [44474007757](https://github.com/pchrisoc/simplypdf/actions/runs/44474007757). GitHub reported mergeable=true, draft=false.
+- Reviewed patch: `crates/measure/src/lib.rs` adds explicit `normalize_ids`; `crates/measure/src/tests.rs` tests duplicate/empty names, idempotence, and save/reopen. Prior sandbox evidence: 43 package tests, focused test, clippy and fmt passed, as documented above.
+- Squash-merged [PR #53](https://github.com/pchrisoc/simplypdf/pull/53) into main as `d5f698ea358e0e4b49c5b73f16c89f98fca66a60`.
+- This is a partial prerequisite for ENG-08.01, not the full feature. UI/automation exposure, migration semantics, malformed input and permission cases remain; README checkbox stays unchecked. Main post-merge CI is not yet verified. Next run must inspect new main CI and continue implementation, not infer success from PR CI.
