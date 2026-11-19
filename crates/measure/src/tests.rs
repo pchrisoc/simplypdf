@@ -48,6 +48,19 @@ fn calibrated_lengths_concave_areas_and_axis_scales() {
     close(reading(Kind::Area, &[[0.0, 0.0], [3.0, 0.0], [3.0, 4.0]], &anisotropic).unwrap().value, 36.0);
 }
 #[test]
+fn extreme_valid_measurement_scales_keep_derived_values_finite() {
+    let scale = Scale { area_factor: 1e12, distance_factor: 1e12, ..Scale::new(1e12, "m", 2).unwrap() };
+    let points = [[-1e9, -1e9], [1e9, -1e9], [1e9, 1e9], [-1e9, 1e9]];
+    for kind in [Kind::Distance, Kind::Perimeter, Kind::Area] {
+        let reading = reading(kind, &points, &scale).unwrap();
+        assert!(reading.value.is_finite());
+        assert!(reading.length.is_finite());
+        assert!(reading.area.is_finite());
+        assert!(reading.delta_x.is_finite() && reading.delta_y.is_finite());
+        assert!(reading.angle.is_finite());
+    }
+}
+#[test]
 fn viewport_precedence_first_point_user_unit_and_roundtrip() {
     let mut d = fixture("", "/UserUnit 2 /Rotate 90 /CropBox [10 20 210 320]", &[]);
     close(scale_at(&d, 0, [50.0, 50.0]).unwrap().x, 2.0 / 72.0);
