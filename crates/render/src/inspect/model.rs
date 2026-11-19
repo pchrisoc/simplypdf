@@ -300,7 +300,7 @@ pub struct OutlineItem {
     pub bold: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Annotation {
     pub page: usize,
     pub subtype: String,

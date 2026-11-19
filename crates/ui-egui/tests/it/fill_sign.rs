@@ -1997,5 +1997,13 @@ fn fill_sign_enter_adds_lines_outside_click_commits_and_escape_cancels() {
     fill_key(&mut h, egui::Key::Enter);
     fill_key(&mut h, egui::Key::Escape);
     assert!(h.state().views[0].fill_text.is_none());
-    assert_eq!(h.state().session.save_bytes(id).unwrap(), saved, "Escape cancels without writing");
+    assert_eq!(items(&h), [("FreeText".to_owned(), Some(text.to_owned()))], "Escape adds no annotation");
+    // Saving may refresh /ModDate when the clock crosses a second; compare the
+    // persisted annotations rather than the resulting compressed PDF bytes.
+    let after = session.open("after.pdf", None, h.state().session.save_bytes(id).unwrap(), None).unwrap();
+    assert_eq!(
+        session.get(after).unwrap().info.annotations,
+        session.get(reopened).unwrap().info.annotations,
+        "Escape cancels without changing annotations"
+    );
 }
