@@ -67,6 +67,20 @@ fn viewport_precedence_first_point_user_unit_and_roundtrip() {
     assert_eq!(scale_at(&reopened, 0, [25.0, 35.0]).unwrap().precision, 4);
 }
 #[test]
+fn imported_measurement_ids_are_unique_and_persist() {
+    let mut d = fixture("", "", &[]);
+    for id in ["dup", "dup", "", "simplypdf-measure-1"] {
+        add(&mut d, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    assert_eq!(normalize_ids(&mut d).unwrap(), 2);
+    let expected = ["dup", "simplypdf-measure-2", "simplypdf-measure-3", "simplypdf-measure-1"];
+    assert_eq!(list(&d).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), expected);
+    assert_eq!(normalize_ids(&mut d).unwrap(), 0);
+    let bytes = write_full(&d, &SaveOptions::default()).unwrap();
+    let reopened = Document::open(Arc::new(bytes)).unwrap();
+    assert_eq!(list(&reopened).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), expected);
+}
+#[test]
 fn standard_annotations_captions_restyle_move_and_unknown_keys() {
     let mut d = fixture("", "", &[]);
     let meta = Meta { date: None, id: String::new() };
