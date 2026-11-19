@@ -112,3 +112,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Source commit `bcc3676cf55cdb6bf1f37262140fc9cd2a0d37b9` adds a guard for all derived finite reading fields. Test commit `8e05345620ac6e87fef58d988c7efe028f4ac0f5` exercises extreme valid coordinate/scale boundaries.
 - This is a defensive hardening and boundary test, not a proven pre-fix failing regression or full ENG-06.08 acceptance. Do not check the README feature checkbox.
 - GitHub-only execution cannot run local Cargo commands. Poll PR-head CI and SonarCloud to completed success before any merge; verify final PR head after this documentation commit. If checks do not execute, leave PR open and report the precise blocker.
+
+## GitHub-only measurement overflow integration — 2026-11-19 PST
+
+- PR #59 (`fix/measure-derived-overflow-20261119`) merged into `main` with squash commit `8646d84d3b3845758491f2f6b196e65c26f995b5` using an expected-head guard for `19ed96764673d987570dac47862d04edf24a51f2`.
+- Source commit `bcc3676cf55cdb6bf1f37262140fc9cd2a0d37b9` rejects non-finite derived readings; test commit `8e05345620ac6e87fef58d988c7efe028f4ac0f5` covers extreme valid scale/coordinate boundaries. Documentation commit `19ed96764673d987570dac47862d04edf24a51f2` records scope and limitations.
+- PR-head GitHub Actions CI run `44562185365` and SonarCloud run `44562185356` both completed successfully at the expected head before merge. The GitHub connector cannot independently run local Cargo tests; do not claim additional local tests or post-merge `main` CI green.
+- This is scoped hardening only, not complete ENG-06.08 acceptance. ENG-08.01 and opt-in managed workbook publishing remain unfinished. No README feature checkbox changed.
