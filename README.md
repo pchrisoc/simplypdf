@@ -12,7 +12,7 @@
 ### Checkpoint 1 · Publish live takeoff quantities to Calc
 
 - [x] Share the [Rust workbook writer](crates/measure/src/xlsx.rs) between desktop export and CLI/MCP.
-- [ ] Define persistent measurement IDs and a versioned row schema for saved and imported markups.
+- [x] Define persistent measurement IDs and a versioned row schema for saved and imported markups (see [takeoff row schema](docs/TAKEOFF_ROW_SCHEMA.md)).
 - [ ] Add an opt-in managed workbook link to the [Measure panel](crates/ui-egui/src/tools/measure_ui.rs) and matching MCP start, status, refresh, and stop tools.
 - [ ] Publish after add, edit, delete, undo, and redo.
 - [ ] Link the named range from a separate Calc estimate.
