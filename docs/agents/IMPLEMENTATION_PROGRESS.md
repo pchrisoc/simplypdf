@@ -49,3 +49,12 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Prior sandbox `simplypdf-measure` job `job-50ec9695c666` did **not** pass: it timed out while compiling dependencies during Clippy. Do not treat this as a code test failure or a test pass; retry with a warm Cargo cache and confirm `done` plus `ok:true`.
 - Post-merge `main` push CI status is **not verified** by the PR-only workflow-run lookup. Confirm the `main` run and its conclusion before declaring the repository fully green.
 - Remaining feature work includes ENG-08.01 and live takeoff workbook publishing; no additional feature checkbox was completed by these CI/doc fixes.
+
+## Active agent iteration — measurement identity (2026-11-18 PST)
+
+- The sandbox gateway is healthy (`doctor`: ready, 2 CPUs) and new isolated session `task-a58a1d6354d0` was prepared from `main` at `2b89ee9`.
+- PR #53 (`fix/measurement-id-normalization-20261118`) adds `simplypdf_measure::normalize_ids` for missing or repeated imported `/NM` names while preserving the first valid existing name, plus save/reopen regression coverage. **Not merged or verified yet.**
+- The first sandbox `cargo fmt --check` found two formatting differences; corrected in PR head `8dc3c769b5c7c2a6f35252132440f25275c41be8`.
+- Sandbox focused test job `job-990afd705df7` launched and was compiling dependencies at last check. Poll via the gateway `job` action until `done` and `ok:true`; GitHub CI run `44474007793` and SonarCloud `44474007757` are also being checked.
+- The new normalization API alone is not the entire ENG-08.01 feature: UI/automation exposure, schema migration, malformed input coverage, and permission checks remain. Do not tick its README checkbox yet.
+- Dependency update PR #47 remains open; its eight grouped dependency updates require full CI validation and should not be merged blindly.
