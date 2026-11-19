@@ -681,6 +681,40 @@ pub fn list(doc: &Document) -> Listing {
     }
     out
 }
+/// Assign persistent, unique PDF /NM names to measurements imported without them or
+/// with duplicate names. Preserve the first occurrence of an existing name.
+/// Never rewrite unrelated annotations; unsupported measurements remain untouched.
+pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
+    let listing = list(doc);
+    if listing.truncated {
+        return Err(invalid("cannot normalize a truncated measurement listing"));
+    }
+    let reserved: std::collections::HashSet<String> = listing.measurements.iter().map(|m| m.id.clone()).filter(|id| !id.trim().is_empty()).collect();
+    let mut seen = std::collections::HashSet::new();
+    let mut next = 1usize;
+    let mut changes = Vec::new();
+    for m in listing.measurements {
+        if !m.id.trim().is_empty() && seen.insert(m.id.clone()) {
+            continue;
+        }
+        let id = loop {
+            let candidate = format!("simplypdf-measure-{next}");
+            next += 1;
+            if !reserved.contains(&candidate) && seen.insert(candidate.clone()) {
+                break candidate;
+            }
+        };
+        // Resolve every target before writing, so inline or invalid annotations
+        // do not cause a partially normalized document.
+        let (reference, _) = annot(doc, m.page, m.index)?;
+        changes.push((reference, id));
+    }
+    let count = changes.len();
+    for (reference, id) in changes {
+        doc.update_dict(reference, |d| d.set(b"NM".to_vec(), PdfString::text(&id))).map_err(|e| invalid(&e.to_string()))?;
+    }
+    Ok(count)
+}
 /// Most viewports [`set_scale`] gives a page, and most [`scale_at`] reads.
 const MAX_VIEWPORTS: usize = 1024;
 
