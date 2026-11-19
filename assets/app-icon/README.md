@@ -2,8 +2,8 @@
 
 The project owner's two supplied logos (November 5, 2026) are the SimplyPDF
 visual identity. Both are geometric teal (`#266e81`) marks on a transparent
-background, faithfully reconstructed as SVG rectangles from the original
-2048 × 2048 artwork without changing the visible shape.
+background, faithfully reconstructed as continuous, seam-free SVG paths from the original
+2048 × 2048 artwork without changing the visible shape. The continuous paths avoid hairline gaps from independently antialiased adjoining rectangles.
 
 - `simplypdf.svg` / `simplypdf-small.svg` — light-mode mark.
 - `simplypdf-dark.svg` — dark-mode mark.
