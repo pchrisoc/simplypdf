@@ -344,7 +344,7 @@ pub fn reading(kind: Kind, points: &[Point], scale: &Scale) -> Result<Reading> {
     let value = if kind == Kind::Area { area } else { length };
     let unit = if kind == Kind::Area { scale.area_unit.clone() } else { scale.unit.clone() };
     let label = format!("{value:.precision$} {unit}", precision = usize::from(scale.precision));
-    if !value.is_finite() {
+    if !value.is_finite() || !length.is_finite() || !area.is_finite() || !delta.iter().all(|v| v.is_finite()) {
         return Err(invalid("measurement overflows its scale"));
     }
     Ok(Reading { kind, value, unit, label, delta_x: delta[0], delta_y: delta[1], angle: delta[1].atan2(delta[0]).to_degrees(), length, area })

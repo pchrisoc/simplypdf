@@ -105,3 +105,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR-head GitHub Actions CI run `44520499695` and SonarCloud run `44520499617` both completed successfully before merge. Prior sandbox job `job-351b216373a9` completed `done`, `ok:true`, with 45 measurement tests and formatting, Clippy, and layering checks.
 - The merged test verifies preservation of unknown vendor annotation fields when duplicate measurement IDs are normalized and the PDF is saved/reopened. No ENG-08.01 checkbox was changed: automation/UI migration and managed workbook publishing remain incomplete.
 - Post-merge `main` push CI has not been independently verified. A fresh isolated sandbox checkout `task-31a711e3136e` was prepared from merge SHA `dc341185`; no subsequent feature edits or verification results are claimed from that checkout.
+
+## GitHub-only automation trial — 2026-11-19 PST
+
+- PR #59 (https://github.com/pchrisoc/simplypdf/pull/59), branch `fix/measure-derived-overflow-20261119`, based on `main` `c6c323e740bae93ca38ee9aafd3b5814e6c3ed25`.
+- Source commit `bcc3676cf55cdb6bf1f37262140fc9cd2a0d37b9` adds a guard for all derived finite reading fields. Test commit `8e05345620ac6e87fef58d988c7efe028f4ac0f5` exercises extreme valid coordinate/scale boundaries.
+- This is a defensive hardening and boundary test, not a proven pre-fix failing regression or full ENG-06.08 acceptance. Do not check the README feature checkbox.
+- GitHub-only execution cannot run local Cargo commands. Poll PR-head CI and SonarCloud to completed success before any merge; verify final PR head after this documentation commit. If checks do not execute, leave PR open and report the precise blocker.
