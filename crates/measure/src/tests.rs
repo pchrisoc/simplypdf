@@ -628,5 +628,6 @@ fn csv_escapes_formula_prefixes_after_unicode_bom() {
     m.label = "\u{feff}=HYPERLINK(\"https://example.test\")".into();
     add(&mut d, &m, &Meta { date: None, id: "csv-bom".into() }).unwrap();
     let output = csv(&list(&d).measurements);
-    assert!(output.contains("\"'\u{feff}=HYPERLINK"), "BOM-prefixed formula must be escaped: {output:?}");
+    // PDF text round-tripping removes the BOM; the CSV cell must still be safe.
+    assert!(output.contains("\"\'=HYPERLINK"), "BOM-prefixed formula must be escaped: {output:?}");
 }
