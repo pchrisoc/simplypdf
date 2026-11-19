@@ -28,6 +28,8 @@ const COMMANDS: &[(&str, &str, Command)] = &[
         gates::ci,
     ),
     ("test", "Workspace tests: cargo nextest (cargo test when it is missing), then doctests", gates::test),
+    ("quick", "Run format, assets and layers plus strict Clippy and tests for the named workspace crates", gates::quick),
+    ("smoke", "Run the local CLI release smoke test with a synthetic PDF and takeoff workbook", gates::smoke),
     ("i18n-report", "Print the strings each interface language lacks (counts and a few keys); never fails", gates::i18n_report),
     ("license-check", "Offline source licence documents, attribution and metadata", license_check::run),
     ("assets", "Enforce the asset policy (AGENTS.md §1) against ATTRIBUTION.toml; --write regenerates ATTRIBUTION.md", assets::run),

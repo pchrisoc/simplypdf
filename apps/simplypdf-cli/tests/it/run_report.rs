@@ -19,6 +19,31 @@ fn blank() -> serde_json::Value {
 }
 
 #[test]
+fn release_smoke() {
+    let steps = serde_json::json!([
+        blank(),
+        { "tool": "measure_scale", "args": { "doc": 1, "page": 1, "points": [[10, 20], [70, 20]], "distance": 6, "unit": "m" } },
+        { "tool": "measure_distance", "args": { "doc": 1, "page": 1, "points": [[10, 20], [70, 20]], "label": "Calibration line" } },
+        { "tool": "doc_save", "args": { "doc": 1, "path": "measured.pdf" } },
+        { "tool": "doc_open", "args": { "path": "measured.pdf" } },
+        { "tool": "measure_list", "args": { "doc": 2 } },
+        { "tool": "takeoff_export_xlsx", "args": { "doc": 2, "out": "takeoff.xlsx" } },
+        { "tool": "page_render", "args": { "doc": 2, "page": 1, "dpi": 72 }, "out": "measured.png" }
+    ]);
+    let output = run_script("release-smoke", &steps, &["--root", ".", "--report"]);
+    assert!(output.status.success(), "{}\n{}", String::from_utf8_lossy(&output.stdout), String::from_utf8_lossy(&output.stderr));
+    let report: serde_json::Value = serde_json::from_slice(&output.stdout).unwrap();
+    assert_eq!(report["ok"], true, "{report}");
+    let listing = &report["steps"][5]["result"][0];
+    assert_eq!(listing["count"], 1);
+    assert_eq!(listing["measurements"][0]["reading"]["value"], 6.0);
+    assert_eq!(listing["measurements"][0]["reading"]["unit"], "m");
+    assert_eq!(report["steps"][6]["result"][0]["count"], 1);
+    let render = &report["steps"][7]["result"][0];
+    assert_eq!((render["width"].as_u64(), render["height"].as_u64()), (Some(100), Some(100)));
+}
+
+#[test]
 fn a_successful_run_is_one_document_with_a_result_per_step() {
     let steps = serde_json::json!([blank(), { "tool": "page_render", "args": { "doc": 1, "page": 1, "dpi": 10 } }]);
     let o = run_script("report-ok", &steps, &["--report"]);

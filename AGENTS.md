@@ -140,6 +140,21 @@ Draw prototype's main tip on an archive branch before the authorized one-time ma
 Do not delete other branches or unrelated work. Upstream contributions still require PRs.
 This workflow does not authorize default servers, background agents, or scheduled execution.
 
+### Default edit, test, and release workflow
+
+Use [the development workflow](docs/development-workflow.md) for each SimplyPDF change request.
+Reproduce reported problems in the existing development build and inspect existing implementations
+before adding features. Edit and verify the affected crates and entry points. Use
+`cargo xtask quick <package> ...` for local gates,
+and `cargo xtask smoke` for release candidates. Reuse the workspace Cargo target directory for
+serial work. Batch related edits into one verified checkpoint before pushing.
+
+A checkpoint push and a public release are separate steps. Start the full release matrix for
+requested GitHub releases or cross-platform packaging. Use a local build for a single-platform
+preview when possible. Reuse an active run for the same commit and version. Verify the draft targets
+the tested commit and contains every requested platform before publishing. Give the user the verified
+release link and any remaining test gaps.
+
 ## Contributor credits (About window)
 
 - About ▸ Contributors/Models are compiled into the binary from `contributors/contributors.json`

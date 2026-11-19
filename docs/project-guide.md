@@ -891,7 +891,8 @@ running a takeoff, saving the PDF, and exporting the workbook.
 
 ```sh
 cargo run --locked -p simplypdf -j 2 -- drawing.pdf
-cargo test --locked -p simplypdf-ui-egui --lib -j 2 brand::tests
+cargo xtask quick simplypdf-ui-egui
+cargo xtask smoke
 ```
 
 Use the normal Linux and Windows CI checks for changes on `main`. Once the native smoke test
@@ -899,6 +900,9 @@ and CI pass, dispatch the [Release workflow](https://github.com/pchrisoc/simplyp
 for that commit. Check that its draft contains the intended desktop downloads before publishing.
 GitHub adds source archives from the release tag. Reserve the full packaging matrix for release
 candidates so routine testing can reuse the development build.
+
+See the [development workflow](development-workflow.md) for the release checklist and examples
+for desktop, CLI and documentation changes.
 
 ## Export a takeoff workbook
 

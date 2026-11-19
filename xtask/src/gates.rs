@@ -106,6 +106,33 @@ pub fn test(_: &[String]) -> anyhow::Result<()> {
     run_args(&["test", "--workspace", "--doc"])
 }
 
+/// Keep routine checks in the shared development cache and compile only the named crates.
+pub fn quick(packages: &[String]) -> anyhow::Result<()> {
+    if !packages.is_empty() {
+        let workspace = layers::from_metadata(&metadata()?).map_err(|error| anyhow!(error))?;
+        for package in packages {
+            anyhow::ensure!(
+                workspace.iter().any(|member| member.name == *package),
+                "unknown workspace package `{package}`; use a Cargo package name"
+            );
+        }
+    }
+    run_args(&["fmt", "--all", "--", "--check"])?;
+    crate::assets::run(&[])?;
+    layers(&[])?;
+    if !packages.is_empty() {
+        let scope: Vec<&str> = packages.iter().flat_map(|package| ["-p", package.as_str()]).collect();
+        run_args(&[&["clippy", "--locked", "-j", "2", "--all-targets"][..], &scope, &["--", "-D", "warnings"]].concat())?;
+        run_args(&[&["test", "--locked", "-j", "2"][..], &scope].concat())?;
+    }
+    Ok(())
+}
+
+pub fn smoke(args: &[String]) -> anyhow::Result<()> {
+    anyhow::ensure!(args.is_empty(), "usage: cargo xtask smoke");
+    run_args(&["test", "--locked", "-j", "2", "-p", "simplypdf-cli", "--test", "it", "run_report::release_smoke", "--", "--exact"])
+}
+
 pub fn ci(_: &[String]) -> anyhow::Result<()> {
     type Step = (&'static str, Box<dyn Fn() -> anyhow::Result<()>>);
     let steps: Vec<Step> = vec![
