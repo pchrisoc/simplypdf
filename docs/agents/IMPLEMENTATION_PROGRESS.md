@@ -119,3 +119,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Source commit `bcc3676cf55cdb6bf1f37262140fc9cd2a0d37b9` rejects non-finite derived readings; test commit `8e05345620ac6e87fef58d988c7efe028f4ac0f5` covers extreme valid scale/coordinate boundaries. Documentation commit `19ed96764673d987570dac47862d04edf24a51f2` records scope and limitations.
 - PR-head GitHub Actions CI run `44562185365` and SonarCloud run `44562185356` both completed successfully at the expected head before merge. The GitHub connector cannot independently run local Cargo tests; do not claim additional local tests or post-merge `main` CI green.
 - This is scoped hardening only, not complete ENG-06.08 acceptance. ENG-08.01 and opt-in managed workbook publishing remain unfinished. No README feature checkbox changed.
+
+## GitHub-only CSV formula hardening — 2026-11-19 PST
+
+- PR #62 (https://github.com/pchrisoc/simplypdf/pull/62) on `fix/measure-csv-bom-formula-20261119` addresses BOM-prefixed spreadsheet formulas in takeoff CSV exports. Source commit `4d7099c18e5b0070fea2d88ee4e5ec453bb9ab9c` changes `crates/measure/src/lib.rs` to ignore U+FEFF while locating the first formula-significant character; regression commit `170e769568c51e8a04f409fb95c95324dca4680f` adds `csv_escapes_formula_prefixes_after_unicode_bom` to `crates/measure/src/tests.rs`.
+- GitHub Actions and SonarCloud have not yet completed at the PR head. The GitHub-only connector cannot execute local Cargo commands, and no passing tests or merge are claimed. Poll PR-head CI, fix any failures, and merge only after checks and review/security conditions permit. No README checkbox changed; ENG-08 remains incomplete.
