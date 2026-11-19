@@ -98,3 +98,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Resumed Sandbox Coding Gateway session `task-54f4203a14e9`; verification job `job-351b216373a9` completed with `status: done`, `ok: true`. The job passed formatting, strict Clippy, layering checks, 42 measurement unit tests and 3 property tests (45 total), including `normalize_ids_preserves_unrelated_annotation_fields`.
 - Published the exact verified 18-line regression test to branch `agent/measurement-vendor-fields-20261119`, source commit `a9b07ea9a70888c6441bd66351ed856b51647552`, changing only `crates/measure/src/tests.rs` before this log update. The test proves duplicate ID repair preserves distinct unknown `/VendorKey` values in both annotations after save/reopen.
 - Sandbox verification is scoped to `simplypdf-measure` and was performed on an isolated checkout; GitHub PR-head CI and post-merge `main` CI are separate gates. Do not claim either green without completed runs. ENG-08.01 remains unchecked; automation/UI integration and workbook publishing remain outstanding.
+
+## Vendor annotation regression integration — 2026-11-19 PST
+
+- PR #58 (`agent/measurement-vendor-fields-20261119`) merged by squash into `main` at `dc34118539761a89ce4379706485f00a91f97d9e`, with expected PR head `510fee910156e7dad1261aa0f21475cd20841205`. The source test commit was `a9b07ea9a70888c6441bd66351ed856b51647552`.
+- PR-head GitHub Actions CI run `44520499695` and SonarCloud run `44520499617` both completed successfully before merge. Prior sandbox job `job-351b216373a9` completed `done`, `ok:true`, with 45 measurement tests and formatting, Clippy, and layering checks.
+- The merged test verifies preservation of unknown vendor annotation fields when duplicate measurement IDs are normalized and the PDF is saved/reopened. No ENG-08.01 checkbox was changed: automation/UI migration and managed workbook publishing remain incomplete.
+- Post-merge `main` push CI has not been independently verified. A fresh isolated sandbox checkout `task-31a711e3136e` was prepared from merge SHA `dc341185`; no subsequent feature edits or verification results are claimed from that checkout.
