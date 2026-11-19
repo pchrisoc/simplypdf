@@ -40,3 +40,12 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 | --- | --- | --- | --- | --- |
 | 2026-11-18 | `224959d` | Repository inspection via n8n sandbox | Completed | No CI/test pass claimed from inspection |
 | 2026-11-18 | `224959d` | `verify` `simplypdf-measure` | Submitted; status not yet confirmed | Job `job-50ec9695c666`; poll to `done` and `ok: true` |
+
+## CI repair checkpoint — 2026-11-18
+
+- PR #51 (`fix/ci-chrono-fill-sign-20261118`) merged into `main` as `f65bac92ca8fe5f7b3880f9178b7fac96acc186e` after its head commit `9d9c5e7dbbf791cc7d861c3f8bae1926e34b05a3` passed both CI run `44469422950` and SonarCloud run `44469422931`.
+- The fix adds a scoped `RUSTSEC-2026-0543` unmaintained-chrono advisory exception and changes the Fill & Sign Escape test to compare persisted annotations rather than bytes affected by `/ModDate`. This is a maintenance advisory exception, not a replacement for reviewing future advisories.
+- PR #52 merged the agent handoff document as `3a85124770e0d39a22a6e2797866e01bec9e90f0`.
+- Prior sandbox `simplypdf-measure` job `job-50ec9695c666` did **not** pass: it timed out while compiling dependencies during Clippy. Do not treat this as a code test failure or a test pass; retry with a warm Cargo cache and confirm `done` plus `ok:true`.
+- Post-merge `main` push CI status is **not verified** by the PR-only workflow-run lookup. Confirm the `main` run and its conclusion before declaring the repository fully green.
+- Remaining feature work includes ENG-08.01 and live takeoff workbook publishing; no additional feature checkbox was completed by these CI/doc fixes.
