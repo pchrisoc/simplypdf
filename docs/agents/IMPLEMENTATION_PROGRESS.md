@@ -92,3 +92,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Codex automated review did not complete because of account review usage limits; this is not a successful review. The PR diff was inspected manually before integration.
 - Post-merge `main` push CI is **not confirmed** by the PR-only workflow-run lookup. ENG-08.01 broader automation/UI migration behavior, malformed imported IDs in downstream consumers, and managed workbook sync remain unverified/incomplete; do not mark ENG-08.01 checked on this evidence alone.
 - PR #54 remains open and is not mergeable against current main; reconcile or close it rather than overwrite newer progress.
+
+## Vendor annotation preservation regression — 2026-11-19 PST
+
+- Resumed Sandbox Coding Gateway session `task-54f4203a14e9`; verification job `job-351b216373a9` completed with `status: done`, `ok: true`. The job passed formatting, strict Clippy, layering checks, 42 measurement unit tests and 3 property tests (45 total), including `normalize_ids_preserves_unrelated_annotation_fields`.
+- Published the exact verified 18-line regression test to branch `agent/measurement-vendor-fields-20261119`, source commit `a9b07ea9a70888c6441bd66351ed856b51647552`, changing only `crates/measure/src/tests.rs` before this log update. The test proves duplicate ID repair preserves distinct unknown `/VendorKey` values in both annotations after save/reopen.
+- Sandbox verification is scoped to `simplypdf-measure` and was performed on an isolated checkout; GitHub PR-head CI and post-merge `main` CI are separate gates. Do not claim either green without completed runs. ENG-08.01 remains unchecked; automation/UI integration and workbook publishing remain outstanding.
