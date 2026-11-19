@@ -67,6 +67,27 @@ fn viewport_precedence_first_point_user_unit_and_roundtrip() {
     assert_eq!(scale_at(&reopened, 0, [25.0, 35.0]).unwrap().precision, 4);
 }
 #[test]
+fn versioned_takeoff_schema_preserves_ids_after_save_and_reopen() {
+    assert_eq!(TAKEOFF_SCHEMA_VERSION, 1);
+    assert_eq!(TAKEOFF_COLUMNS.len(), 14);
+    assert_eq!(TAKEOFF_COLUMNS[8], "Annotation ID");
+    assert_eq!(TAKEOFF_COLUMNS[13], "Schema version");
+    let mut doc = fixture("", "", &[]);
+    let mut measurement = new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]);
+    measurement.label = "pipe run".into();
+    add(&mut doc, &measurement, &Meta { date: None, id: "stable-id-42".into() }).unwrap();
+    let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
+    let rows = list(&reopened).measurements;
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0].id, "stable-id-42");
+    let exported = csv(&rows);
+    let lines: Vec<&str> = exported.trim_end().split("\r\n").collect();
+    assert_eq!(lines.len(), 2);
+    assert_eq!(lines[0], TAKEOFF_COLUMNS.join(","));
+    assert!(lines[1].contains("\"stable-id-42\""));
+    assert!(lines[1].ends_with(",1"));
+}
+#[test]
 fn imported_measurement_ids_are_unique_and_persist() {
     let mut d = fixture("", "", &[]);
     for id in ["dup", "dup", "", "simplypdf-measure-1"] {
