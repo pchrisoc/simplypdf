@@ -839,6 +839,10 @@ using the actual implemented tools, with engine/automation and UI evidence plus 
 
 - **ENG-30.01 — Supported-platform release.** Package and smoke-test clean Windows, macOS,
   and Linux installations, including desktop takeoff and opt-in CLI/MCP. Record actual platform evidence.
+  The 2026-11-18 Apple Silicon source-build smoke test opened a synthetic drawing and showed a
+  6.00 m takeoff in the desktop table. The CLI saved and reopened the PDF, rendered the annotation,
+  and exported a numeric `TakeoffData` value. The opt-in MCP server also exported the workbook.
+  Clean-install and linked Calc smoke tests are still pending.
 - **ENG-30.02 — Original release assets.** Complete allowed SimplyPDF artwork/attribution and
   verify coexistence with PdfCraft installations. Verify no restricted upstream trademarks ship.
 - **ENG-30.03 — Capability and limitation guide.** Document invocation, automation tools,
@@ -878,6 +882,23 @@ cargo run --locked --release -p simplypdf-cli -- mcp --root ./work
 ```
 
 See the [MCP guide](../docs/mcp.md) for client configuration.
+
+### Test before packaging
+
+For everyday testing, keep the local Cargo target directory and use the incremental development
+build. Open a synthetic drawing and check the Home and title-bar logos in both themes before
+running a takeoff, saving the PDF, and exporting the workbook.
+
+```sh
+cargo run --locked -p simplypdf -j 2 -- drawing.pdf
+cargo test --locked -p simplypdf-ui-egui --lib -j 2 brand::tests
+```
+
+Use the normal Linux and Windows CI checks for changes on `main`. Once the native smoke test
+and CI pass, dispatch the [Release workflow](https://github.com/pchrisoc/simplypdf/actions/workflows/release.yml)
+for that commit. Check that its draft contains the intended desktop downloads before publishing.
+GitHub adds source archives from the release tag. Reserve the full packaging matrix for release
+candidates so routine testing can reuse the development build.
 
 ## Export a takeoff workbook
 

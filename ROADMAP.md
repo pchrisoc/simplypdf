@@ -134,6 +134,19 @@ Ranked; detail and the full milestone table in [docs/roadmap.md](docs/roadmap.md
 
 ## Progress log
 
+- 2026-11-18 (ENG-30.01): Fixed the SimplyPDF title-bar and Home logos by loading the existing
+  embedded PNGs into theme-specific textures. The original desktop build reproduced the image
+  loader warning. The macOS smoke drawing validated PDF save/reopen and rendering, a 6.00 m
+  takeoff row, numeric XLSX output and stdio MCP export. Cross-platform installation and Calc
+  linkage still require verification.
+- 2026-11-18 (ENG-30.01): Updated macOS association reads and the atomic save writer to use
+  `rustix` length-query APIs. Native tests previously failed to preserve opening attributes
+  on an in-place save after the dependency update. All 25 platform tests passed, and a CLI
+  save preserved both a custom attribute and quarantine metadata on a synthetic PDF.
+- 2026-11-18 (ENG-01.07): Corrected the pinned-folder persistence test fixture to use an absolute
+  Windows path on Windows. The prior Windows CI run rejected the POSIX-only test path during
+  preference restore.
+
 - 2026-11-06: Repository context cleanup: removed historical status preambles and append-only logs; retained milestone tables, scope, estimates and acceptance criteria. Historical details remain in Git (`git show 153b223d:ROADMAP.md`). Added `.ignore` for default search exclusions; no product behavior changed.
   Validation: `cargo fmt --check`, `target/debug/xtask layers`, `target/debug/xtask assets`,
   `git diff --check`, preservation of all pre-history table/section lines, and default `rg`

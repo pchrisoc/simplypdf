@@ -41,26 +41,29 @@ impl OpeningMetadata {
 
 /// Read a last-component-symlink-safe attribute with a strict allocation cap.
 fn read_attribute(path: &Path, name: &str) -> io::Result<Option<Vec<u8>>> {
-    read_attribute_with(|buffer| rustix::fs::lgetxattr(path, name, buffer))
+    read_attribute_with(|| rustix::fs::lgetxattr_query(path, name), |buffer| rustix::fs::lgetxattr(path, name, buffer))
 }
 
 /// Probe the length before allocating. A concurrently grown value fails safely; unreadable
 /// attributes or values beyond the parser cap skip recovery without affecting open/save.
-fn read_attribute_with(mut get: impl FnMut(&mut [u8]) -> rustix::io::Result<usize>) -> io::Result<Option<Vec<u8>>> {
+fn read_attribute_with(
+    query_size: impl FnOnce() -> rustix::io::Result<usize>,
+    read: impl FnOnce(&mut [u8]) -> rustix::io::Result<usize>,
+) -> io::Result<Option<Vec<u8>>> {
     use rustix::io::Errno;
     let unreadable = |error| match error {
         Errno::RANGE => Err(io::Error::new(io::ErrorKind::InvalidData, "opening metadata exceeds 64 KiB or changed while reading")),
         _ => Ok(None),
     };
-    let len = match get(&mut []) {
+    let len = match query_size() {
         Ok(len) if len <= MAX_ATTRIBUTE => len,
         Ok(_) => return unreadable(Errno::RANGE),
         Err(e) => return unreadable(e),
     };
-    let mut bytes = vec![0; len];
-    match get(bytes.as_mut_slice()) {
-        Ok(len) if len <= bytes.len() => {
-            bytes.truncate(len);
+    let mut bytes = vec![0; len.max(1)];
+    match read(bytes.as_mut_slice()) {
+        Ok(read) if read <= len => {
+            bytes.truncate(read);
             Ok(Some(bytes.into_boxed_slice().into_vec()))
         }
         Ok(_) => unreadable(Errno::RANGE),
@@ -353,7 +356,15 @@ mod tests {
         let hex = "62706c6973743030d30102030405065776657273696f6e54706174685f101062756e646c656964656e74696669657210005f101a2f4170706c69636174696f6e732f50646643726166742e6170705f101761692e73746f727974656c6c65722e7064666372616674080f171c2f314e0000000000000101000000000000000700000000000000000000000000000068";
         let captured: Vec<u8> =
             hex.as_bytes().as_chunks::<2>().0.iter().map(|pair| u8::from_str_radix(std::str::from_utf8(pair).unwrap(), 16).unwrap()).collect();
-        assert!(points_to_this_app(&captured, Path::new("/Applications/SimplyPDF.app")));
+        let app = Path::new("/Applications/SimplyPDF.app");
+        assert!(!points_to_this_app(&captured, app), "the captured upstream binding belongs to PdfCraft");
+        let mut native = plist::from_bytes::<plist::Value>(&captured).unwrap();
+        let entries = native.as_dictionary_mut().unwrap();
+        entries.insert("path".into(), app.to_str().unwrap().into());
+        entries.insert("bundleidentifier".into(), BUNDLE_ID.into());
+        let mut simplypdf_binding = Vec::new();
+        native.to_writer_binary(&mut simplypdf_binding).unwrap();
+        assert!(points_to_this_app(&simplypdf_binding, app));
         let package = plist::from_bytes::<plist::Value>(include_bytes!("../../../../packaging/macos/Info.plist.in")).unwrap();
         assert_eq!(package.as_dictionary().unwrap().get("CFBundleIdentifier").unwrap().as_string(), Some(BUNDLE_ID));
     }
@@ -393,30 +404,21 @@ mod tests {
     /// and skips recovery if the value grows between the probe and read.
     #[test]
     fn attribute_probes_bound_allocation_and_detect_growth() {
-        let mut calls = 0;
-        let small = read_attribute_with(|out| {
-            calls += 1;
-            if calls == 1 {
-                assert!(out.is_empty());
-                return Ok(3);
-            }
-            assert_eq!(out.len(), 3);
-            out.copy_from_slice(b"abc");
-            Ok(3)
-        })
+        let small = read_attribute_with(
+            || Ok(3),
+            |out| {
+                assert_eq!(out.len(), 3);
+                out.copy_from_slice(b"abc");
+                Ok(3)
+            },
+        )
         .unwrap()
         .unwrap();
         assert_eq!(small, b"abc");
         assert_eq!(small.capacity(), 3);
-        assert!(read_attribute_with(|_| Ok(MAX_ATTRIBUTE + 1)).is_err());
-        let mut calls = 0;
-        assert!(
-            read_attribute_with(|_| {
-                calls += 1;
-                if calls == 1 { Ok(3) } else { Err(rustix::io::Errno::RANGE) }
-            })
-            .is_err()
-        );
+        assert!(read_attribute_with(|| Ok(MAX_ATTRIBUTE + 1), |_| panic!("oversized value must not be read")).is_err());
+        assert!(read_attribute_with(|| Ok(3), |_| Err(rustix::io::Errno::RANGE)).is_err());
+        assert!(read_attribute_with(|| Ok(0), |_| Ok(1)).is_err());
     }
 
     /// Volumes may expose no readable attributes with errors beyond ENOTSUP.
@@ -424,7 +426,7 @@ mod tests {
     fn unreadable_attributes_are_best_effort() {
         use rustix::io::Errno;
         for errno in [Errno::NOSYS, Errno::INVAL, Errno::PERM, Errno::ACCESS, Errno::IO] {
-            assert_eq!(read_attribute_with(|_| Err(errno)).unwrap(), None);
+            assert_eq!(read_attribute_with(|| Err(errno), |_| panic!("unavailable attribute")).unwrap(), None);
         }
     }
 
@@ -433,8 +435,8 @@ mod tests {
     fn unsupported_attribute_volumes_are_distinct_from_read_failures() {
         use rustix::io::Errno;
         for errno in [Errno::NOATTR, Errno::NOTSUP, Errno::OPNOTSUPP] {
-            assert_eq!(read_attribute_with(|_| Err(errno)).unwrap(), None, "{errno}");
+            assert_eq!(read_attribute_with(|| Err(errno), |_| panic!("unavailable attribute")).unwrap(), None, "{errno}");
         }
-        assert!(read_attribute_with(|_| Err(Errno::RANGE)).is_err());
+        assert!(read_attribute_with(|| Err(Errno::RANGE), |_| panic!("oversized value must not be read")).is_err());
     }
 }

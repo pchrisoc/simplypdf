@@ -77,7 +77,7 @@ pub fn show(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     egui::ScrollArea::vertical().auto_shrink([false, false]).show(ui, |ui| {
         egui::Frame::NONE.inner_margin(egui::Margin { left: 36, right: 36, top: 28, bottom: 28 }).show(ui, |ui| {
             ui.horizontal(|ui| {
-                ui.add(crate::brand::image(t.dark(), 52.0)).on_hover_text("SimplyPDF");
+                crate::brand::show(ui, t.dark(), 52.0).on_hover_text("SimplyPDF");
                 ui.vertical(|ui| {
                     ui.label(egui::RichText::new(tl!("Welcome to SimplyPDF")).font(theme::semibold(24.0)));
                     ui.label(
@@ -316,31 +316,33 @@ mod tests {
 
     #[test]
     fn recent_files_and_pinned_locations_round_trip_independently() {
+        let pinned_folder = if cfg!(windows) { "C:/private/project" } else { "/private/project" };
+        let drawing_path = format!("{pinned_folder}/drawing.pdf");
         let mut app = SimplyPDFApp::new();
-        app.recent.push(crate::state::RecentFile { name: "drawing.pdf".into(), path: "/private/drawing.pdf".into(), pages: 2, size: 123 });
-        app.pinned.folders.push("/private/project".into());
+        app.recent.push(crate::state::RecentFile { name: "drawing.pdf".into(), path: drawing_path.clone(), pages: 2, size: 123 });
+        app.pinned.folders.push(pinned_folder.into());
         let saved = app.persist();
         let mut restored = SimplyPDFApp::new();
         restored.restore(&saved);
         assert_eq!(restored.recent.len(), 1);
-        assert_eq!(restored.recent[0].path, "/private/drawing.pdf");
-        assert_eq!(restored.pinned.folders, vec!["/private/project"]);
+        assert_eq!(restored.recent[0].path, drawing_path);
+        assert_eq!(restored.pinned.folders, vec![pinned_folder]);
 
         restored.execute("file.clear_recent");
         let mut cleared = SimplyPDFApp::new();
         cleared.restore(&restored.persist());
         assert!(cleared.recent.is_empty());
-        assert_eq!(cleared.pinned.folders, vec!["/private/project"]);
+        assert_eq!(cleared.pinned.folders, vec![pinned_folder]);
 
         // A zero history limit must not write private file paths into preferences.
         app.recent_limit = 0;
         let private_free = app.persist();
-        assert!(!private_free.contains("/private/drawing.pdf"));
+        assert!(!private_free.contains(&drawing_path));
         let mut no_history = SimplyPDFApp::new();
         no_history.restore(&private_free);
         assert_eq!(no_history.recent_limit, 0);
         assert!(no_history.recent.is_empty());
-        assert_eq!(no_history.pinned.folders, vec!["/private/project"]);
+        assert_eq!(no_history.pinned.folders, vec![pinned_folder]);
     }
 
     #[test]

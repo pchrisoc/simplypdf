@@ -28,6 +28,8 @@ simplypdf-model = { workspace = true }
 simplypdf-platform = { workspace = true }
 egui = { workspace = true, features = ["bytemuck", "default_fonts", "monochrome_emoji_fonts"] }
 egui_extras = { workspace = true }
+# The theme-aware title bar and Home logos are embedded PNGs.
+image = { version = "0.25", default-features = false, features = ["png"] }
 eframe = { workspace = true, features = ["default_fonts", "wgpu", "accesskit", "persistence", "links", "clipboard"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -96,7 +98,6 @@ egui_kittest = { workspace = true, features = ["eframe", "wgpu"] }
 # Tests draw SimplyPDF text without a system provider: the bundled and monochrome emoji faces must
 # be enabled on the test graph itself (a dependency's dev-features do not propagate).
 egui = { workspace = true, features = ["default_fonts", "monochrome_emoji_fonts"] }
-image = { version = "0.25", default-features = false, features = ["png"] }
 # Glyph-coverage test of the interface fonts; the same skrifa simplypdf-fonts already uses.
 skrifa = "0.47"
 proptest = { workspace = true }
