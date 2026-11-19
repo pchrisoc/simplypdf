@@ -76,3 +76,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - `cargo clippy --locked -p simplypdf-measure -j 1 --all-targets -- -D warnings` sandbox job `job-5566c64f857a` **passed**, `ok:true`, after 46.83s.
 - Fetched formatted PR #53 head and reran `cargo fmt --check` sandbox job `job-9f79188ccefb` **passed**, `ok:true`.
 - Together with 43 passing package tests and passing SonarCloud, the scoped local gates have succeeded. GitHub CI `44474007793` must still conclude success and mergeability must be rechecked against current `main` (which also received PR #47) before PR #53 is merged.
+
+## Measurement identity merge checkpoint — 2026-11-18 PST
+
+- GitHub CI run `44474007793` and SonarCloud run `44474007757` for PR #53 head `8dc3c769b5c7c2a6f35252132440f25275c41be8` both concluded **success**.
+- PR #53 merged into `main` as squash commit `d5f698ea358e0e4b49c5b73f16c89f98fca66a60` using GitHub's merge API with an expected head SHA guard.
+- The prior measurement test evidence is scoped to 43 tests; it does not establish full cross-platform or post-merge `main` CI status. ENG-08.01 remains unchecked pending full identity acceptance, and managed workbook publishing remains unimplemented.
+- Sandbox session `task-7b28aba97166` started verification job `job-306fd2e91a0c` for `simplypdf-measure`; formatting and strict Clippy finished, while scoped test compilation was still running at last check. Poll for `status: done` and `ok: true` before recording a pass.
