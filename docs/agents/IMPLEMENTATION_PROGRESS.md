@@ -119,3 +119,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Source commit `bcc3676cf55cdb6bf1f37262140fc9cd2a0d37b9` rejects non-finite derived readings; test commit `8e05345620ac6e87fef58d988c7efe028f4ac0f5` covers extreme valid scale/coordinate boundaries. Documentation commit `19ed96764673d987570dac47862d04edf24a51f2` records scope and limitations.
 - PR-head GitHub Actions CI run `44562185365` and SonarCloud run `44562185356` both completed successfully at the expected head before merge. The GitHub connector cannot independently run local Cargo tests; do not claim additional local tests or post-merge `main` CI green.
 - This is scoped hardening only, not complete ENG-06.08 acceptance. ENG-08.01 and opt-in managed workbook publishing remain unfinished. No README feature checkbox changed.
+
+## GitHub-only view coordinate bounds integration — 2026-11-19 PST
+
+- PR #61 (https://github.com/pchrisoc/simplypdf/pull/61), branch `fix/measure-view-coordinate-bounds-20261119`, merged into `main` via squash commit `abe3c0a5a2cc9320755dcad6a42a97730b89309c` after expected head `d6a03b4b7b9f6e08d5f0f9b2f24787dde2bbc78f` was confirmed.
+- Source commit `40387d1869e9fe59cf9489c48845a7a3222a0db9` validates finite, bounded transformed output from `user_to_view`; test commit `d6a03b4b7b9f6e08d5f0f9b2f24787dde2bbc78f` adds a `/UserUnit 2` boundary regression and ordinary-coordinate check in `crates/measure/src/tests.rs`.
+- PR-head GitHub Actions CI run `44595279636` and SonarCloud run `44595279709` both completed with `success` before the guarded merge. No local Cargo test or post-merge `main` CI result is claimed.
+- ENG-06.08 remains unchecked because this is only a coordinate-validation hardening change; ENG-08.01 downstream integration and managed workbook publishing remain incomplete. PR #62 has failing CI and is not mergeable at the time of this entry; investigate independently before merging.
