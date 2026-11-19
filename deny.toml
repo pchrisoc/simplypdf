@@ -61,6 +61,11 @@ ignore = [
     { id = "RUSTSEC-2026-0370", reason = "zvariant unmaintained; Linux a11y stack via accesskit_unix" },
     { id = "RUSTSEC-2026-0371", reason = "zbus_names unmaintained; Linux a11y stack via accesskit_unix" },
     { id = "RUSTSEC-2026-0372", reason = "zvariant_derive unmaintained; Linux a11y stack via accesskit_unix" },
+    # RUSTSEC-2026-0543 marks chrono unmaintained, not vulnerable. Chrono is used
+    # throughout the application for dates and time zones (see CLAUDE.md); removing
+    # it requires a reviewed replacement and cross-platform date regression tests.
+    # Keep this exception specific to the maintenance advisory, not future CVEs.
+    { id = "RUSTSEC-2026-0543", reason = "chrono maintenance notice; migrate date handling after cross-platform validation" },
 ]
 
 # egui's default UI fonts (Ubuntu-Light, Hack, emoji-icon-font): font licences on the AGENTS.md
