@@ -689,8 +689,7 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     if listing.truncated {
         return Err(invalid("cannot normalize a truncated measurement listing"));
     }
-    let reserved: std::collections::HashSet<String> =
-        listing.measurements.iter().map(|m| m.id.clone()).filter(|id| !id.trim().is_empty()).collect();
+    let reserved: std::collections::HashSet<String> = listing.measurements.iter().map(|m| m.id.clone()).filter(|id| !id.trim().is_empty()).collect();
     let mut seen = std::collections::HashSet::new();
     let mut next = 1usize;
     let mut changes = Vec::new();
@@ -712,8 +711,7 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     }
     let count = changes.len();
     for (reference, id) in changes {
-        doc.update_dict(reference, |d| d.set(b"NM".to_vec(), PdfString::text(&id)))
-            .map_err(|e| invalid(&e.to_string()))?;
+        doc.update_dict(reference, |d| d.set(b"NM".to_vec(), PdfString::text(&id))).map_err(|e| invalid(&e.to_string()))?;
     }
     Ok(count)
 }
