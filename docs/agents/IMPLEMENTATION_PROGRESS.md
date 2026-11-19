@@ -64,3 +64,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Dependabot PR #47 (eight Rust dependency upgrades) passed CI (`44469619980`), SonarCloud (`44469619892`), Nix (`44469619807`), Windows ARM64 (`44469619988`) and FreeBSD (`44469619819`) at head `12de5379dc21134d14703e0714d113ef8e1ec45d`.
 - Merged PR #47 into `pchrisoc/simplypdf` main using squash commit `2703c0ac5c38df9101bc81ef9344ae0eab5a1b9b`. Main post-merge verification remains separate; do not assert that push CI passed without checking it.
 - PR #53 (measurement IDs) remained open, SonarCloud green and CI in progress at its formatted head commit `8dc3c769b5c7c2a6f35252132440f25275c41be8` when this log was updated.
+
+## Measurement test evidence — 2026-11-18 PST
+
+- Sandbox session `task-a58a1d6354d0` checked out PR #53's first test commit (`2ee5867`) and ran focused test job `job-990afd705df7`: `cargo test --locked -p simplypdf-measure imported_measurement_ids_are_unique_and_persist -- --nocapture` **passed (1/1)** after a cold 5m11s dependency build.
+- Full package test job `job-5a9bf9561c77`: `cargo test --locked -p simplypdf-measure` **passed: 40 unit tests plus 3 property tests, 0 failures**. The tested implementation is unchanged by PR #53's later formatting-only commit `8dc3c769b5c7c2a6f35252132440f25275c41be8`.
+- PR #53 SonarCloud `44474007757` succeeded. GitHub CI `44474007793` still in progress at last query. Do not merge or check README feature until green, and do not claim the full measurement identity/workbook goal complete from this scoped test.
