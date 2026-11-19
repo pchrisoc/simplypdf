@@ -58,3 +58,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Sandbox focused test job `job-990afd705df7` launched and was compiling dependencies at last check. Poll via the gateway `job` action until `done` and `ok:true`; GitHub CI run `44474007793` and SonarCloud `44474007757` are also being checked.
 - The new normalization API alone is not the entire ENG-08.01 feature: UI/automation exposure, schema migration, malformed input coverage, and permission checks remain. Do not tick its README checkbox yet.
 - Dependency update PR #47 remains open; its eight grouped dependency updates require full CI validation and should not be merged blindly.
+
+## Dependency modernization checkpoint — 2026-11-18 PST
+
+- Dependabot PR #47 (eight Rust dependency upgrades) passed CI (`44469619980`), SonarCloud (`44469619892`), Nix (`44469619807`), Windows ARM64 (`44469619988`) and FreeBSD (`44469619819`) at head `12de5379dc21134d14703e0714d113ef8e1ec45d`.
+- Merged PR #47 into `pchrisoc/simplypdf` main using squash commit `2703c0ac5c38df9101bc81ef9344ae0eab5a1b9b`. Main post-merge verification remains separate; do not assert that push CI passed without checking it.
+- PR #53 (measurement IDs) remained open, SonarCloud green and CI in progress at its formatted head commit `8dc3c769b5c7c2a6f35252132440f25275c41be8` when this log was updated.
