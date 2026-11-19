@@ -610,3 +610,13 @@ fn csv_escapes_formula_prefixes_after_leading_control_characters() {
     let output = csv(&list(&d).measurements);
     assert!(output.contains("\"'\u{0001}=HYPERLINK"), "control-prefixed formula must be escaped: {output:?}");
 }
+
+#[test]
+fn transformed_view_coordinates_remain_within_measurement_bounds() {
+    let doc = fixture("", "/UserUnit 2 /CropBox [0 0 612 792]", &[]);
+    let origin = user_to_view(&doc, 0, [10.0, 20.0]).unwrap();
+    assert!(origin.iter().all(|value| value.is_finite() && value.abs() <= MAX_COORD));
+    // A finite PDF user-space point may exceed the supported geometry bounds
+    // after the page's UserUnit transform. Do not return an unusable view point.
+    assert!(user_to_view(&doc, 0, [MAX_COORD, MAX_COORD]).is_err());
+}

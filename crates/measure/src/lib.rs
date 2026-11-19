@@ -867,5 +867,7 @@ pub fn user_to_view(doc: &Document, page_index: usize, at: Point) -> Result<Poin
     let (_, height) = page.display_size(doc);
     let m = simplypdf_content::Matrix(page.view_matrix(doc)).invert().ok_or_else(|| invalid("invalid page transform"))?;
     let (x, y) = m.apply(at[0], at[1]);
-    Ok([x, height - y])
+    let view = [x, height - y];
+    check_points(&[view])?;
+    Ok(view)
 }
