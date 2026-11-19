@@ -102,6 +102,24 @@ fn imported_measurement_ids_are_unique_and_persist() {
     assert_eq!(list(&reopened).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), expected);
 }
 #[test]
+fn normalize_ids_preserves_unrelated_annotation_fields() {
+    let mut d = fixture("", "", &[]);
+    for id in ["repeat", "repeat"] {
+        add(&mut d, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    let (first, _) = annot(&d, 0, 0).unwrap();
+    let (second, _) = annot(&d, 0, 1).unwrap();
+    d.update_dict(first, |dict| dict.set(b"VendorKey".to_vec(), Object::Int(42))).unwrap();
+    d.update_dict(second, |dict| dict.set(b"VendorKey".to_vec(), Object::Int(99))).unwrap();
+    assert_eq!(normalize_ids(&mut d).unwrap(), 1);
+    assert_eq!(annot(&d, 0, 0).unwrap().1.int(b"VendorKey"), Some(42));
+    assert_eq!(annot(&d, 0, 1).unwrap().1.int(b"VendorKey"), Some(99));
+    let reopened = Document::open(Arc::new(write_full(&d, &SaveOptions::default()).unwrap())).unwrap();
+    assert_eq!(list(&reopened).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["repeat", "simplypdf-measure-1"]);
+    assert_eq!(annot(&reopened, 0, 0).unwrap().1.int(b"VendorKey"), Some(42));
+    assert_eq!(annot(&reopened, 0, 1).unwrap().1.int(b"VendorKey"), Some(99));
+}
+#[test]
 fn standard_annotations_captions_restyle_move_and_unknown_keys() {
     let mut d = fixture("", "", &[]);
     let meta = Meta { date: None, id: String::new() };
