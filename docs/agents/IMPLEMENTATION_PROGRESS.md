@@ -83,3 +83,12 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #53 merged into `main` as squash commit `d5f698ea358e0e4b49c5b73f16c89f98fca66a60` using GitHub's merge API with an expected head SHA guard.
 - The prior measurement test evidence is scoped to 43 tests; it does not establish full cross-platform or post-merge `main` CI status. ENG-08.01 remains unchecked pending full identity acceptance, and managed workbook publishing remains unimplemented.
 - Sandbox session `task-7b28aba97166` started verification job `job-306fd2e91a0c` for `simplypdf-measure`; formatting and strict Clippy finished, while scoped test compilation was still running at last check. Poll for `status: done` and `ok: true` before recording a pass.
+
+## Checkpoint 1 schema integration — 2026-11-19 PST
+
+- PR #55 (`agent/test-versioned-takeoff-schema-20261118`) merged into `main` as squash commit `02d99ae86fab44c2fdc49e741d81bea6fc599865`, expected head `c9c1a05e0e865a9800f112b91fd6144619ad9933`.
+- Adds a PDF save/reopen and CSV schema regression test, `docs/TAKEOFF_ROW_SCHEMA.md`, and checks the Checkpoint 1 persistent-ID/versioned-row-schema entry. PR #55 GitHub CI run `44480529741` and SonarCloud run `44480529737` both concluded `success` at the expected head.
+- Independent sandbox `simplypdf-measure` verification job `job-ba414fec31e4` finished `status: done`, `ok: true`; 41 unit tests and 3 property tests passed, with formatting and strict Clippy gates. Sandbox verification was scoped to the measure crate, not full UI/automation/platform acceptance.
+- Codex automated review did not complete because of account review usage limits; this is not a successful review. The PR diff was inspected manually before integration.
+- Post-merge `main` push CI is **not confirmed** by the PR-only workflow-run lookup. ENG-08.01 broader automation/UI migration behavior, malformed imported IDs in downstream consumers, and managed workbook sync remain unverified/incomplete; do not mark ENG-08.01 checked on this evidence alone.
+- PR #54 remains open and is not mergeable against current main; reconcile or close it rather than overwrite newer progress.
