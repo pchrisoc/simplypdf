@@ -620,3 +620,14 @@ fn transformed_view_coordinates_remain_within_measurement_bounds() {
     // after the page's UserUnit transform. Do not return an unusable view point.
     assert!(user_to_view(&doc, 0, [MAX_COORD, MAX_COORD]).is_err());
 }
+
+#[test]
+fn csv_escapes_formula_prefixes_after_unicode_bom() {
+    let mut d = fixture("", "", &[]);
+    let mut m = new(Kind::Distance, vec![[0.0, 0.0], [72.0, 0.0]]);
+    m.label = "\u{feff}=HYPERLINK(\"https://example.test\")".into();
+    add(&mut d, &m, &Meta { date: None, id: "csv-bom".into() }).unwrap();
+    let output = csv(&list(&d).measurements);
+    // PDF text round-tripping removes the BOM; the CSV cell must still be safe.
+    assert!(output.contains("\"\'=HYPERLINK"), "BOM-prefixed formula must be escaped: {output:?}");
+}
