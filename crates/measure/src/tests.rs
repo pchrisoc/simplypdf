@@ -695,3 +695,131 @@ fn normalize_ids_reserves_nonmeasurement_ids_across_pages() {
         ["simplypdf-measure-3", "simplypdf-measure-2", "simplypdf-measure-4"]
     );
 }
+
+#[test]
+fn checked_csv_requires_persistent_unique_ids_and_complete_scan() {
+    let mut doc = fixture("", "", &[]);
+    for id in ["duplicate", "duplicate", ""] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    let listing = list(&doc);
+    assert!(csv_checked(&listing).is_err());
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 2);
+    let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
+    let listing = list(&reopened);
+    let output = csv_checked(&listing).unwrap();
+    assert_eq!(output.trim_end().split("\r\n").count(), 4);
+    for measurement in &listing.measurements {
+        assert!(output.contains(&format!("\"{}\"", measurement.id)));
+    }
+    let mut incomplete = listing.clone();
+    incomplete.truncated = true;
+    assert!(csv_checked(&incomplete).is_err());
+    incomplete.truncated = false;
+    incomplete.unsupported.push(Unsupported { page: 0, index: 0, reason: "invalid imported measurement".into() });
+    assert!(csv_checked(&incomplete).is_ok());
+}
+
+#[test]
+fn prepare_export_migrates_legacy_ids_and_is_idempotent_after_reopen() {
+    let mut doc = fixture("", "", &[]);
+    for id in ["legacy", "legacy", ""] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    let first = prepare_export(&mut doc).unwrap();
+    assert_eq!(first.measurements.len(), 3);
+    assert_eq!(first.measurements[0].id, "legacy");
+    assert!(first.measurements.iter().all(|m| !m.id.is_empty()));
+    let mut reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
+    let second = prepare_export(&mut reopened).unwrap();
+    assert_eq!(first.measurements.iter().map(|m| &m.id).collect::<Vec<_>>(), second.measurements.iter().map(|m| &m.id).collect::<Vec<_>>());
+    assert_eq!(normalize_ids(&mut reopened).unwrap(), 0);
+}
+
+#[test]
+fn migration_change_count_distinguishes_legacy_and_persisted_snapshots() {
+    let mut doc = fixture("", "", &[]);
+    for id in ["", "same", "same"] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    let (listing, changes) = prepare_export_with_changes(&mut doc).unwrap();
+    assert_eq!(changes, 2);
+    assert_eq!(listing.measurements.len(), 3);
+    let (_, changes) = prepare_export_with_changes(&mut doc).unwrap();
+    assert_eq!(changes, 0);
+}
+
+#[test]
+fn checked_exports_reject_invalid_numeric_measurements() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "valid".into() }).unwrap();
+    let mut listing = list(&doc);
+    assert_eq!(listing.measurements.len(), 1);
+    listing.measurements[0].reading.value = f64::NAN;
+    assert!(csv_checked(&listing).is_err());
+    listing.measurements[0].reading.value = f64::INFINITY;
+    assert!(csv_checked(&listing).is_err());
+    listing.measurements[0].reading.value = -1.0;
+    assert!(csv_checked(&listing).is_err());
+    listing.measurements[0].reading.value = 5.0;
+    assert!(csv_checked(&listing).is_ok());
+}
+
+#[test]
+fn snapshot_fingerprint_is_stable_and_changes_with_measurement_edits() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "row-1".into() }).unwrap();
+    let first = list(&doc);
+    let token = snapshot_fingerprint(&first).unwrap();
+    assert_eq!(snapshot_fingerprint(&first).unwrap(), token);
+    assert!(token.starts_with(&format!("v{}-", TAKEOFF_SCHEMA_VERSION)));
+    let mut edited = first.clone();
+    edited.measurements[0].label.push_str(" changed");
+    assert_ne!(snapshot_fingerprint(&edited).unwrap(), token);
+    edited.truncated = true;
+    assert!(snapshot_fingerprint(&edited).is_err());
+}
+
+#[test]
+fn refresh_comparison_requires_first_publication_and_detects_changes() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "refresh-1".into() }).unwrap();
+    let listing = list(&doc);
+    let published = snapshot_fingerprint(&listing).unwrap();
+    assert!(snapshot_needs_refresh(&listing, None).unwrap());
+    assert!(!snapshot_needs_refresh(&listing, Some(&published)).unwrap());
+    let mut changed = listing.clone();
+    changed.measurements[0].label.push_str(" updated");
+    assert!(snapshot_needs_refresh(&changed, Some(&published)).unwrap());
+    changed.truncated = true;
+    assert!(snapshot_needs_refresh(&changed, Some(&published)).is_err());
+}
+
+#[test]
+fn refresh_tokens_reject_empty_and_stale_versions_without_skipping_validation() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "refresh-2".into() }).unwrap();
+    let listing = list(&doc);
+    assert!(snapshot_needs_refresh(&listing, Some("")).unwrap());
+    assert!(snapshot_needs_refresh(&listing, Some("v0-old")).unwrap());
+    let mut invalid = listing.clone();
+    invalid.measurements[0].id.clear();
+    assert!(snapshot_needs_refresh(&invalid, None).is_err());
+    assert!(snapshot_needs_refresh(&invalid, Some("")).is_err());
+}
+
+#[test]
+fn snapshot_fingerprint_tracks_unsupported_imported_annotations() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "row-1".into() }).unwrap();
+    let listing = list(&doc);
+    let original = snapshot_fingerprint(&listing).unwrap();
+    let mut changed = listing.clone();
+    changed.unsupported.push(Unsupported { page: 0, index: 3, reason: "unrecognized annotation".into() });
+    let with_unsupported = snapshot_fingerprint(&changed).unwrap();
+    assert_ne!(original, with_unsupported);
+    assert!(snapshot_needs_refresh(&changed, Some(&original)).unwrap());
+    changed.unsupported[0].reason = "annotation repaired".into();
+    assert_ne!(snapshot_fingerprint(&changed).unwrap(), with_unsupported);
+    assert_eq!(snapshot_fingerprint(&changed).unwrap(), snapshot_fingerprint(&changed).unwrap());
+}

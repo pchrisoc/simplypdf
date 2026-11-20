@@ -164,3 +164,32 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #71: https://github.com/pchrisoc/simplypdf/pull/71. Source commit `472d49989e3c457b953a78e77abb8b8aa34c4da4` reserves existing `/NM` IDs from all annotations during measurement ID normalization, not just measurement annotations. Test commit `baa5874a506caada21e7d336e5007dfd3c030647` adds collision, idempotence and save/reopen coverage.
 - Initial CI `44680244866` failed at `cargo fmt --all -- --check`; source formatting commit `2c1b88c06f2197091be43d3429683545f5f51fa2` applies the reported rustfmt diff. SonarCloud `44680244746` passed on the prior head, but neither CI nor SonarCloud is yet claimed green on the new head. Do not merge until both pass and branch currency/review/security checks are satisfied.
 - README ENG-08.01 checkbox stays unchecked pending full acceptance, including verification of the new regression and other row-identity export pathways.
+
+## 2026-11-20 — ENG-08.01 PR #73 CI repair
+
+- Inspected `main` at `d1a62ea2298d443546bd18ed50c66dcf5d9a357c`, open PRs #73/#57/#56, README (214 unchecked entries), AGENTS.md, and CLAUDE.md.
+- CI run [44708866613](https://github.com/pchrisoc/simplypdf/actions/runs/44708866613) failed in Clippy: `error[E0425]: cannot find value fingerprint in this scope` in the measurement listing response. SonarCloud run [44708866594](https://github.com/pchrisoc/simplypdf/actions/runs/44708866594) succeeded on the preceding head `65c08ae8`.
+- Source commit `11eed51b` removes the accidentally added export-only fingerprint field from `measurement_list`, preserving read-only listings for legacy documents while retaining change fingerprints in checked CSV/XLSX export responses.
+- Regression commit `44563e20` verifies that listing a synthetic PDF returns its count/truncation without requiring an export fingerprint.
+- Verification of the new head is pending GitHub CI; do not merge or check ENG-08.01 until required checks pass and full milestone acceptance is established.
+- Remaining ENG-08.01 work: verify persistent row identities across all mutation paths and save/reopen, confirm versioned export schema and migration behavior, resolve any further CI failures, then merge and update the README only if all acceptance requirements are met.
+
+## ENG-08.01 follow-up — 2026-11-20
+
+- PR #73 head before this run: `ab443efa`; CI run 44717226109 failed at Clippy, SonarCloud run 44717226170 succeeded.
+- Failure identified from CI job 136223603344: `clippy::field_reassign_with_default` in `crates/measure/src/xlsx.rs` test; fixed by `eb5cf9a` using a struct initializer.
+- Added a validated takeoff refresh-token comparison API (`snapshot_needs_refresh`) in `3aac82b`, with first-publish, unchanged, edited, and truncated-listing tests in `2e69784`.
+- New CI and SonarCloud results are **pending** for the latest head; no merge or README checkbox change until checks and full acceptance are verified.
+- Remaining: integrate persistent-ID normalization into durable PDF save and export entry points; verify imported/duplicate IDs across desktop, CLI and XLSX; implement managed workbook lifecycle and live publishing in later ENG milestones.
+
+## ENG-08.01 — Export refresh status and CI regression repair (2026-11-20)
+
+- PR #73 source commit `1dd6710` adds optional `published_fingerprint` comparison to automation CSV and XLSX export results; `needs_refresh` is true when the published snapshot is missing or stale. The export still validates and writes output, so this is a status indicator, not managed workbook live refresh.
+- Test commit `4584eca` covers missing/stale publication tokens and ensures invalid IDs cannot bypass validation. CI regression repair `853cdc9` corrects the CSV quoted-ID assertion after run 44724472473 failed (SonarCloud passed on previous head).
+- New CI and SonarCloud on current head remain to be verified. No README checkbox may be checked until durable PDF ID persistence and all acceptance paths are verified. ENG-08.05 managed publishing and ENG-08.06 live refresh are not complete.
+
+### 2026-11-20 — ENG-08.01 / snapshot consistency
+
+- PR #73: source commit `1ab7a65` includes skipped imported annotations in deterministic snapshot fingerprints, so changes to unsupported annotations trigger refresh even when supported takeoff rows are unchanged. Uses length-prefixed inputs to avoid ambiguous concatenation.
+- Regression commit `d5833b0` verifies changes to skipped annotations and reasons invalidate the published token.
+- CI for this head must be observed before merge; prior green checks on older heads are not sufficient. ENG-08.01 remains unchecked pending durable PDF identity normalization and cross-interface verification. No claim of completed backlog.

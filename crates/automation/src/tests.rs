@@ -617,3 +617,13 @@ fn numbered_symbols_survive_save_reopen_without_renumbering() {
     json(&mut a, "doc_close", json!({"doc":reopened}));
     std::fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn measurement_list_does_not_require_export_ready_identifiers() {
+    let mut a = Automation::new();
+    let doc = search_document(&mut a, 1);
+    let result = a.measurement_list(&Args(&json!({"doc":doc.0}))).unwrap();
+    assert_eq!(result["count"], 0);
+    assert_eq!(result["truncated"], false);
+    assert!(result.get("fingerprint").is_none());
+}

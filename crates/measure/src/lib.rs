@@ -730,6 +730,21 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     }
     Ok(count)
 }
+/// Upgrade legacy measurement IDs in-place, then return a complete export listing.
+/// The caller must save the document to persist any assigned IDs across sessions.
+pub fn prepare_export(doc: &mut Document) -> Result<Listing> {
+    prepare_export_with_changes(doc).map(|(listing, _)| listing)
+}
+
+/// Return a stable export snapshot and the number of legacy IDs repaired.
+/// Persist the mutated PDF before publishing the snapshot for durable identity.
+pub fn prepare_export_with_changes(doc: &mut Document) -> Result<(Listing, usize)> {
+    let changed = normalize_ids(doc)?;
+    let listing = list(doc);
+    csv_checked(&listing)?;
+    Ok((listing, changed))
+}
+
 /// Most viewports [`set_scale`] gives a page, and most [`scale_at`] reads.
 const MAX_VIEWPORTS: usize = 1024;
 
@@ -826,6 +841,56 @@ pub const TAKEOFF_COLUMNS: [&str; 14] = [
     "System",
     "Schema version",
 ];
+
+/// Export only a complete listing with durable, unambiguous row identifiers.
+/// Call normalize_ids before this for legacy PDFs with missing or duplicate /NM values.
+pub fn csv_checked(listing: &Listing) -> Result<String> {
+    if listing.truncated {
+        return Err(invalid("cannot export an incomplete measurement listing"));
+    }
+    let mut ids = std::collections::HashSet::new();
+    for measurement in &listing.measurements {
+        if !measurement.reading.value.is_finite() || measurement.reading.value < 0.0 {
+            return Err(invalid("measurement values must be finite and nonnegative before export"));
+        }
+        if measurement.id.trim().is_empty() || !ids.insert(measurement.id.as_str()) {
+            return Err(invalid("measurement IDs must be nonempty and unique before export"));
+        }
+    }
+    Ok(csv(&listing.measurements))
+}
+
+/// Deterministic content fingerprint for detecting takeoff changes before workbook refresh.
+/// This is a change token, not a cryptographic integrity hash.
+pub fn snapshot_fingerprint(listing: &Listing) -> Result<String> {
+    let csv = csv_checked(listing)?;
+    let mut hash = 0xcbf29ce484222325u64;
+    // Include skipped imported annotations: their appearance or resolution must
+    // invalidate a published snapshot even if supported rows are unchanged.
+    let mut feed = |bytes: &[u8]| {
+        for byte in bytes {
+            hash ^= u64::from(*byte);
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+    };
+    feed(&(csv.len() as u64).to_le_bytes());
+    feed(csv.as_bytes());
+    feed(&(listing.unsupported.len() as u64).to_le_bytes());
+    for skipped in &listing.unsupported {
+        feed(&(skipped.page as u64).to_le_bytes());
+        feed(&(skipped.index as u64).to_le_bytes());
+        feed(&(skipped.reason.len() as u64).to_le_bytes());
+        feed(skipped.reason.as_bytes());
+    }
+    Ok(format!("v{TAKEOFF_SCHEMA_VERSION}-{hash:016x}"))
+}
+
+/// Check whether a validated takeoff snapshot differs from the last published token.
+/// Missing tokens always require an initial publication; malformed listings fail closed.
+pub fn snapshot_needs_refresh(listing: &Listing, published: Option<&str>) -> Result<bool> {
+    let current = snapshot_fingerprint(listing)?;
+    Ok(published != Some(current.as_str()))
+}
 
 pub fn csv(measurements: &[Measurement]) -> String {
     // A spreadsheet may ignore leading whitespace and control characters when

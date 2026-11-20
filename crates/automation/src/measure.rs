@@ -202,11 +202,13 @@ impl Automation {
     }
     pub(crate) fn measurement_export(&self, a: &Args) -> Result<Value> {
         let all = self.doc(a)?.measurements_for_export().map_err(failed)?;
-        let csv = measure::csv(&all.measurements);
+        let csv = measure::csv_checked(&all).map_err(failed)?;
+        let fingerprint = measure::snapshot_fingerprint(&all).map_err(failed)?;
+        let needs_refresh = measure::snapshot_needs_refresh(&all, a.get("published_fingerprint").and_then(Value::as_str)).map_err(failed)?;
         let target = self.resolve(a.str("out")?, true)?;
         simplypdf_platform::staging::write_new_atomically(&target, csv.as_bytes()).map_err(failed)?;
         Ok(
-            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}),
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":fingerprint,"needs_refresh":needs_refresh}),
         )
     }
 
@@ -227,9 +229,11 @@ impl Automation {
         }
         let doc = self.doc(a)?;
         let all = doc.measurements_for_export().map_err(failed)?;
-        measure::xlsx::write_new(&target, &all.measurements).map_err(failed)?;
+        let fingerprint = measure::snapshot_fingerprint(&all).map_err(failed)?;
+        let needs_refresh = measure::snapshot_needs_refresh(&all, a.get("published_fingerprint").and_then(Value::as_str)).map_err(failed)?;
+        measure::xlsx::write_new_checked(&target, &all).map_err(failed)?;
         Ok(
-            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}),
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":fingerprint,"needs_refresh":needs_refresh}),
         )
     }
 }

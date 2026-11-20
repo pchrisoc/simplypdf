@@ -1,6 +1,6 @@
 //! Native XLSX snapshots shared by the desktop and automation tools.
 
-use crate::{Measurement, TAKEOFF_COLUMNS, TAKEOFF_SCHEMA_VERSION};
+use crate::{Listing, Measurement, TAKEOFF_COLUMNS, TAKEOFF_SCHEMA_VERSION};
 use rust_xlsxwriter::Workbook;
 use std::path::Path;
 
@@ -12,6 +12,12 @@ fn data_row(offset: usize) -> Result<u32, String> {
         return Err("takeoff exceeds Excel's 1,048,575 measurement-row limit".into());
     }
     u32::try_from(offset + 1).map_err(|e| e.to_string())
+}
+
+/// Publish a validated, versioned measurement snapshot without incomplete row identity.
+pub fn write_new_checked(path: &Path, listing: &Listing) -> Result<(), String> {
+    crate::csv_checked(listing).map_err(|e| e.to_string())?;
+    write_new(path, &listing.measurements)
 }
 
 /// Write a workbook beside its destination and publish it only if the path is free.
@@ -74,6 +80,18 @@ mod tests {
         let error = write_new(&path, &[]).expect_err("existing workbook must not be replaced");
         assert!(error.contains("takeoff.xlsx"), "{error}");
         assert_eq!(std::fs::read(&path).expect("read existing workbook"), original);
+    }
+
+    #[test]
+    fn checked_snapshot_rejects_incomplete_rows_before_creating_file() {
+        let dir = tempfile::tempdir().expect("temporary export directory");
+        let path = dir.path().join("takeoff.xlsx");
+        let mut listing = Listing { truncated: true, ..Listing::default() };
+        assert!(write_new_checked(&path, &listing).is_err());
+        assert!(!path.exists());
+        listing.truncated = false;
+        write_new_checked(&path, &listing).expect("complete empty snapshot");
+        assert!(path.exists());
     }
 
     #[cfg(unix)]
