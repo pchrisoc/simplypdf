@@ -227,3 +227,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #78 merged as `8054a19` after CI and SonarCloud passed; typed SnapshotStatus and tests cover publication fingerprints and incomplete scans.
 - Follow-up branch `feat/eng-0804-automation-status-20261120`, source commit `9a7e0d5`: CSV and XLSX automation exports use the same validated snapshot_status result, avoiding divergent fingerprint/refresh computations. Existing measurement snapshot tests cover this shared API; CI for this branch is pending.
 - Do not check ENG-08.01 or ENG-08.04 yet: cross-interface save/refresh acceptance and a complete snapshot-export acceptance demonstration remain to be verified. Continue with managed workbook lifecycle and tests.
+
+## 2026-11-20 — Publication-state diagnostics
+
+- PR #79 merged to main as `f14261230f7ca629882c340422491ccebd2572cd` after CI and SonarCloud success. CSV and XLSX automation now share validated snapshot status.
+- New feature branch `feat/eng-0806-publication-state-20261120`: `7a90d23` adds typed `PublicationState` (unpublished/current/stale/incompatible_schema); `4a1aeef` adds transition/version-mismatch regression tests; `3abfbdb` exposes state in both automation export responses; `4b1d7f8` formats tests.
+- This is a diagnostic component of ENG-08.06, not full live-refresh acceptance. Required next: managed workbook lifecycle, edit/undo/redo event wiring, transient-lock retry, and CI verification. README engineering checkboxes remain unchecked.
