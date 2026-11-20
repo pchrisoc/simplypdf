@@ -893,7 +893,16 @@ fn publication_state_distinguishes_unpublished_current_stale_and_incompatible() 
     assert_eq!(current.publication_state, PublicationState::Current);
     assert!(!current.needs_refresh);
     let stale = format!("v{TAKEOFF_SCHEMA_VERSION}-0000000000000000");
-    assert_eq!(snapshot_status(&listing, Some(&stale)).unwrap().publication_state, PublicationState::Stale);
-    assert_eq!(snapshot_status(&listing, Some("v0-0000000000000000")).unwrap().publication_state, PublicationState::IncompatibleSchema);
-    assert_eq!(snapshot_status(&listing, Some("")).unwrap().publication_state, PublicationState::IncompatibleSchema);
+    assert_eq!(
+        snapshot_status(&listing, Some(&stale)).unwrap().publication_state,
+        PublicationState::Stale
+    );
+    assert_eq!(
+        snapshot_status(&listing, Some("v0-0000000000000000")).unwrap().publication_state,
+        PublicationState::IncompatibleSchema
+    );
+    assert_eq!(
+        snapshot_status(&listing, Some("")).unwrap().publication_state,
+        PublicationState::IncompatibleSchema
+    );
 }
