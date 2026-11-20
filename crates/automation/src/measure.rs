@@ -227,6 +227,7 @@ impl Automation {
         }
         let doc = self.doc(a)?;
         let all = doc.measurements_for_export().map_err(failed)?;
+        measure::csv_checked(&all).map_err(failed)?;
         measure::xlsx::write_new(&target, &all.measurements).map_err(failed)?;
         Ok(
             json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}),
