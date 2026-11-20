@@ -689,7 +689,19 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     if listing.truncated {
         return Err(invalid("cannot normalize a truncated measurement listing"));
     }
-    let reserved: std::collections::HashSet<String> = listing.measurements.iter().map(|m| m.id.clone()).filter(|id| !id.trim().is_empty()).collect();
+    // Keep generated measurement IDs distinct from IDs on other PDF annotations.
+    let mut reserved: std::collections::HashSet<String> =
+        listing.measurements.iter().map(|m| m.id.clone()).filter(|id| !id.trim().is_empty()).collect();
+    for page in simplypdf_model::pages(doc) {
+        let Some(annots) = page.dict.get(b"Annots").and_then(|o| doc.resolve(o).as_array()) else { continue };
+        for annot in annots {
+            let Some(dict) = doc.resolve(annot).as_dict() else { continue };
+            let id = text(dict, b"NM");
+            if !id.trim().is_empty() {
+                reserved.insert(id);
+            }
+        }
+    }
     let mut seen = std::collections::HashSet::new();
     let mut next = 1usize;
     let mut changes = Vec::new();
