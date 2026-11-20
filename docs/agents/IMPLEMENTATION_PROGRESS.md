@@ -173,3 +173,11 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Regression commit `44563e20` verifies that listing a synthetic PDF returns its count/truncation without requiring an export fingerprint.
 - Verification of the new head is pending GitHub CI; do not merge or check ENG-08.01 until required checks pass and full milestone acceptance is established.
 - Remaining ENG-08.01 work: verify persistent row identities across all mutation paths and save/reopen, confirm versioned export schema and migration behavior, resolve any further CI failures, then merge and update the README only if all acceptance requirements are met.
+
+## ENG-08.01 follow-up — 2026-11-20
+
+- PR #73 head before this run: `ab443efa`; CI run 44717226109 failed at Clippy, SonarCloud run 44717226170 succeeded.
+- Failure identified from CI job 136223603344: `clippy::field_reassign_with_default` in `crates/measure/src/xlsx.rs` test; fixed by `eb5cf9a` using a struct initializer.
+- Added a validated takeoff refresh-token comparison API (`snapshot_needs_refresh`) in `3aac82b`, with first-publish, unchanged, edited, and truncated-listing tests in `2e69784`.
+- New CI and SonarCloud results are **pending** for the latest head; no merge or README checkbox change until checks and full acceptance are verified.
+- Remaining: integrate persistent-ID normalization into durable PDF save and export entry points; verify imported/duplicate IDs across desktop, CLI and XLSX; implement managed workbook lifecycle and live publishing in later ENG milestones.
