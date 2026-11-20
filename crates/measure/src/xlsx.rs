@@ -86,8 +86,7 @@ mod tests {
     fn checked_snapshot_rejects_incomplete_rows_before_creating_file() {
         let dir = tempfile::tempdir().expect("temporary export directory");
         let path = dir.path().join("takeoff.xlsx");
-        let mut listing = Listing::default();
-        listing.truncated = true;
+        let mut listing = Listing { truncated: true, ..Listing::default() };
         assert!(write_new_checked(&path, &listing).is_err());
         assert!(!path.exists());
         listing.truncated = false;
