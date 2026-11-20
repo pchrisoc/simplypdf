@@ -735,6 +735,14 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     }
     Ok(count)
 }
+/// Report how many imported measurement IDs require normalization without mutating the PDF.
+/// This includes IDs that collide with unrelated annotations, so callers can
+/// warn before saving a document with repaired identities.
+pub fn pending_id_repairs(doc: &Document) -> Result<usize> {
+    let mut preview = doc.clone();
+    normalize_ids(&mut preview)
+}
+
 /// Upgrade legacy measurement IDs in-place, then return a complete export listing.
 /// The caller must save the document to persist any assigned IDs across sessions.
 pub fn prepare_export(doc: &mut Document) -> Result<Listing> {
