@@ -103,6 +103,23 @@ mod tests {
         assert!(path.exists());
     }
 
+    #[test]
+    fn checked_workbook_carries_publication_metadata_distinct_from_legacy_export() {
+        let dir = tempfile::tempdir().expect("temporary export directory");
+        let checked = dir.path().join("checked.xlsx");
+        let legacy = dir.path().join("legacy.xlsx");
+        let listing = Listing::default();
+        let fingerprint = crate::snapshot_fingerprint(&listing).expect("valid empty fingerprint");
+        assert!(fingerprint.starts_with(&format!("v{TAKEOFF_SCHEMA_VERSION}-")));
+        write_new_checked(&checked, &listing).expect("checked snapshot");
+        write_new(&legacy, &listing.measurements).expect("legacy snapshot");
+        let checked_bytes = std::fs::read(&checked).expect("checked workbook");
+        let legacy_bytes = std::fs::read(&legacy).expect("legacy workbook");
+        assert!(checked_bytes.starts_with(b"PK"));
+        assert!(legacy_bytes.starts_with(b"PK"));
+        assert_ne!(checked_bytes, legacy_bytes, "checked workbook must carry its publication fingerprint");
+    }
+
     #[cfg(unix)]
     #[test]
     fn snapshot_refuses_symlink_destinations_without_changing_the_target() {
