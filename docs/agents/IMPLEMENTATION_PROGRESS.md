@@ -187,3 +187,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #73 source commit `1dd6710` adds optional `published_fingerprint` comparison to automation CSV and XLSX export results; `needs_refresh` is true when the published snapshot is missing or stale. The export still validates and writes output, so this is a status indicator, not managed workbook live refresh.
 - Test commit `4584eca` covers missing/stale publication tokens and ensures invalid IDs cannot bypass validation. CI regression repair `853cdc9` corrects the CSV quoted-ID assertion after run 44724472473 failed (SonarCloud passed on previous head).
 - New CI and SonarCloud on current head remain to be verified. No README checkbox may be checked until durable PDF ID persistence and all acceptance paths are verified. ENG-08.05 managed publishing and ENG-08.06 live refresh are not complete.
+
+### 2026-11-20 — ENG-08.01 / snapshot consistency
+
+- PR #73: source commit `1ab7a65` includes skipped imported annotations in deterministic snapshot fingerprints, so changes to unsupported annotations trigger refresh even when supported takeoff rows are unchanged. Uses length-prefixed inputs to avoid ambiguous concatenation.
+- Regression commit `d5833b0` verifies changes to skipped annotations and reasons invalidate the published token.
+- CI for this head must be observed before merge; prior green checks on older heads are not sufficient. ENG-08.01 remains unchecked pending durable PDF identity normalization and cross-interface verification. No claim of completed backlog.
