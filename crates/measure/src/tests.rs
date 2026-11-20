@@ -690,5 +690,8 @@ fn normalize_ids_reserves_nonmeasurement_ids_across_pages() {
         add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
     }
     assert_eq!(normalize_ids(&mut doc).unwrap(), 2);
-    assert_eq!(list(&doc).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["simplypdf-measure-3", "simplypdf-measure-2", "simplypdf-measure-4"]);
+    assert_eq!(
+        list(&doc).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(),
+        ["simplypdf-measure-3", "simplypdf-measure-2", "simplypdf-measure-4"]
+    );
 }
