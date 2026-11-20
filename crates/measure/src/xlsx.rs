@@ -1,6 +1,6 @@
 //! Native XLSX snapshots shared by the desktop and automation tools.
 
-use crate::{Measurement, TAKEOFF_COLUMNS, TAKEOFF_SCHEMA_VERSION};
+use crate::{Listing, Measurement, TAKEOFF_COLUMNS, TAKEOFF_SCHEMA_VERSION};
 use rust_xlsxwriter::Workbook;
 use std::path::Path;
 
@@ -12,6 +12,12 @@ fn data_row(offset: usize) -> Result<u32, String> {
         return Err("takeoff exceeds Excel's 1,048,575 measurement-row limit".into());
     }
     u32::try_from(offset + 1).map_err(|e| e.to_string())
+}
+
+/// Publish a validated, versioned measurement snapshot without incomplete row identity.
+pub fn write_new_checked(path: &Path, listing: &Listing) -> Result<(), String> {
+    crate::csv_checked(listing).map_err(|e| e.to_string())?;
+    write_new(path, &listing.measurements)
 }
 
 /// Write a workbook beside its destination and publish it only if the path is free.
