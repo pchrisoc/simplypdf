@@ -193,3 +193,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #73: source commit `1ab7a65` includes skipped imported annotations in deterministic snapshot fingerprints, so changes to unsupported annotations trigger refresh even when supported takeoff rows are unchanged. Uses length-prefixed inputs to avoid ambiguous concatenation.
 - Regression commit `d5833b0` verifies changes to skipped annotations and reasons invalidate the published token.
 - CI for this head must be observed before merge; prior green checks on older heads are not sufficient. ENG-08.01 remains unchecked pending durable PDF identity normalization and cross-interface verification. No claim of completed backlog.
+
+## ENG-08.01 checkpoint — 2026-11-20 06:05 PST
+
+- PR #73 merged to main as squash commit `94764cf09c69d985c2c9cb1f7a96d63631befeef` after CI run [44741831961](https://github.com/pchrisoc/simplypdf/actions/runs/44741831961) and SonarCloud run [44741832512](https://github.com/pchrisoc/simplypdf/actions/runs/44741832512) both passed on head `cd01e520b00a7148640f9215bdc0298e1a7799b5`.
+- Follow-up PR #75 on branch `feat/eng-0801-persistent-id-validation-20261120`: source `f43e27e` repairs measurement /NM collisions with unrelated annotation types; test `eccaf97` covers preserving unrelated annotations, idempotent migration, PDF save/reopen, and checked CSV.
+- PR #75 CI is pending; do not merge without passing checks. ENG-08.01 remains unchecked because durable export/save integration and cross-interface acceptance are still incomplete.
+- All 214 numbered README engineering checkboxes remain the overall goal; do not tick partial work.
