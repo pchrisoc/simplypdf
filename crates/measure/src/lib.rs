@@ -821,7 +821,14 @@ pub fn csv(measurements: &[Measurement]) -> String {
         // interpreting a formula. Treat any leading control code as unsafe.
         let dangerous = s.chars().next().is_some_and(char::is_control)
             || s.chars()
-                .find(|ch| !ch.is_whitespace() && !ch.is_control() && !matches!(ch, '\u{feff}' | '\u{200b}' | '\u{200c}' | '\u{200d}' | '\u{2060}'))
+                .find(|ch| {
+                    !ch.is_whitespace()
+                        && !ch.is_control()
+                        && !matches!(
+                            ch,
+                            '\u{feff}' | '\u{200b}' | '\u{200c}' | '\u{200d}' | '\u{2060}' | '\u{2061}' | '\u{2062}' | '\u{2063}' | '\u{2064}'
+                        )
+                })
                 .is_some_and(|ch| matches!(ch, '=' | '+' | '-' | '@'));
         let prefix = if dangerous { "'" } else { "" };
         format!("\"{prefix}{}\"", s.replace('"', "\"\""))

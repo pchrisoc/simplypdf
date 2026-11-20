@@ -644,3 +644,16 @@ fn csv_escapes_formulas_after_invisible_unicode_prefixes() {
         assert!(output.contains(&format!("\"'{prefix}=HYPERLINK")), "invisible prefix {prefix:?} must be escaped: {output:?}");
     }
 }
+
+#[test]
+fn csv_escapes_formulas_after_invisible_math_operators() {
+    let mut d = fixture("", "", &[]);
+    let m = new(Kind::Distance, vec![[0.0, 0.0], [72.0, 0.0]]);
+    add(&mut d, &m, &Meta { date: None, id: "csv-math-invisible".into() }).unwrap();
+    for prefix in ["\u{2061}", "\u{2062}", "\u{2063}", "\u{2064}"] {
+        let mut measurements = list(&d).measurements;
+        measurements[0].label = format!("{prefix}=HYPERLINK(\"https://example.test\")");
+        let output = csv(&measurements);
+        assert!(output.contains(&format!("\"'{prefix}=HYPERLINK")), "invisible math prefix {prefix:?} must be escaped: {output:?}");
+    }
+}
