@@ -911,6 +911,16 @@ pub fn snapshot_needs_refresh(listing: &Listing, published: Option<&str>) -> Res
     Ok(published != Some(current.as_str()))
 }
 
+/// Explain why a published takeoff snapshot needs to be refreshed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PublicationState {
+    Unpublished,
+    Current,
+    Stale,
+    IncompatibleSchema,
+}
+
 /// Validated snapshot metadata for publication status and refresh decisions.
 #[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
 pub struct SnapshotStatus {
@@ -919,17 +929,25 @@ pub struct SnapshotStatus {
     pub measurement_count: usize,
     pub unsupported_count: usize,
     pub needs_refresh: bool,
+    pub publication_state: PublicationState,
 }
 
 pub fn snapshot_status(listing: &Listing, published: Option<&str>) -> Result<SnapshotStatus> {
     let fingerprint = snapshot_fingerprint(listing)?;
-    let needs_refresh = published != Some(fingerprint.as_str());
+    let publication_state = match published {
+        None => PublicationState::Unpublished,
+        Some(token) if token == fingerprint => PublicationState::Current,
+        Some(token) if !token.starts_with(&format!("v{TAKEOFF_SCHEMA_VERSION}-")) => PublicationState::IncompatibleSchema,
+        Some(_) => PublicationState::Stale,
+    };
+    let needs_refresh = publication_state != PublicationState::Current;
     Ok(SnapshotStatus {
         schema_version: TAKEOFF_SCHEMA_VERSION,
         fingerprint,
         measurement_count: listing.measurements.len(),
         unsupported_count: listing.unsupported.len(),
         needs_refresh,
+        publication_state,
     })
 }
 
