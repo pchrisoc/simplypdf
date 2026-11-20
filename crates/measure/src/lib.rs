@@ -827,6 +827,21 @@ pub const TAKEOFF_COLUMNS: [&str; 14] = [
     "Schema version",
 ];
 
+/// Export only a complete listing with durable, unambiguous row identifiers.
+/// Call normalize_ids before this for legacy PDFs with missing or duplicate /NM values.
+pub fn csv_checked(listing: &Listing) -> Result<String> {
+    if listing.truncated || !listing.unsupported.is_empty() {
+        return Err(invalid("cannot export an incomplete measurement listing"));
+    }
+    let mut ids = std::collections::HashSet::new();
+    for measurement in &listing.measurements {
+        if measurement.id.trim().is_empty() || !ids.insert(measurement.id.as_str()) {
+            return Err(invalid("measurement IDs must be nonempty and unique before export"));
+        }
+    }
+    Ok(csv(&listing.measurements))
+}
+
 pub fn csv(measurements: &[Measurement]) -> String {
     // A spreadsheet may ignore leading whitespace and control characters when
     // deciding whether a quoted CSV cell starts a formula. Escape the *first*
