@@ -794,3 +794,16 @@ fn refresh_comparison_requires_first_publication_and_detects_changes() {
     changed.truncated = true;
     assert!(snapshot_needs_refresh(&changed, Some(&published)).is_err());
 }
+
+#[test]
+fn refresh_tokens_reject_empty_and_stale_versions_without_skipping_validation() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "refresh-2".into() }).unwrap();
+    let listing = list(&doc);
+    assert!(snapshot_needs_refresh(&listing, Some("")).unwrap());
+    assert!(snapshot_needs_refresh(&listing, Some("v0-old")).unwrap());
+    let mut invalid = listing.clone();
+    invalid.measurements[0].id.clear();
+    assert!(snapshot_needs_refresh(&invalid, None).is_err());
+    assert!(snapshot_needs_refresh(&invalid, Some("")).is_err());
+}
