@@ -24,8 +24,7 @@ impl RateLine {
         if self.unit.trim().is_empty() {
             return Err("unit is required".into());
         }
-        if ![self.quantity, self.material_rate, self.labor_rate, self.waste_percent]
-            .iter().all(|v| v.is_finite() && *v >= 0.0) {
+        if ![self.quantity, self.material_rate, self.labor_rate, self.waste_percent].iter().all(|v| v.is_finite() && *v >= 0.0) {
             return Err("quantity, rates, and waste must be finite and nonnegative".into());
         }
         let billable_quantity = self.quantity * (1.0 + self.waste_percent / 100.0);
