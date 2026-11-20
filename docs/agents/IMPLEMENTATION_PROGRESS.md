@@ -214,3 +214,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Branch `fix/eng-0801-atomic-export-preparation-20261120`. Source commit `030a9f99` prepares imported-ID repairs on a detached PDF document and commits those changes only after the complete export listing passes CSV validation. This avoids mutating a live document when export preparation fails.
 - Test commit `61c562b2` verifies duplicate/blank IDs are repaired, the prepared export has unique IDs, the PDF save/reopen preserves those IDs, and a second preparation performs no further repair.
 - GitHub Actions CI and SonarCloud must be checked on the PR head; the GitHub connector cannot run local Cargo tests. ENG-08.01 remains unchecked pending integration and acceptance verification. No claim of complete managed workbook publishing or live refresh.
+
+## ENG-08.01 — XLSX publication identity checkpoint (2026-11-20)
+
+- Branch `feat/eng-0801-xlsx-snapshot-fingerprint-20261120`: checked XLSX snapshots now embed the validated `snapshot_fingerprint` as a workbook-level `TakeoffFingerprint` defined name. This enables external consumers to compare a saved workbook's publication token with a newly scanned PDF snapshot without relying on file timestamps. Legacy `write_new` remains available without checked metadata.
+- Regression test `checked_workbook_carries_publication_metadata_distinct_from_legacy_export` covers checked/legacy workbook generation and distinguishes their bytes. CI and SonarCloud verification are pending; no task checkbox is marked complete.
+- Remaining ENG-08.01 acceptance: desktop save integration, CLI/automation parity, end-to-end workbook metadata inspection, and cross-interface tests. ENG-08.05 managed publishing and ENG-08.06 live refresh are separate future milestones.
