@@ -807,3 +807,19 @@ fn refresh_tokens_reject_empty_and_stale_versions_without_skipping_validation() 
     assert!(snapshot_needs_refresh(&invalid, None).is_err());
     assert!(snapshot_needs_refresh(&invalid, Some("")).is_err());
 }
+
+#[test]
+fn snapshot_fingerprint_tracks_unsupported_imported_annotations() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "row-1".into() }).unwrap();
+    let listing = list(&doc);
+    let original = snapshot_fingerprint(&listing).unwrap();
+    let mut changed = listing.clone();
+    changed.unsupported.push(Unsupported { page: 0, index: 3, reason: "unrecognized annotation".into() });
+    let with_unsupported = snapshot_fingerprint(&changed).unwrap();
+    assert_ne!(original, with_unsupported);
+    assert!(snapshot_needs_refresh(&changed, Some(&original)).unwrap());
+    changed.unsupported[0].reason = "annotation repaired".into();
+    assert_ne!(snapshot_fingerprint(&changed).unwrap(), with_unsupported);
+    assert_eq!(snapshot_fingerprint(&changed).unwrap(), snapshot_fingerprint(&changed).unwrap());
+}
