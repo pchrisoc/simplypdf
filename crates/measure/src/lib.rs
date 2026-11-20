@@ -693,9 +693,12 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     let mut reserved: std::collections::HashSet<String> =
         listing.measurements.iter().map(|m| m.id.clone()).filter(|id| !id.trim().is_empty()).collect();
     for page in simplypdf_model::pages(doc) {
-        let Some(annots) = page.dict.get(b"Annots").and_then(|o| doc.resolve(o).as_array()) else { continue };
+        let Some(annots) = page.dict.get(b"Annots") else { continue };
+        let resolved = doc.resolve(annots);
+        let Some(annots) = resolved.as_array() else { continue };
         for annot in annots {
-            let Some(dict) = doc.resolve(annot).as_dict() else { continue };
+            let resolved = doc.resolve(annot);
+            let Some(dict) = resolved.as_dict() else { continue };
             let id = text(dict, b"NM");
             if !id.trim().is_empty() {
                 reserved.insert(id);
