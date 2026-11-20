@@ -682,3 +682,13 @@ fn normalize_ids_avoids_unrelated_annotation_ids() {
     let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
     assert_eq!(list(&reopened).measurements[0].id, "simplypdf-measure-2");
 }
+
+#[test]
+fn normalize_ids_reserves_nonmeasurement_ids_across_pages() {
+    let mut doc = fixture("", "/Annots [5 0 R]", &["<< /Type /Annot /Subtype /Text /NM (simplypdf-measure-1) /Rect [0 0 20 20] >>"]);
+    for id in ["", "simplypdf-measure-2", ""] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 2);
+    assert_eq!(list(&doc).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["simplypdf-measure-3", "simplypdf-measure-2", "simplypdf-measure-4"]);
+}
