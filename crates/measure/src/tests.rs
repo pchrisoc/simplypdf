@@ -735,3 +735,16 @@ fn prepare_export_migrates_legacy_ids_and_is_idempotent_after_reopen() {
     assert_eq!(first.measurements.iter().map(|m| &m.id).collect::<Vec<_>>(), second.measurements.iter().map(|m| &m.id).collect::<Vec<_>>());
     assert_eq!(normalize_ids(&mut reopened).unwrap(), 0);
 }
+
+#[test]
+fn migration_change_count_distinguishes_legacy_and_persisted_snapshots() {
+    let mut doc = fixture("", "", &[]);
+    for id in ["", "same", "same"] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    let (listing, changes) = prepare_export_with_changes(&mut doc).unwrap();
+    assert_eq!(changes, 2);
+    assert_eq!(listing.measurements.len(), 3);
+    let (_, changes) = prepare_export_with_changes(&mut doc).unwrap();
+    assert_eq!(changes, 0);
+}
