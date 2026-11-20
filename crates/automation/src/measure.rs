@@ -95,7 +95,7 @@ impl Automation {
             .map(|u| json!({"page":u.page.saturating_add(1),"index":u.index.saturating_add(1),"reason":u.reason}))
             .collect();
         Ok(
-            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"count":measurements.len(),"measurements":measurements,"unsupported":unsupported,"truncated":all.truncated}),
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"count":measurements.len(),"measurements":measurements,"unsupported":unsupported,"truncated":all.truncated,"fingerprint":fingerprint}),
         )
     }
     pub(crate) fn measurement_scale(&mut self, a: &Args) -> Result<Value> {
@@ -203,10 +203,11 @@ impl Automation {
     pub(crate) fn measurement_export(&self, a: &Args) -> Result<Value> {
         let all = self.doc(a)?.measurements_for_export().map_err(failed)?;
         let csv = measure::csv_checked(&all).map_err(failed)?;
+        let fingerprint = measure::snapshot_fingerprint(&all).map_err(failed)?;
         let target = self.resolve(a.str("out")?, true)?;
         simplypdf_platform::staging::write_new_atomically(&target, csv.as_bytes()).map_err(failed)?;
         Ok(
-            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}),
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":fingerprint}),
         )
     }
 
@@ -227,9 +228,10 @@ impl Automation {
         }
         let doc = self.doc(a)?;
         let all = doc.measurements_for_export().map_err(failed)?;
+        let fingerprint = measure::snapshot_fingerprint(&all).map_err(failed)?;
         measure::xlsx::write_new_checked(&target, &all).map_err(failed)?;
         Ok(
-            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated}),
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":fingerprint}),
         )
     }
 }
