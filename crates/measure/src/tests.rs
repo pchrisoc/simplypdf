@@ -112,7 +112,10 @@ fn prepare_export_repairs_ids_and_persists_only_validated_snapshot() {
     assert_eq!(snapshot.measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["same", "simplypdf-measure-1", "simplypdf-measure-2"]);
     assert_eq!(csv_checked(&snapshot).unwrap().matches("simplypdf-measure-").count(), 2);
     let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
-    assert_eq!(list(&reopened).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["same", "simplypdf-measure-1", "simplypdf-measure-2"]);
+    assert_eq!(
+        list(&reopened).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(),
+        ["same", "simplypdf-measure-1", "simplypdf-measure-2"]
+    );
     let (_, repaired_again) = prepare_export_with_changes(&mut doc).unwrap();
     assert_eq!(repaired_again, 0);
 }
