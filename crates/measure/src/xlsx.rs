@@ -54,7 +54,7 @@ fn write_snapshot(path: &Path, measurements: &[Measurement], fingerprint: Option
     if let Some(fingerprint) = fingerprint {
         // Store the validated publication token as a workbook-level defined name.
         // Consumers can compare it with snapshot_fingerprint before refreshing.
-        book.define_name("TakeoffFingerprint", &format!("=\\"{fingerprint}\\"")).map_err(failed)?;
+        book.define_name("TakeoffFingerprint", &format!("=\"{fingerprint}\"")).map_err(failed)?;
     }
     let parent = path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
     let mut staged = tempfile::NamedTempFile::new_in(parent).map_err(|e| e.to_string())?;
