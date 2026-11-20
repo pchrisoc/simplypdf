@@ -233,3 +233,12 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #79 merged to main as `f14261230f7ca629882c340422491ccebd2572cd` after CI and SonarCloud success. CSV and XLSX automation now share validated snapshot status.
 - New feature branch `feat/eng-0806-publication-state-20261120`: `7a90d23` adds typed `PublicationState` (unpublished/current/stale/incompatible_schema); `4a1aeef` adds transition/version-mismatch regression tests; `3abfbdb` exposes state in both automation export responses; `4b1d7f8` formats tests.
 - This is a diagnostic component of ENG-08.06, not full live-refresh acceptance. Required next: managed workbook lifecycle, edit/undo/redo event wiring, transient-lock retry, and CI verification. README engineering checkboxes remain unchecked.
+
+### 2026-11-20 — parallel ENG-08 implementation and CI verification
+
+- PR #81 merged after CI and SonarCloud passed; publication fingerprint format validation is integrated.
+- PR #83 merged after CI and SonarCloud passed; versioned editable classification-list validation and focused tests are integrated. ENG-08.03 remains unchecked pending UI and workflow integration.
+- PR #82 adds unit-aware material/labor rate calculation and focused tests; formatting repaired, CI rerun pending. ENG-08.02 remains unchecked pending UI, persisted fields and export integration.
+- PR #84 adds unit-separated filtered quantity aggregation; CI formatting failure still needs repair and integration with source PDFs and additional filter fields.
+- PR #85 adds serializable snapshot manifests and tests; CI formatting failures still need repair.
+- The full engineering backlog remains in scope; no task was marked complete on partial acceptance evidence.
