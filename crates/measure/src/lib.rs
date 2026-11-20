@@ -826,7 +826,7 @@ pub fn csv(measurements: &[Measurement]) -> String {
                         && !ch.is_control()
                         && !matches!(
                             ch,
-                            '\u{feff}' | '\u{200b}' | '\u{200c}' | '\u{200d}' | '\u{2060}' | '\u{2061}' | '\u{2062}' | '\u{2063}' | '\u{2064}'
+                            '\u{feff}' | '\u{200b}' | '\u{200c}' | '\u{200d}' | '\u{200e}' | '\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2060}'..='\u{2069}'
                         )
                 })
                 .is_some_and(|ch| matches!(ch, '=' | '+' | '-' | '@'));
