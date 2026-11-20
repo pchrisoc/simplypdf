@@ -837,3 +837,13 @@ fn normalize_ids_repairs_collisions_with_other_annotation_types() {
     assert_eq!(list(&reopened).measurements[0].id, updated.measurements[0].id);
     assert!(csv_checked(&list(&reopened)).is_ok());
 }
+
+#[test]
+fn pending_id_repairs_previews_collisions_without_mutating_document() {
+    let mut doc = fixture("", "/Annots [5 0 R]", &["<< /Type /Annot /Subtype /Text /Rect [0 0 20 20] /NM (shared) >>"]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "shared".into() }).unwrap();
+    assert_eq!(pending_id_repairs(&doc).unwrap(), 1);
+    assert_eq!(list(&doc).measurements[0].id, "shared");
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 1);
+    assert_eq!(pending_id_repairs(&doc).unwrap(), 0);
+}
