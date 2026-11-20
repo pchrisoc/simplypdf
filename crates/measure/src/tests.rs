@@ -101,6 +101,22 @@ fn versioned_takeoff_schema_preserves_ids_after_save_and_reopen() {
     assert!(lines[1].ends_with(",1"));
 }
 #[test]
+fn prepare_export_repairs_ids_and_persists_only_validated_snapshot() {
+    let mut doc = fixture("", "", &[]);
+    for id in ["same", "same", ""] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    let (snapshot, repaired) = prepare_export_with_changes(&mut doc).unwrap();
+    assert_eq!(repaired, 2);
+    assert_eq!(snapshot.measurements.len(), 3);
+    assert_eq!(snapshot.measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["same", "simplypdf-measure-1", "simplypdf-measure-2"]);
+    assert_eq!(csv_checked(&snapshot).unwrap().matches("simplypdf-measure-").count(), 2);
+    let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
+    assert_eq!(list(&reopened).measurements.iter().map(|m| m.id.as_str()).collect::<Vec<_>>(), ["same", "simplypdf-measure-1", "simplypdf-measure-2"]);
+    let (_, repaired_again) = prepare_export_with_changes(&mut doc).unwrap();
+    assert_eq!(repaired_again, 0);
+}
+#[test]
 fn imported_measurement_ids_are_unique_and_persist() {
     let mut d = fixture("", "", &[]);
     for id in ["dup", "dup", "", "simplypdf-measure-1"] {
