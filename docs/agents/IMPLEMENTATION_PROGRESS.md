@@ -164,3 +164,12 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #71: https://github.com/pchrisoc/simplypdf/pull/71. Source commit `472d49989e3c457b953a78e77abb8b8aa34c4da4` reserves existing `/NM` IDs from all annotations during measurement ID normalization, not just measurement annotations. Test commit `baa5874a506caada21e7d336e5007dfd3c030647` adds collision, idempotence and save/reopen coverage.
 - Initial CI `44680244866` failed at `cargo fmt --all -- --check`; source formatting commit `2c1b88c06f2197091be43d3429683545f5f51fa2` applies the reported rustfmt diff. SonarCloud `44680244746` passed on the prior head, but neither CI nor SonarCloud is yet claimed green on the new head. Do not merge until both pass and branch currency/review/security checks are satisfied.
 - README ENG-08.01 checkbox stays unchecked pending full acceptance, including verification of the new regression and other row-identity export pathways.
+
+## 2026-11-20 — ENG-08.01 PR #73 CI repair
+
+- Inspected `main` at `d1a62ea2298d443546bd18ed50c66dcf5d9a357c`, open PRs #73/#57/#56, README (214 unchecked entries), AGENTS.md, and CLAUDE.md.
+- CI run [44708866613](https://github.com/pchrisoc/simplypdf/actions/runs/44708866613) failed in Clippy: `error[E0425]: cannot find value fingerprint in this scope` in the measurement listing response. SonarCloud run [44708866594](https://github.com/pchrisoc/simplypdf/actions/runs/44708866594) succeeded on the preceding head `65c08ae8`.
+- Source commit `11eed51b` removes the accidentally added export-only fingerprint field from `measurement_list`, preserving read-only listings for legacy documents while retaining change fingerprints in checked CSV/XLSX export responses.
+- Regression commit `44563e20` verifies that listing a synthetic PDF returns its count/truncation without requiring an export fingerprint.
+- Verification of the new head is pending GitHub CI; do not merge or check ENG-08.01 until required checks pass and full milestone acceptance is established.
+- Remaining ENG-08.01 work: verify persistent row identities across all mutation paths and save/reopen, confirm versioned export schema and migration behavior, resolve any further CI failures, then merge and update the README only if all acceptance requirements are met.
