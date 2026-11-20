@@ -95,7 +95,7 @@ impl Automation {
             .map(|u| json!({"page":u.page.saturating_add(1),"index":u.index.saturating_add(1),"reason":u.reason}))
             .collect();
         Ok(
-            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"count":measurements.len(),"measurements":measurements,"unsupported":unsupported,"truncated":all.truncated,"fingerprint":fingerprint}),
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"count":measurements.len(),"measurements":measurements,"unsupported":unsupported,"truncated":all.truncated}),
         )
     }
     pub(crate) fn measurement_scale(&mut self, a: &Args) -> Result<Value> {
