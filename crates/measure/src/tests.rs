@@ -882,3 +882,18 @@ fn snapshot_status_reports_counts_and_publication_changes() {
     incomplete.truncated = true;
     assert!(snapshot_status(&incomplete, None).is_err());
 }
+
+#[test]
+fn publication_state_distinguishes_unpublished_current_stale_and_incompatible() {
+    let listing = Listing::default();
+    let initial = snapshot_status(&listing, None).unwrap();
+    assert_eq!(initial.publication_state, PublicationState::Unpublished);
+    assert!(initial.needs_refresh);
+    let current = snapshot_status(&listing, Some(&initial.fingerprint)).unwrap();
+    assert_eq!(current.publication_state, PublicationState::Current);
+    assert!(!current.needs_refresh);
+    let stale = format!("v{TAKEOFF_SCHEMA_VERSION}-0000000000000000");
+    assert_eq!(snapshot_status(&listing, Some(&stale)).unwrap().publication_state, PublicationState::Stale);
+    assert_eq!(snapshot_status(&listing, Some("v0-0000000000000000")).unwrap().publication_state, PublicationState::IncompatibleSchema);
+    assert_eq!(snapshot_status(&listing, Some("")).unwrap().publication_state, PublicationState::IncompatibleSchema);
+}
