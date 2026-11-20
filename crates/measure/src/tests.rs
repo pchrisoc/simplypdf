@@ -715,4 +715,7 @@ fn checked_csv_requires_persistent_unique_ids_and_complete_scan() {
     let mut incomplete = listing.clone();
     incomplete.truncated = true;
     assert!(csv_checked(&incomplete).is_err());
+    incomplete.truncated = false;
+    incomplete.unsupported.push(Unsupported { page: 0, index: 0, reason: "invalid imported measurement".into() });
+    assert!(csv_checked(&incomplete).is_err());
 }
