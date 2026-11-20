@@ -152,3 +152,15 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Initial GitHub Actions CI `44658364038` failed `cargo fmt --all -- --check` (not a functional test failure); formatting correction commit `35f1b9892cc44e7a60cd60c8974e1f1ea43532fd` applied the exact rustfmt diff.
 - At exact verified head `35f1b9892cc44e7a60cd60c8974e1f1ea43532fd`, CI `44663712509` and SonarCloud `44663712447` both completed successfully. Guarded squash merge SHA: `f196418a1b9baeb439796b25fd0ce209be3ea1be`.
 - No README acceptance checkbox changed: ENG-08.01 persistent row identity, ENG-08.05 managed workbook publishing, and ENG-08.06 live refresh still require complete acceptance evidence. No post-merge main CI result is claimed.
+
+## CSV bidirectional prefix regression integrated — 2026-11-19 PST
+
+- PR #70: https://github.com/pchrisoc/simplypdf/pull/70. The measurement CSV exporter now treats eleven Unicode bidirectional formatting prefixes as ignorable when identifying spreadsheet formulas; focused tests cover the prefixes. Source/test commits `790ae3e`, `49cdb4f`, formatting commits `2f224e0` and `533a40a0155e6514df38d8b75e2020727f59792f`.
+- GitHub Actions CI `44679069754` and SonarCloud `44679069733` passed on exact PR head `533a40a0155e6514df38d8b75e2020727f59792f`; guarded squash merge SHA `b1f84bdac010f663c0b7b3fe991aa389130fe6e1`. Post-merge main CI not yet verified.
+- ENG-08.01 remains unchecked: persistent measurement identity requires continued integration and acceptance verification; managed workbook publishing and live refresh remain outstanding.
+
+## ENG-08.01 — Cross-annotation ID collision regression (in progress)
+
+- PR #71: https://github.com/pchrisoc/simplypdf/pull/71. Source commit `472d49989e3c457b953a78e77abb8b8aa34c4da4` reserves existing `/NM` IDs from all annotations during measurement ID normalization, not just measurement annotations. Test commit `baa5874a506caada21e7d336e5007dfd3c030647` adds collision, idempotence and save/reopen coverage.
+- Initial CI `44680244866` failed at `cargo fmt --all -- --check`; source formatting commit `2c1b88c06f2197091be43d3429683545f5f51fa2` applies the reported rustfmt diff. SonarCloud `44680244746` passed on the prior head, but neither CI nor SonarCloud is yet claimed green on the new head. Do not merge until both pass and branch currency/review/security checks are satisfied.
+- README ENG-08.01 checkbox stays unchecked pending full acceptance, including verification of the new regression and other row-identity export pathways.
