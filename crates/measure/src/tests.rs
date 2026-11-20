@@ -719,3 +719,19 @@ fn checked_csv_requires_persistent_unique_ids_and_complete_scan() {
     incomplete.unsupported.push(Unsupported { page: 0, index: 0, reason: "invalid imported measurement".into() });
     assert!(csv_checked(&incomplete).is_ok());
 }
+
+#[test]
+fn prepare_export_migrates_legacy_ids_and_is_idempotent_after_reopen() {
+    let mut doc = fixture("", "", &[]);
+    for id in ["legacy", "legacy", ""] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    let first = prepare_export(&mut doc).unwrap();
+    assert_eq!(first.measurements.len(), 3);
+    assert_eq!(first.measurements[0].id, "legacy");
+    assert!(first.measurements.iter().all(|m| !m.id.is_empty()));
+    let mut reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
+    let second = prepare_export(&mut reopened).unwrap();
+    assert_eq!(first.measurements.iter().map(|m| &m.id).collect::<Vec<_>>(), second.measurements.iter().map(|m| &m.id).collect::<Vec<_>>());
+    assert_eq!(normalize_ids(&mut reopened).unwrap(), 0);
+}
