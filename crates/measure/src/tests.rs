@@ -748,3 +748,19 @@ fn migration_change_count_distinguishes_legacy_and_persisted_snapshots() {
     let (_, changes) = prepare_export_with_changes(&mut doc).unwrap();
     assert_eq!(changes, 0);
 }
+
+#[test]
+fn checked_exports_reject_invalid_numeric_measurements() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "valid".into() }).unwrap();
+    let mut listing = list(&doc);
+    assert_eq!(listing.measurements.len(), 1);
+    listing.measurements[0].reading.value = f64::NAN;
+    assert!(csv_checked(&listing).is_err());
+    listing.measurements[0].reading.value = f64::INFINITY;
+    assert!(csv_checked(&listing).is_err());
+    listing.measurements[0].reading.value = -1.0;
+    assert!(csv_checked(&listing).is_err());
+    listing.measurements[0].reading.value = 5.0;
+    assert!(csv_checked(&listing).is_ok());
+}
