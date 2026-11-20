@@ -202,7 +202,7 @@ impl Automation {
     }
     pub(crate) fn measurement_export(&self, a: &Args) -> Result<Value> {
         let all = self.doc(a)?.measurements_for_export().map_err(failed)?;
-        let csv = measure::csv(&all.measurements);
+        let csv = measure::csv_checked(&all).map_err(failed)?;
         let target = self.resolve(a.str("out")?, true)?;
         simplypdf_platform::staging::write_new_atomically(&target, csv.as_bytes()).map_err(failed)?;
         Ok(
