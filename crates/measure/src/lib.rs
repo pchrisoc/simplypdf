@@ -872,6 +872,13 @@ pub fn snapshot_fingerprint(listing: &Listing) -> Result<String> {
     Ok(format!("v{TAKEOFF_SCHEMA_VERSION}-{hash:016x}"))
 }
 
+/// Check whether a validated takeoff snapshot differs from the last published token.
+/// Missing tokens always require an initial publication; malformed listings fail closed.
+pub fn snapshot_needs_refresh(listing: &Listing, published: Option<&str>) -> Result<bool> {
+    let current = snapshot_fingerprint(listing)?;
+    Ok(published != Some(current.as_str()))
+}
+
 pub fn csv(measurements: &[Measurement]) -> String {
     // A spreadsheet may ignore leading whitespace and control characters when
     // deciding whether a quoted CSV cell starts a formula. Escape the *first*
