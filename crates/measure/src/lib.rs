@@ -911,6 +911,28 @@ pub fn snapshot_needs_refresh(listing: &Listing, published: Option<&str>) -> Res
     Ok(published != Some(current.as_str()))
 }
 
+/// Validated snapshot metadata for publication status and refresh decisions.
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+pub struct SnapshotStatus {
+    pub schema_version: u32,
+    pub fingerprint: String,
+    pub measurement_count: usize,
+    pub unsupported_count: usize,
+    pub needs_refresh: bool,
+}
+
+pub fn snapshot_status(listing: &Listing, published: Option<&str>) -> Result<SnapshotStatus> {
+    let fingerprint = snapshot_fingerprint(listing)?;
+    let needs_refresh = published != Some(fingerprint.as_str());
+    Ok(SnapshotStatus {
+        schema_version: TAKEOFF_SCHEMA_VERSION,
+        fingerprint,
+        measurement_count: listing.measurements.len(),
+        unsupported_count: listing.unsupported.len(),
+        needs_refresh,
+    })
+}
+
 pub fn csv(measurements: &[Measurement]) -> String {
     // A spreadsheet may ignore leading whitespace and control characters when
     // deciding whether a quoted CSV cell starts a formula. Escape the *first*
