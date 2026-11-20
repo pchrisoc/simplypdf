@@ -866,3 +866,19 @@ fn pending_id_repairs_previews_collisions_without_mutating_document() {
     assert_eq!(normalize_ids(&mut doc).unwrap(), 1);
     assert_eq!(pending_id_repairs(&doc).unwrap(), 0);
 }
+
+#[test]
+fn snapshot_status_reports_counts_and_publication_changes() {
+    let listing = Listing::default();
+    let first = snapshot_status(&listing, None).unwrap();
+    assert_eq!(first.schema_version, TAKEOFF_SCHEMA_VERSION);
+    assert_eq!(first.measurement_count, 0);
+    assert_eq!(first.unsupported_count, 0);
+    assert!(first.needs_refresh);
+    let unchanged = snapshot_status(&listing, Some(&first.fingerprint)).unwrap();
+    assert!(!unchanged.needs_refresh);
+    assert_eq!(unchanged.fingerprint, first.fingerprint);
+    let mut incomplete = listing.clone();
+    incomplete.truncated = true;
+    assert!(snapshot_status(&incomplete, None).is_err());
+}
