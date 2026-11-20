@@ -932,12 +932,20 @@ pub struct SnapshotStatus {
     pub publication_state: PublicationState,
 }
 
+/// A publication token is the version prefix followed by exactly 16 lowercase hex digits.
+fn valid_publication_token(token: &str) -> bool {
+    let Some(hash) = token.strip_prefix(&format!("v{TAKEOFF_SCHEMA_VERSION}-")) else {
+        return false;
+    };
+    hash.len() == 16 && hash.bytes().all(|b| b.is_ascii_hexdigit() && !b.is_ascii_uppercase())
+}
+
 pub fn snapshot_status(listing: &Listing, published: Option<&str>) -> Result<SnapshotStatus> {
     let fingerprint = snapshot_fingerprint(listing)?;
     let publication_state = match published {
         None => PublicationState::Unpublished,
         Some(token) if token == fingerprint => PublicationState::Current,
-        Some(token) if !token.starts_with(&format!("v{TAKEOFF_SCHEMA_VERSION}-")) => PublicationState::IncompatibleSchema,
+        Some(token) if !valid_publication_token(token) => PublicationState::IncompatibleSchema,
         Some(_) => PublicationState::Stale,
     };
     let needs_refresh = publication_state != PublicationState::Current;
