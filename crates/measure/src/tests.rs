@@ -695,3 +695,24 @@ fn normalize_ids_reserves_nonmeasurement_ids_across_pages() {
         ["simplypdf-measure-3", "simplypdf-measure-2", "simplypdf-measure-4"]
     );
 }
+
+#[test]
+fn checked_csv_requires_persistent_unique_ids_and_complete_scan() {
+    let mut doc = fixture("", "", &[]);
+    for id in ["duplicate", "duplicate", ""] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    let listing = list(&doc);
+    assert!(csv_checked(&listing).is_err());
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 2);
+    let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
+    let listing = list(&reopened);
+    let output = csv_checked(&listing).unwrap();
+    assert_eq!(output.trim_end().split("\\r\\n").count(), 4);
+    for measurement in &listing.measurements {
+        assert!(output.contains(&format!("\\\"{}\\\"", measurement.id)));
+    }
+    let mut incomplete = listing.clone();
+    incomplete.truncated = true;
+    assert!(csv_checked(&incomplete).is_err());
+}
