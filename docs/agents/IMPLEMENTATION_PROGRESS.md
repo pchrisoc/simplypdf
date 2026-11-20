@@ -139,3 +139,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - CI run `44616248077` failed 1 of 6,591 tests because PDF text normalization removed the BOM. Test correction `232d87cabf3455af8245657f370227fc827edbfe` verifies the exported value is apostrophe-prefixed after normalization.
 - At exact PR head `232d87cabf3455af8245657f370227fc827edbfe`, GitHub Actions CI `44625500175` and SonarCloud `44625500111` both completed successfully. Squash merge to main: `e9a9b2283be5f3320d7be98dde9bda4c28e0014e`.
 - No README engineering acceptance checkbox changed. ENG-08.01 persistent row identity and ENG-08.05/08.06 managed workbook publishing/live updates remain unfinished. Post-merge main CI is not claimed.
+
+## CSV invisible-prefix formula protection integrated — 2026-11-19 PST
+
+- PR #66 (https://github.com/pchrisoc/simplypdf/pull/66) added CSV formula-prefix handling for zero-width Unicode characters and a focused regression covering five invisible prefixes. Verified PR head `74239fd760f8fb99ac3846717b8b6a0a6cab07c9`.
+- GitHub Actions CI run `44643437234` and SonarCloud run `44643437193` both completed successfully at that head. Guarded squash merge SHA: `6e8cf5c803194bb150e253cc9b4e7bf88d9b2c1c`.
+- No README engineering checkbox changed. ENG-08.01 persistent row identity and ENG-08.05/08.06 managed workbook publishing/live updates remain unfinished; no post-merge main CI result is claimed.
