@@ -692,8 +692,7 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     // Keep generated measurement IDs distinct from IDs on other PDF annotations.
     let mut reserved: std::collections::HashSet<String> =
         listing.measurements.iter().map(|m| m.id.clone()).filter(|id| !id.trim().is_empty()).collect();
-    let measurement_positions: std::collections::HashSet<(usize, usize)> =
-        listing.measurements.iter().map(|m| (m.page, m.index)).collect();
+    let measurement_positions: std::collections::HashSet<(usize, usize)> = listing.measurements.iter().map(|m| (m.page, m.index)).collect();
     let mut other_ids = std::collections::HashSet::new();
     for (page_index, page) in simplypdf_model::pages(doc).into_iter().enumerate() {
         let Some(annots) = page.dict.get(b"Annots") else { continue };
