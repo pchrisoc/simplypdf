@@ -132,3 +132,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #62 was based on an older main and its latest formatting commit `03ac7d46db69f30240c809123355dc79f0570350` had no GitHub Actions runs returned; earlier head `ffd5de15ec1093ef099fda60ee60fe27069b2dac` failed CI. Do not treat either as verified.
 - A new branch `fix/measure-csv-bom-formula-rebased-20261119` starts from current main after PR #63. Source commit `7c319abee8462953f348f917323ae0807b1ee9fe` updates `crates/measure/src/lib.rs` CSV formula-prefix detection to skip Unicode BOM. Test commit `c3b794f1a1765f5b9acea2b15ae7f2fe3e12b64e` adds `csv_escapes_formula_prefixes_after_unicode_bom` in `crates/measure/src/tests.rs`.
 - PR-head GitHub Actions and SonarCloud verification remain pending at documentation time. No README checkbox changed. ENG-08.01 and managed workbook publishing remain unfinished.
+
+## CSV BOM protection merged — 2026-11-19 PST
+
+- PR #64: https://github.com/pchrisoc/simplypdf/pull/64. Source `7c319abee8462953f348f917323ae0807b1ee9fe` ignores Unicode BOM while checking CSV formula prefixes; regression `c3b794f1a1765f5b9acea2b15ae7f2fe3e12b64e` covers BOM-prefixed `=HYPERLINK`.
+- CI run `44616248077` failed 1 of 6,591 tests because PDF text normalization removed the BOM. Test correction `232d87cabf3455af8245657f370227fc827edbfe` verifies the exported value is apostrophe-prefixed after normalization.
+- At exact PR head `232d87cabf3455af8245657f370227fc827edbfe`, GitHub Actions CI `44625500175` and SonarCloud `44625500111` both completed successfully. Squash merge to main: `e9a9b2283be5f3320d7be98dde9bda4c28e0014e`.
+- No README engineering acceptance checkbox changed. ENG-08.01 persistent row identity and ENG-08.05/08.06 managed workbook publishing/live updates remain unfinished. Post-merge main CI is not claimed.
