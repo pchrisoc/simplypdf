@@ -752,9 +752,15 @@ pub fn prepare_export(doc: &mut Document) -> Result<Listing> {
 /// Return a stable export snapshot and the number of legacy IDs repaired.
 /// Persist the mutated PDF before publishing the snapshot for durable identity.
 pub fn prepare_export_with_changes(doc: &mut Document) -> Result<(Listing, usize)> {
-    let changed = normalize_ids(doc)?;
-    let listing = list(doc);
+    // Validate a detached copy first. An invalid export must not leave the
+    // caller's live document with partially migrated annotation identities.
+    let mut candidate = doc.clone();
+    let changed = normalize_ids(&mut candidate)?;
+    let listing = list(&candidate);
     csv_checked(&listing)?;
+    if changed != 0 {
+        *doc = candidate;
+    }
     Ok((listing, changed))
 }
 
