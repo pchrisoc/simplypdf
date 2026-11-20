@@ -865,9 +865,22 @@ pub fn csv_checked(listing: &Listing) -> Result<String> {
 pub fn snapshot_fingerprint(listing: &Listing) -> Result<String> {
     let csv = csv_checked(listing)?;
     let mut hash = 0xcbf29ce484222325u64;
-    for byte in csv.as_bytes() {
-        hash ^= u64::from(*byte);
-        hash = hash.wrapping_mul(0x100000001b3);
+    // Include skipped imported annotations: their appearance or resolution must
+    // invalidate a published snapshot even if supported rows are unchanged.
+    let mut feed = |bytes: &[u8]| {
+        for byte in bytes {
+            hash ^= u64::from(*byte);
+            hash = hash.wrapping_mul(0x100000001b3);
+        }
+    };
+    feed(&(csv.len() as u64).to_le_bytes());
+    feed(csv.as_bytes());
+    feed(&(listing.unsupported.len() as u64).to_le_bytes());
+    for skipped in &listing.unsupported {
+        feed(&(skipped.page as u64).to_le_bytes());
+        feed(&(skipped.index as u64).to_le_bytes());
+        feed(&(skipped.reason.len() as u64).to_le_bytes());
+        feed(skipped.reason.as_bytes());
     }
     Ok(format!("v{TAKEOFF_SCHEMA_VERSION}-{hash:016x}"))
 }
