@@ -631,3 +631,16 @@ fn csv_escapes_formula_prefixes_after_unicode_bom() {
     // PDF text round-tripping removes the BOM; the CSV cell must still be safe.
     assert!(output.contains("\"\'=HYPERLINK"), "BOM-prefixed formula must be escaped: {output:?}");
 }
+
+#[test]
+fn csv_escapes_formulas_after_invisible_unicode_prefixes() {
+    let mut d = fixture("", "", &[]);
+    let m = new(Kind::Distance, vec![[0.0, 0.0], [72.0, 0.0]]);
+    add(&mut d, &m, &Meta { date: None, id: "csv-invisible".into() }).unwrap();
+    for prefix in ["\u{200b}", "\u{200c}", "\u{200d}", "\u{2060}", "\u{feff}"] {
+        let mut measurements = list(&d).measurements;
+        measurements[0].label = format!("{prefix}=HYPERLINK(\"https://example.test\")");
+        let output = csv(&measurements);
+        assert!(output.contains(&format!("\"'{prefix}=HYPERLINK")), "invisible prefix {prefix:?} must be escaped: {output:?}");
+    }
+}
