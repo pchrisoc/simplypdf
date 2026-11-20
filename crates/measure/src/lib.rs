@@ -6,6 +6,7 @@
 pub mod classifications;
 pub mod hvac;
 pub mod presets;
+pub mod quantity_rates;
 pub mod snap;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod xlsx;
