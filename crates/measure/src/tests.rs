@@ -779,3 +779,18 @@ fn snapshot_fingerprint_is_stable_and_changes_with_measurement_edits() {
     edited.truncated = true;
     assert!(snapshot_fingerprint(&edited).is_err());
 }
+
+#[test]
+fn refresh_comparison_requires_first_publication_and_detects_changes() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "refresh-1".into() }).unwrap();
+    let listing = list(&doc);
+    let published = snapshot_fingerprint(&listing).unwrap();
+    assert!(snapshot_needs_refresh(&listing, None).unwrap());
+    assert!(!snapshot_needs_refresh(&listing, Some(&published)).unwrap());
+    let mut changed = listing.clone();
+    changed.measurements[0].label.push_str(" updated");
+    assert!(snapshot_needs_refresh(&changed, Some(&published)).unwrap());
+    changed.truncated = true;
+    assert!(snapshot_needs_refresh(&changed, Some(&published)).is_err());
+}
