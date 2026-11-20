@@ -2733,6 +2733,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f4d0e94ddd48749f06bbe4e5389fb9799a0c45bcaf00495042076ef05e3241a"
 
 [[package]]
+name = "hayro-ccitt"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "adbed896e99325bc312778bb9c9c289d795d51c12775c44dd5e4352f679c7e46"
+
+[[package]]
 name = "hayro-cmap"
 version = "0.1.0"
 dependencies = [
@@ -2762,7 +2768,7 @@ name = "hayro-jbig2"
 version = "0.3.0"
 dependencies = [
  "fearless_simd",
- "hayro-ccitt",
+ "hayro-ccitt 0.3.0",
  "image",
 ]
 
@@ -2784,7 +2790,7 @@ name = "hayro-syntax"
 version = "0.7.2"
 dependencies = [
  "flate2",
- "hayro-ccitt",
+ "hayro-ccitt 0.3.0",
  "hayro-jbig2",
  "hayro-jpeg2000",
  "memchr",
@@ -3665,9 +3671,9 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.31.3"
+version = "0.32.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cf20d2fde8ff38632c426f1165ed7436270b44f199fc55284c38276f9db47c3d"
+checksum = "77730ed34f01f4990cb2ea67fec715ecebc6fab9a6396cf83c5529b13f581bdc"
 dependencies = [
  "bitflags 2.13.2",
  "cfg-if",
@@ -4477,9 +4483,9 @@ checksum = "b4596b6d070b27117e987119b4dac604f3c58cfb0b191112e24771b2faeac1a6"
 
 [[package]]
 name = "plist"
-version = "1.10.3"
+version = "1.10.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "327a4cb2ad49dc48adfdc9da89e22c64d488b508c67a044d71ba729e4521a285"
+checksum = "d86a77b7d9cdebd9643c180c158748db7d894b24a3935ed4b5843e698ae086eb"
 dependencies = [
  "base64 0.23.1",
  "indexmap",
@@ -6067,7 +6073,7 @@ name = "simplypdf-create"
 version = "0.18.1"
 dependencies = [
  "encoding_rs",
- "hayro-ccitt",
+ "hayro-ccitt 0.5.0",
  "hayro-syntax",
  "image",
  "png 0.18.1",
@@ -6168,7 +6174,7 @@ version = "0.18.1"
 dependencies = [
  "fax 0.3.0",
  "flate2",
- "hayro-ccitt",
+ "hayro-ccitt 0.5.0",
  "hayro-jbig2",
  "proptest",
  "thiserror 2.0.21",
@@ -8706,9 +8712,9 @@ dependencies = [
 
 [[package]]
 name = "zip"
-version = "9.5.1"
+version = "9.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e3476fd497ac8af5b1ec7b51acab7bef380f7e8dd8e0487595bafd839417a302"
+checksum = "953a376f4930ed5af88e1e65948385f76866b45e7f75b21ac275327d0eeb9b46"
 dependencies = [
  "constant_time_eq",
  "crc32fast",
