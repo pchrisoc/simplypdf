@@ -220,3 +220,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Branch `feat/eng-0801-xlsx-snapshot-fingerprint-20261120`: checked XLSX snapshots now embed the validated `snapshot_fingerprint` as a workbook-level `TakeoffFingerprint` defined name. This enables external consumers to compare a saved workbook's publication token with a newly scanned PDF snapshot without relying on file timestamps. Legacy `write_new` remains available without checked metadata.
 - Regression test `checked_workbook_carries_publication_metadata_distinct_from_legacy_export` covers checked/legacy workbook generation and distinguishes their bytes. CI and SonarCloud verification are pending; no task checkbox is marked complete.
 - Remaining ENG-08.01 acceptance: desktop save integration, CLI/automation parity, end-to-end workbook metadata inspection, and cross-interface tests. ENG-08.05 managed publishing and ENG-08.06 live refresh are separate future milestones.
+
+## 2026-11-20 — ENG-08 snapshot publication integration
+
+- PR #77 merged as `54739dc` after CI and SonarCloud passed; checked XLSX workbooks carry a TakeoffFingerprint defined name.
+- PR #78 merged as `8054a19` after CI and SonarCloud passed; typed SnapshotStatus and tests cover publication fingerprints and incomplete scans.
+- Follow-up branch `feat/eng-0804-automation-status-20261120`, source commit `9a7e0d5`: CSV and XLSX automation exports use the same validated snapshot_status result, avoiding divergent fingerprint/refresh computations. Existing measurement snapshot tests cover this shared API; CI for this branch is pending.
+- Do not check ENG-08.01 or ENG-08.04 yet: cross-interface save/refresh acceptance and a complete snapshot-export acceptance demonstration remain to be verified. Continue with managed workbook lifecycle and tests.
