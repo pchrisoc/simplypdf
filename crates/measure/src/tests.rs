@@ -657,3 +657,14 @@ fn csv_escapes_formulas_after_invisible_math_operators() {
         assert!(output.contains(&format!("\"'{prefix}=HYPERLINK")), "invisible math prefix {prefix:?} must be escaped: {output:?}");
     }
 }
+
+#[test]
+fn normalize_ids_avoids_unrelated_annotation_ids() {
+    let mut doc = fixture("", "/Annots [5 0 R]", &["<< /Type /Annot /Subtype /Text /NM (simplypdf-measure-1) /Rect [0 0 20 20] >>"]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "".into() }).unwrap();
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 1);
+    assert_eq!(list(&doc).measurements[0].id, "simplypdf-measure-2");
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 0);
+    let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
+    assert_eq!(list(&reopened).measurements[0].id, "simplypdf-measure-2");
+}
