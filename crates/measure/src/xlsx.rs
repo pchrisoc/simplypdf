@@ -16,12 +16,16 @@ fn data_row(offset: usize) -> Result<u32, String> {
 
 /// Publish a validated, versioned measurement snapshot without incomplete row identity.
 pub fn write_new_checked(path: &Path, listing: &Listing) -> Result<(), String> {
-    crate::csv_checked(listing).map_err(|e| e.to_string())?;
-    write_new(path, &listing.measurements)
+    let fingerprint = crate::snapshot_fingerprint(listing).map_err(|e| e.to_string())?;
+    write_snapshot(path, &listing.measurements, Some(&fingerprint))
 }
 
 /// Write a workbook beside its destination and publish it only if the path is free.
 pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String> {
+    write_snapshot(path, measurements, None)
+}
+
+fn write_snapshot(path: &Path, measurements: &[Measurement], fingerprint: Option<&str>) -> Result<(), String> {
     // Refuse impossible worksheets before allocating or staging any output.
     if measurements.len() > MAX_DATA_ROWS {
         return Err("takeoff exceeds Excel's 1,048,575 measurement-row limit".into());
@@ -47,6 +51,11 @@ pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String
     let count = measurements.len();
     book.define_name("TakeoffData", &format!("=Takeoff!$A$1:$N${}", count.saturating_add(1))).map_err(failed)?;
     book.define_name("TakeoffSchemaVersion", &TAKEOFF_SCHEMA_VERSION.to_string()).map_err(failed)?;
+    if let Some(fingerprint) = fingerprint {
+        // Store the validated publication token as a workbook-level defined name.
+        // Consumers can compare it with snapshot_fingerprint before refreshing.
+        book.define_name("TakeoffFingerprint", &format!("=\\"{fingerprint}\\"")).map_err(failed)?;
+    }
     let parent = path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
     let mut staged = tempfile::NamedTempFile::new_in(parent).map_err(|e| e.to_string())?;
     book.save_to_writer(staged.as_file_mut()).map_err(failed)?;
