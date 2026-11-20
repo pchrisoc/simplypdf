@@ -207,7 +207,7 @@ impl Automation {
         let target = self.resolve(a.str("out")?, true)?;
         simplypdf_platform::staging::write_new_atomically(&target, csv.as_bytes()).map_err(failed)?;
         Ok(
-            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":status.fingerprint,"needs_refresh":status.needs_refresh}),
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":status.fingerprint,"needs_refresh":status.needs_refresh,"publication_state":status.publication_state}),
         )
     }
 
@@ -231,7 +231,7 @@ impl Automation {
         let status = measure::snapshot_status(&all, a.get("published_fingerprint").and_then(Value::as_str)).map_err(failed)?;
         measure::xlsx::write_new_checked(&target, &all).map_err(failed)?;
         Ok(
-            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":status.fingerprint,"needs_refresh":status.needs_refresh}),
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":status.fingerprint,"needs_refresh":status.needs_refresh,"publication_state":status.publication_state}),
         )
     }
 }
