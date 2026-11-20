@@ -145,3 +145,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #66 (https://github.com/pchrisoc/simplypdf/pull/66) added CSV formula-prefix handling for zero-width Unicode characters and a focused regression covering five invisible prefixes. Verified PR head `74239fd760f8fb99ac3846717b8b6a0a6cab07c9`.
 - GitHub Actions CI run `44643437234` and SonarCloud run `44643437193` both completed successfully at that head. Guarded squash merge SHA: `6e8cf5c803194bb150e253cc9b4e7bf88d9b2c1c`.
 - No README engineering checkbox changed. ENG-08.01 persistent row identity and ENG-08.05/08.06 managed workbook publishing/live updates remain unfinished; no post-merge main CI result is claimed.
+
+## CSV invisible mathematical operators integrated — 2026-11-19 PST
+
+- PR #68: https://github.com/pchrisoc/simplypdf/pull/68. Source commit `59c8e6174b759f14d0b4431e08756ba5cc1cd94e` adds U+2061–U+2064 to the ignored leading Unicode prefix set when checking CSV cells for formula injection. Test commit `76eb438a1fc8ca139006bdfe2bcbfe10c1b5c444` covers four invisible mathematical operators preceding `=HYPERLINK`.
+- Initial GitHub Actions CI `44658364038` failed `cargo fmt --all -- --check` (not a functional test failure); formatting correction commit `35f1b9892cc44e7a60cd60c8974e1f1ea43532fd` applied the exact rustfmt diff.
+- At exact verified head `35f1b9892cc44e7a60cd60c8974e1f1ea43532fd`, CI `44663712509` and SonarCloud `44663712447` both completed successfully. Guarded squash merge SHA: `f196418a1b9baeb439796b25fd0ce209be3ea1be`.
+- No README acceptance checkbox changed: ENG-08.01 persistent row identity, ENG-08.05 managed workbook publishing, and ENG-08.06 live refresh still require complete acceptance evidence. No post-merge main CI result is claimed.
