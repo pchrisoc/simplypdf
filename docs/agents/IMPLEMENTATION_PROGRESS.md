@@ -233,3 +233,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #79 merged to main as `f14261230f7ca629882c340422491ccebd2572cd` after CI and SonarCloud success. CSV and XLSX automation now share validated snapshot status.
 - New feature branch `feat/eng-0806-publication-state-20261120`: `7a90d23` adds typed `PublicationState` (unpublished/current/stale/incompatible_schema); `4a1aeef` adds transition/version-mismatch regression tests; `3abfbdb` exposes state in both automation export responses; `4b1d7f8` formats tests.
 - This is a diagnostic component of ENG-08.06, not full live-refresh acceptance. Required next: managed workbook lifecycle, edit/undo/redo event wiring, transient-lock retry, and CI verification. README engineering checkboxes remain unchecked.
+
+## 2026-11-20 — ENG-08.06 publication-token validation
+
+- PR #80 merged into main as `4373533f54ab83cdc7b08236ff1e8dfa95255a27` after CI run `44817938794` and SonarCloud run `44817938203` both passed on `e0d47f8`.
+- Follow-up source commit `f2ec8f4` validates that a published token has the exact current version prefix and 16 lowercase hexadecimal hash digits. Previously malformed same-version tokens were incorrectly reported as stale rather than incompatible.
+- Regression commit `6166647` tests short, long, invalid-hex, uppercase and suffixed tokens, plus valid-shaped stale tokens. CI pending for this follow-up branch.
+- ENG-08.06 remains unchecked: automated edit/undo/redo publication, managed workbook lifecycle, lock retries, and full acceptance are still outstanding. Continue implementation after checks pass.
