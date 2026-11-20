@@ -208,3 +208,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Commit `3674478` introduced `pending_id_repairs(&Document)` for a non-mutating preview of imported ID repairs, including collisions with unrelated annotations.
 - Commit `4d46fa3` added regression coverage confirming the preview leaves the PDF untouched and becomes zero after normalization.
 - **Not yet verified:** CI/SonarCloud on the latest head, the new API's compilation/test pass, and remaining durable-save and cross-interface acceptance. Do not merge or check ENG-08.01 until verified.
+
+## ENG-08.01 — Atomic export preparation (2026-11-20)
+
+- Branch `fix/eng-0801-atomic-export-preparation-20261120`. Source commit `030a9f99` prepares imported-ID repairs on a detached PDF document and commits those changes only after the complete export listing passes CSV validation. This avoids mutating a live document when export preparation fails.
+- Test commit `61c562b2` verifies duplicate/blank IDs are repaired, the prepared export has unique IDs, the PDF save/reopen preserves those IDs, and a second preparation performs no further repair.
+- GitHub Actions CI and SonarCloud must be checked on the PR head; the GitHub connector cannot run local Cargo tests. ENG-08.01 remains unchecked pending integration and acceptance verification. No claim of complete managed workbook publishing or live refresh.
