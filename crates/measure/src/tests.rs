@@ -897,3 +897,23 @@ fn publication_state_distinguishes_unpublished_current_stale_and_incompatible() 
     assert_eq!(snapshot_status(&listing, Some("v0-0000000000000000")).unwrap().publication_state, PublicationState::IncompatibleSchema);
     assert_eq!(snapshot_status(&listing, Some("")).unwrap().publication_state, PublicationState::IncompatibleSchema);
 }
+
+#[test]
+fn publication_state_rejects_malformed_same_version_tokens() {
+    let listing = Listing::default();
+    let prefix = format!("v{TAKEOFF_SCHEMA_VERSION}-");
+    for token in [
+        format!("{prefix}"),
+        format!("{prefix}1234"),
+        format!("{prefix}00000000000000000"),
+        format!("{prefix}000000000000000g"),
+        format!("{prefix}000000000000000A"),
+        format!("{prefix}0000000000000000-extra"),
+    ] {
+        let status = snapshot_status(&listing, Some(&token)).unwrap();
+        assert_eq!(status.publication_state, PublicationState::IncompatibleSchema, "{token}");
+        assert!(status.needs_refresh);
+    }
+    let stale = format!("{prefix}0000000000000000");
+    assert_eq!(snapshot_status(&listing, Some(&stale)).unwrap().publication_state, PublicationState::Stale);
+}
