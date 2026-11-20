@@ -850,6 +850,9 @@ pub fn csv_checked(listing: &Listing) -> Result<String> {
     }
     let mut ids = std::collections::HashSet::new();
     for measurement in &listing.measurements {
+        if !measurement.reading.value.is_finite() || measurement.reading.value < 0.0 {
+            return Err(invalid("measurement values must be finite and nonnegative before export"));
+        }
         if measurement.id.trim().is_empty() || !ids.insert(measurement.id.as_str()) {
             return Err(invalid("measurement IDs must be nonempty and unique before export"));
         }
