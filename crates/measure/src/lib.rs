@@ -692,16 +692,22 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     // Keep generated measurement IDs distinct from IDs on other PDF annotations.
     let mut reserved: std::collections::HashSet<String> =
         listing.measurements.iter().map(|m| m.id.clone()).filter(|id| !id.trim().is_empty()).collect();
-    for page in simplypdf_model::pages(doc) {
+    let measurement_positions: std::collections::HashSet<(usize, usize)> =
+        listing.measurements.iter().map(|m| (m.page, m.index)).collect();
+    let mut other_ids = std::collections::HashSet::new();
+    for (page_index, page) in simplypdf_model::pages(doc).into_iter().enumerate() {
         let Some(annots) = page.dict.get(b"Annots") else { continue };
         let resolved = doc.resolve(annots);
         let Some(annots) = resolved.as_array() else { continue };
-        for annot in annots {
+        for (annot_index, annot) in annots.iter().enumerate() {
             let resolved = doc.resolve(annot);
             let Some(dict) = resolved.as_dict() else { continue };
             let id = text(dict, b"NM");
             if !id.trim().is_empty() {
-                reserved.insert(id);
+                reserved.insert(id.clone());
+                if !measurement_positions.contains(&(page_index, annot_index)) {
+                    other_ids.insert(id);
+                }
             }
         }
     }
@@ -709,7 +715,7 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     let mut next = 1usize;
     let mut changes = Vec::new();
     for m in listing.measurements {
-        if !m.id.trim().is_empty() && seen.insert(m.id.clone()) {
+        if !m.id.trim().is_empty() && !other_ids.contains(&m.id) && seen.insert(m.id.clone()) {
             continue;
         }
         let id = loop {
