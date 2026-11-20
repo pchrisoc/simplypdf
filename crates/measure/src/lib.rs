@@ -860,6 +860,18 @@ pub fn csv_checked(listing: &Listing) -> Result<String> {
     Ok(csv(&listing.measurements))
 }
 
+/// Deterministic content fingerprint for detecting takeoff changes before workbook refresh.
+/// This is a change token, not a cryptographic integrity hash.
+pub fn snapshot_fingerprint(listing: &Listing) -> Result<String> {
+    let csv = csv_checked(listing)?;
+    let mut hash = 0xcbf29ce484222325u64;
+    for byte in csv.as_bytes() {
+        hash ^= u64::from(*byte);
+        hash = hash.wrapping_mul(0x100000001b3);
+    }
+    Ok(format!("v{TAKEOFF_SCHEMA_VERSION}-{hash:016x}"))
+}
+
 pub fn csv(measurements: &[Measurement]) -> String {
     // A spreadsheet may ignore leading whitespace and control characters when
     // deciding whether a quoted CSV cell starts a formula. Escape the *first*
