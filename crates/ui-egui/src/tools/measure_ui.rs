@@ -746,7 +746,13 @@ pub(crate) fn export_csv(app: &mut SimplyPDFApp) {
     match result {
         Err(e) => app.notify(&e),
         Ok(listing) => {
-            let csv = measure::csv(&listing.measurements);
+            let csv = match measure::csv_checked(&listing) {
+                Ok(csv) => csv,
+                Err(e) => {
+                    app.notify(e.to_string());
+                    return;
+                }
+            };
             let notice = export_success_notice(&listing);
             #[cfg(not(target_arch = "wasm32"))]
             {
