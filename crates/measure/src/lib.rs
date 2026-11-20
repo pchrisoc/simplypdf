@@ -730,6 +730,15 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     }
     Ok(count)
 }
+/// Upgrade legacy measurement IDs in-place, then return a complete export listing.
+/// The caller must save the document to persist any assigned IDs across sessions.
+pub fn prepare_export(doc: &mut Document) -> Result<Listing> {
+    normalize_ids(doc)?;
+    let listing = list(doc);
+    csv_checked(&listing)?;
+    Ok(listing)
+}
+
 /// Most viewports [`set_scale`] gives a page, and most [`scale_at`] reads.
 const MAX_VIEWPORTS: usize = 1024;
 
