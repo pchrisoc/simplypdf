@@ -764,3 +764,18 @@ fn checked_exports_reject_invalid_numeric_measurements() {
     listing.measurements[0].reading.value = 5.0;
     assert!(csv_checked(&listing).is_ok());
 }
+
+#[test]
+fn snapshot_fingerprint_is_stable_and_changes_with_measurement_edits() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "row-1".into() }).unwrap();
+    let first = list(&doc);
+    let token = snapshot_fingerprint(&first).unwrap();
+    assert_eq!(snapshot_fingerprint(&first).unwrap(), token);
+    assert!(token.starts_with(&format!("v{}-", TAKEOFF_SCHEMA_VERSION)));
+    let mut edited = first.clone();
+    edited.measurements[0].label.push_str(" changed");
+    assert_ne!(snapshot_fingerprint(&edited).unwrap(), token);
+    edited.truncated = true;
+    assert!(snapshot_fingerprint(&edited).is_err());
+}
