@@ -708,7 +708,7 @@ fn checked_csv_requires_persistent_unique_ids_and_complete_scan() {
     let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
     let listing = list(&reopened);
     let output = csv_checked(&listing).unwrap();
-    assert_eq!(output.trim_end().split("\\r\\n").count(), 4);
+    assert_eq!(output.trim_end().split("\r\n").count(), 4);
     for measurement in &listing.measurements {
         assert!(output.contains(&format!("\\\"{}\\\"", measurement.id)));
     }
