@@ -82,6 +82,19 @@ mod tests {
         assert_eq!(std::fs::read(&path).expect("read existing workbook"), original);
     }
 
+    #[test]
+    fn checked_snapshot_rejects_incomplete_rows_before_creating_file() {
+        let dir = tempfile::tempdir().expect("temporary export directory");
+        let path = dir.path().join("takeoff.xlsx");
+        let mut listing = Listing::default();
+        listing.truncated = true;
+        assert!(write_new_checked(&path, &listing).is_err());
+        assert!(!path.exists());
+        listing.truncated = false;
+        write_new_checked(&path, &listing).expect("complete empty snapshot");
+        assert!(path.exists());
+    }
+
     #[cfg(unix)]
     #[test]
     fn snapshot_refuses_symlink_destinations_without_changing_the_target() {
