@@ -733,10 +733,16 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
 /// Upgrade legacy measurement IDs in-place, then return a complete export listing.
 /// The caller must save the document to persist any assigned IDs across sessions.
 pub fn prepare_export(doc: &mut Document) -> Result<Listing> {
-    normalize_ids(doc)?;
+    prepare_export_with_changes(doc).map(|(listing, _)| listing)
+}
+
+/// Return a stable export snapshot and the number of legacy IDs repaired.
+/// Persist the mutated PDF before publishing the snapshot for durable identity.
+pub fn prepare_export_with_changes(doc: &mut Document) -> Result<(Listing, usize)> {
+    let changed = normalize_ids(doc)?;
     let listing = list(doc);
     csv_checked(&listing)?;
-    Ok(listing)
+    Ok((listing, changed))
 }
 
 /// Most viewports [`set_scale`] gives a page, and most [`scale_at`] reads.
