@@ -657,3 +657,16 @@ fn csv_escapes_formulas_after_invisible_math_operators() {
         assert!(output.contains(&format!("\"'{prefix}=HYPERLINK")), "invisible math prefix {prefix:?} must be escaped: {output:?}");
     }
 }
+
+#[test]
+fn csv_escapes_formulas_after_bidi_formatting_marks() {
+    let mut d = fixture("", "", &[]);
+    let m = new(Kind::Distance, vec![[0.0, 0.0], [72.0, 0.0]]);
+    add(&mut d, &m, &Meta { date: None, id: "csv-bidi".into() }).unwrap();
+    for prefix in ["\u{200e}", "\u{200f}", "\u{202a}", "\u{202b}", "\u{202c}", "\u{202d}", "\u{202e}", "\u{2066}", "\u{2067}", "\u{2068}", "\u{2069}"] {
+        let mut measurements = list(&d).measurements;
+        measurements[0].label = format!("{prefix}=HYPERLINK(\"https://example.test\")");
+        let output = csv(&measurements);
+        assert!(output.contains(&format!("\"'{prefix}=HYPERLINK")), "bidi prefix {prefix:?} must be escaped: {output:?}");
+    }
+}
