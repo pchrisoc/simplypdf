@@ -181,3 +181,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Added a validated takeoff refresh-token comparison API (`snapshot_needs_refresh`) in `3aac82b`, with first-publish, unchanged, edited, and truncated-listing tests in `2e69784`.
 - New CI and SonarCloud results are **pending** for the latest head; no merge or README checkbox change until checks and full acceptance are verified.
 - Remaining: integrate persistent-ID normalization into durable PDF save and export entry points; verify imported/duplicate IDs across desktop, CLI and XLSX; implement managed workbook lifecycle and live publishing in later ENG milestones.
+
+## ENG-08.01 — Export refresh status and CI regression repair (2026-11-20)
+
+- PR #73 source commit `1dd6710` adds optional `published_fingerprint` comparison to automation CSV and XLSX export results; `needs_refresh` is true when the published snapshot is missing or stale. The export still validates and writes output, so this is a status indicator, not managed workbook live refresh.
+- Test commit `4584eca` covers missing/stale publication tokens and ensures invalid IDs cannot bypass validation. CI regression repair `853cdc9` corrects the CSV quoted-ID assertion after run 44724472473 failed (SonarCloud passed on previous head).
+- New CI and SonarCloud on current head remain to be verified. No README checkbox may be checked until durable PDF ID persistence and all acceptance paths are verified. ENG-08.05 managed publishing and ENG-08.06 live refresh are not complete.
