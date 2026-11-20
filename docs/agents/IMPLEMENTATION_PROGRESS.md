@@ -200,3 +200,11 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Follow-up PR #75 on branch `feat/eng-0801-persistent-id-validation-20261120`: source `f43e27e` repairs measurement /NM collisions with unrelated annotation types; test `eccaf97` covers preserving unrelated annotations, idempotent migration, PDF save/reopen, and checked CSV.
 - PR #75 CI is pending; do not merge without passing checks. ENG-08.01 remains unchecked because durable export/save integration and cross-interface acceptance are still incomplete.
 - All 214 numbered README engineering checkboxes remain the overall goal; do not tick partial work.
+
+## ENG-08.01 follow-up — 2026-11-20 (CI formatting and identity preview)
+
+- PR #75 at prior head `d024885`: SonarCloud run 44750304594 passed; CI run 44750304588 failed at `cargo fmt --all -- --check`, before tests. The log identified one line-wrap difference in `crates/measure/src/lib.rs`.
+- Commit `6dc56f0` applied the exact rustfmt line-wrap fix.
+- Commit `3674478` introduced `pending_id_repairs(&Document)` for a non-mutating preview of imported ID repairs, including collisions with unrelated annotations.
+- Commit `4d46fa3` added regression coverage confirming the preview leaves the PDF untouched and becomes zero after normalization.
+- **Not yet verified:** CI/SonarCloud on the latest head, the new API's compilation/test pass, and remaining durable-save and cross-interface acceptance. Do not merge or check ENG-08.01 until verified.
