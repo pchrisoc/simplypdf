@@ -903,7 +903,7 @@ fn publication_state_rejects_malformed_same_version_tokens() {
     let listing = Listing::default();
     let prefix = format!("v{TAKEOFF_SCHEMA_VERSION}-");
     for token in [
-        format!("{prefix}"),
+        prefix.to_string(),
         format!("{prefix}1234"),
         format!("{prefix}00000000000000000"),
         format!("{prefix}000000000000000g"),
