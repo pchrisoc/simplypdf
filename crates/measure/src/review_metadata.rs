@@ -24,6 +24,9 @@ impl ReviewMetadata {
         if fields.into_iter().flatten().any(|s| s.trim().is_empty() || s.len() > 256) {
             return Err("review metadata fields must be nonempty and at most 256 characters".into());
         }
+        if self.tags.len() > 64 {
+            return Err("review metadata supports at most 64 tags".into());
+        }
         let mut seen = BTreeSet::new();
         for tag in &self.tags {
             let normalized = tag.trim().to_lowercase();
@@ -42,12 +45,19 @@ impl ReviewMetadata {
         Ok(())
     }
 
+    /// Remove a tag without changing the stored spelling of other tags.
+    pub fn remove_tag(&mut self, tag: &str) -> bool {
+        let before = self.tags.len();
+        self.tags.retain(|value| !value.trim().eq_ignore_ascii_case(tag.trim()));
+        self.tags.len() != before
+    }
+
     pub fn matches_tag(&self, tag: &str) -> bool {
         self.tags.iter().any(|value| value.trim().eq_ignore_ascii_case(tag.trim()))
     }
 
     pub fn matches_discipline(&self, discipline: &str) -> bool {
-        self.discipline.as_ref().is_some_and(|value| value.eq_ignore_ascii_case(discipline.trim()))
+        self.discipline.as_ref().is_some_and(|value| value.trim().eq_ignore_ascii_case(discipline.trim()))
     }
 }
 
@@ -64,6 +74,26 @@ mod tests {
         let encoded = serde_json::to_string(&metadata).unwrap();
         let restored: ReviewMetadata = serde_json::from_str(&encoded).unwrap();
         assert_eq!(restored, metadata);
+    }
+
+    #[test]
+    fn tag_removal_is_case_insensitive_and_preserves_other_tags() {
+        let mut metadata = ReviewMetadata::default();
+        metadata.add_tag("Pipe".into()).unwrap();
+        metadata.add_tag("Duct".into()).unwrap();
+        assert!(metadata.remove_tag(" pipe "));
+        assert!(!metadata.remove_tag("pipe"));
+        assert_eq!(metadata.tags, vec!["Duct"]);
+    }
+
+    #[test]
+    fn tag_limit_rejects_overflow_without_mutation() {
+        let mut metadata = ReviewMetadata::default();
+        for i in 0..64 {
+            metadata.add_tag(format!("tag-{i}")).unwrap();
+        }
+        assert!(metadata.add_tag("overflow".into()).is_err());
+        assert_eq!(metadata.tags.len(), 64);
     }
 
     #[test]
