@@ -89,16 +89,12 @@ impl ReviewMetadata {
 
     /// Filter review records by assignee, including whitespace-tolerant comparisons.
     pub fn matches_assignee(&self, assignee: &str) -> bool {
-        self.assignee
-            .as_ref()
-            .is_some_and(|value| value.trim().eq_ignore_ascii_case(assignee.trim()))
+        self.assignee.as_ref().is_some_and(|value| value.trim().eq_ignore_ascii_case(assignee.trim()))
     }
 
     /// Filter review records by priority without changing stored values.
     pub fn matches_priority(&self, priority: &str) -> bool {
-        self.priority
-            .as_ref()
-            .is_some_and(|value| value.trim().eq_ignore_ascii_case(priority.trim()))
+        self.priority.as_ref().is_some_and(|value| value.trim().eq_ignore_ascii_case(priority.trim()))
     }
 
     pub fn matches_discipline(&self, discipline: &str) -> bool {
