@@ -146,6 +146,13 @@ mod tests {
         huge.labor_rate = 1.0;
         huge.waste_percent = 0.0;
         assert!(huge.calculate().is_ok());
-        assert!(aggregate_rates(&[huge.clone(), huge.clone(), huge.clone(), huge.clone(), huge]).is_err());
+        assert!(aggregate_rates(&[
+            huge.clone(),
+            huge.clone(),
+            huge.clone(),
+            huge.clone(),
+            huge,
+        ])
+        .is_err());
     }
 }
