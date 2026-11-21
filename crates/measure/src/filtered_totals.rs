@@ -40,9 +40,62 @@ pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Resul
     Ok(totals.into_iter().map(|(unit, (count, quantity))| QuantityTotal { unit, count, quantity }).collect())
 }
 
+/// A source PDF and its measurements. Source keys must be stable across refreshes.
+#[derive(Clone, Debug)]
+pub struct QuantitySource<'a> {
+    pub source_id: &'a str,
+    pub measurements: &'a [Measurement],
+}
+
+/// Filter across independent PDFs without merging their annotation identities.
+/// The optional source selector is an exact, case-sensitive stable source ID.
+pub fn aggregate_sources(sources: &[QuantitySource<'_>], source_id: Option<&str>, filter: &QuantityFilter) -> Result<Vec<QuantityTotal>> {
+    let mut totals: BTreeMap<String, (usize, f64)> = BTreeMap::new();
+    let mut seen = std::collections::BTreeSet::new();
+    for source in sources {
+        if source.source_id.is_empty() || source.source_id.len() > 1024 || !seen.insert(source.source_id) {
+            return Err(invalid("source IDs must be nonempty, unique, and at most 1024 bytes"));
+        }
+        if source_id.is_some_and(|id| id != source.source_id) {
+            continue;
+        }
+        for total in aggregate(source.measurements, filter)? {
+            let entry = totals.entry(total.unit).or_insert((0usize, 0.0f64));
+            entry.0 = entry.0.checked_add(total.count).ok_or_else(|| invalid("filtered count overflow"))?;
+            entry.1 += total.quantity;
+            if !entry.1.is_finite() {
+                return Err(invalid("filtered quantity overflow across PDFs"));
+            }
+        }
+    }
+    Ok(totals.into_iter().map(|(unit, (count, quantity))| QuantityTotal { unit, count, quantity }).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn multi_pdf_sources_reject_duplicate_and_missing_ids() {
+        let empty: &[Measurement] = &[];
+        let sources = [
+            QuantitySource { source_id: "sheet-a", measurements: empty },
+            QuantitySource { source_id: "sheet-a", measurements: empty },
+        ];
+        assert!(aggregate_sources(&sources, None, &QuantityFilter::default()).is_err());
+        let missing = [QuantitySource { source_id: "", measurements: empty }];
+        assert!(aggregate_sources(&missing, None, &QuantityFilter::default()).is_err());
+    }
+    #[test]
+    fn multi_pdf_empty_sources_and_source_selection() {
+        let empty: &[Measurement] = &[];
+        let sources = [
+            QuantitySource { source_id: "sheet-a", measurements: empty },
+            QuantitySource { source_id: "sheet-b", measurements: empty },
+        ];
+        assert!(aggregate_sources(&sources, None, &QuantityFilter::default()).unwrap().is_empty());
+        assert!(aggregate_sources(&sources, Some("sheet-b"), &QuantityFilter::default()).unwrap().is_empty());
+        assert!(aggregate_sources(&sources, Some("absent"), &QuantityFilter::default()).unwrap().is_empty());
+    }
     #[test]
     fn unit_filter_is_case_sensitive() {
         let filter = QuantityFilter { label: None, author: None, unit: Some("mm".into()) };
