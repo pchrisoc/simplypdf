@@ -66,6 +66,24 @@ impl ReviewMetadata {
         Ok(true)
     }
 
+    /// Replace an optional field after validating the entire record.
+    pub fn set_assignee(&mut self, assignee: Option<String>) -> Result<(), String> {
+        let mut next = self.clone();
+        next.assignee = assignee;
+        next.validate()?;
+        *self = next;
+        Ok(())
+    }
+
+    /// Change review priority without losing existing metadata on invalid input.
+    pub fn set_priority(&mut self, priority: Option<String>) -> Result<(), String> {
+        let mut next = self.clone();
+        next.priority = priority;
+        next.validate()?;
+        *self = next;
+        Ok(())
+    }
+
     pub fn matches_tag(&self, tag: &str) -> bool {
         self.tags.iter().any(|value| value.trim().eq_ignore_ascii_case(tag.trim()))
     }
@@ -88,6 +106,19 @@ mod tests {
         let encoded = serde_json::to_string(&metadata).unwrap();
         let restored: ReviewMetadata = serde_json::from_str(&encoded).unwrap();
         assert_eq!(restored, metadata);
+    }
+
+    #[test]
+    fn assignee_and_priority_updates_are_atomic() {
+        let mut metadata = ReviewMetadata::default();
+        metadata.set_assignee(Some("Engineer".into())).unwrap();
+        metadata.set_priority(Some("High".into())).unwrap();
+        assert!(metadata.set_assignee(Some(" ".into())).is_err());
+        assert!(metadata.set_priority(Some(" ".into())).is_err());
+        assert_eq!(metadata.assignee.as_deref(), Some("Engineer"));
+        assert_eq!(metadata.priority.as_deref(), Some("High"));
+        metadata.set_assignee(None).unwrap();
+        assert_eq!(metadata.assignee, None);
     }
 
     #[test]
