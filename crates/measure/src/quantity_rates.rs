@@ -158,6 +158,53 @@ pub fn aggregate_estimate_cost(lines: &[RateLine]) -> Result<EstimateCost, Strin
     Ok(costs)
 }
 
+
+/// A named rate schedule entry, independent of the measurement's physical quantity.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RateScheduleEntry {
+    pub code: String,
+    pub unit: String,
+    pub material_rate: f64,
+    pub labor_rate: f64,
+    pub waste_percent: f64,
+}
+
+/// Resolve a takeoff against an editable schedule, rejecting ambiguous codes and
+/// incompatible units instead of silently applying a rate for the wrong unit.
+pub fn rate_line_from_schedule(
+    quantity: f64,
+    unit: &str,
+    code: &str,
+    schedule: &[RateScheduleEntry],
+) -> Result<RateLine, String> {
+    let code = code.trim();
+    if code.is_empty() {
+        return Err("rate code is required".into());
+    }
+    let mut match_entry = None;
+    for entry in schedule {
+        if entry.code.trim() == code {
+            if match_entry.is_some() {
+                return Err("duplicate rate code".into());
+            }
+            match_entry = Some(entry);
+        }
+    }
+    let entry = match_entry.ok_or_else(|| "rate code not found".to_owned())?;
+    if entry.unit.trim().is_empty() || entry.unit.trim() != unit.trim() {
+        return Err("rate unit does not match measurement unit".into());
+    }
+    let line = RateLine {
+        quantity,
+        unit: unit.trim().to_owned(),
+        material_rate: entry.material_rate,
+        labor_rate: entry.labor_rate,
+        waste_percent: entry.waste_percent,
+    };
+    line.calculate()?;
+    Ok(line)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -170,6 +217,42 @@ mod tests {
             labor_rate: 3.0,
             waste_percent: 10.0,
         }
+    }
+
+
+    #[test]
+    fn schedule_resolves_named_rate_and_calculates_cost() {
+        let schedule = [RateScheduleEntry {
+            code: "P-100".into(),
+            unit: "ft".into(),
+            material_rate: 4.0,
+            labor_rate: 6.0,
+            waste_percent: 5.0,
+        }];
+        let line = rate_line_from_schedule(10.0, " ft ", " P-100 ", &schedule).unwrap();
+        let total = line.calculate().unwrap();
+        assert_eq!(total.billable_quantity, 10.5);
+        assert_eq!(total.material_cost, 42.0);
+        assert_eq!(total.labor_cost, 60.0);
+        assert_eq!(total.total_cost, 102.0);
+    }
+
+    #[test]
+    fn schedule_rejects_unknown_ambiguous_incompatible_and_invalid_rates() {
+        let entry = RateScheduleEntry {
+            code: "A".into(),
+            unit: "ft".into(),
+            material_rate: 2.0,
+            labor_rate: 3.0,
+            waste_percent: 0.0,
+        };
+        assert!(rate_line_from_schedule(1.0, "ft", "missing", &[entry.clone()]).is_err());
+        assert!(rate_line_from_schedule(1.0, "m", "A", &[entry.clone()]).is_err());
+        assert!(rate_line_from_schedule(1.0, "ft", "A", &[entry.clone(), entry.clone()]).is_err());
+        assert!(rate_line_from_schedule(f64::NAN, "ft", "A", &[entry.clone()]).is_err());
+        let mut invalid = entry;
+        invalid.material_rate = -1.0;
+        assert!(rate_line_from_schedule(1.0, "ft", "A", &[invalid]).is_err());
     }
 
     #[test]
