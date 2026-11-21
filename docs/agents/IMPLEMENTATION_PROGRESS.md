@@ -285,3 +285,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #82 feature commit `e688a659a8963572f349cca3f18076135de620e2` adds `validate_rate_schedule` and calls it before batch pricing. It rejects empty codes/units, duplicate codes, invalid and overflowing rates even for unused entries, preventing a partially validated schedule from producing an estimate.
 - Focused regression `schedule_validation_rejects_unused_invalid_entries` covers valid entries, duplicate entries, blank codes and an invalid unused rate with empty takeoff input.
 - Test command for CI: `cargo test -p simplypdf-measure quantity_rates`; run formatting and Clippy. GitHub-only connector cannot execute Cargo locally. Await verified CI and mergeability; do not check ENG-08.02 until persistence, desktop editing, export and automation acceptance are complete.
+
+## ENG-08.02 indexed batch rate pricing — 2026-11-21
+
+- PR #82 commit `c5497fec48b8988717bf256ead28b43c564b7925` indexes the already validated rate schedule by trimmed code for batch pricing, avoiding a full schedule scan per quantity while retaining unit validation, calculation overflow checks, original input order, and all-or-error results.
+- Commit `78dcd333985b932d1fb9883c18152035b51dbf46` formats the new regression test. Test `scheduled_pricing_resolves_trimmed_codes_and_preserves_input_order` covers out-of-order schedule entries, trimmed codes/units, repeated code usage, material/labor totals, and duplicate schedule rejection.
+- Verification still required: `cargo fmt --check`, `cargo test -p simplypdf-measure quantity_rates`, strict Clippy, GitHub CI/SonarCloud, and merge conflict resolution. Tests are committed, **not verified passing**. Do not mark ENG-08.02 complete: persisted schedules, desktop editing, export and headless automation integration remain.
