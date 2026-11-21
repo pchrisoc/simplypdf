@@ -238,3 +238,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - Commit `8322732` changes quantity-unit filtering to exact case-sensitive comparison (`mm` and `Mm` are distinct) and uses the measurement crate's `Result` / `MeasureError` instead of `String` errors. Added focused contract tests.
 - This addresses two reported PR review concerns. GitHub-only editing could not run local Rust tests; CI, merge conflicts, and full multi-document aggregation acceptance remain to be verified. Do not mark ENG-08.07 complete.
+
+## ENG-08.07 multi-PDF source aggregation — 2026-11-21
+
+- PR #84 commit `ed746434df4c25ae8fb7c689bad2dbaea25ca869` introduces `QuantitySource` and `aggregate_sources` for aggregating per-unit totals across multiple PDFs with stable source identifiers and optional exact source filtering. Duplicate, empty, and oversized source IDs are rejected; counts use checked addition and totals reject nonfinite overflow.
+- Focused tests `multi_pdf_sources_reject_duplicate_and_missing_ids` and `multi_pdf_empty_sources_and_source_selection` cover invalid source identities and empty/missing source selections. CI has not yet verified this head.
+- Still outstanding: subject/color/layer/custom-field filters, real multi-document integration, desktop and automation exposure, conflict resolution, passing required CI, and complete ENG-08.07 acceptance. README remains unchecked.
