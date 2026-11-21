@@ -277,3 +277,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #87 commit `2ee80f5bd68f3ce942f585155f6ee97230b76d54` implements atomic case-insensitive tag rename with duplicate validation and an associated regression test.
 - Checks on the latest head remain unverified; do not merge or check the README until required checks pass and UI/register/persistence acceptance is satisfied.
+
+## ENG-09.06 assignment and priority checkpoint — 2026-11-20 PST
+
+- Commit `ba7fa47ecf19707fc2010a25fc7e94702e719e17` adds atomic `set_assignee` and `set_priority` operations, preserving valid prior values on rejected updates; `assignee_and_priority_updates_are_atomic` tests the behavior.
+- The feature remains a metadata foundation. No annotation storage, UI/register editing or end-to-end acceptance has been verified; do not check ENG-09.06.
+- PR #87 latest CI, SonarCloud and platform checks need to finish successfully before any merge.
