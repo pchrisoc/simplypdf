@@ -255,3 +255,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #82 commit `f2d39d040117bd7c75ce122840862ee4218a83c8` adds `aggregate_estimate_cost` and `EstimateCost`: material, labor, and total monetary costs can be summed across physical units without falsely summing quantities. Callers must ensure the rate currency matches.
 - Focused regression tests `mixed_units_can_sum_costs_but_not_quantities` and `estimate_cost_rejects_invalid_lines_and_overflow` cover cross-unit monetary aggregation, zero-line estimates, invalid input and overflow. These are committed but not yet executed/verified; check `cargo test -p simplypdf-measure quantity_rates` and `cargo fmt --all -- --check` in CI.
 - GitHub returned no workflow runs or commit statuses for this new head at inspection. PR #82 remains unmergeable; do not merge or mark ENG-08.02 complete. Outstanding: persist/edit rate fields in desktop, integrate estimate exports and headless automation, resolve branch conflicts, and verify required CI.
+
+## ENG-08.02 mixed-unit rate grouping — 2026-11-21 PST
+
+- Commit `b7dc4f05540079d7f09b04dc337400b40eb6c397` adds `aggregate_rates_by_unit`, grouping physical quantities and costs deterministically by unit without combining incompatible quantities. Focused test `grouped_estimates_keep_units_separate_and_sorted` checks ordering, grouped totals, empty input and invalid input.
+- Verification: GitHub CI on the new head remains required; test has been committed but not locally executed. PR #82 is not yet mergeable. Do not check ENG-08.02 until persisted rate fields, desktop editing, estimate export, and end-to-end acceptance are implemented and verified.
