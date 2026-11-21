@@ -246,14 +246,32 @@ pub fn price_scheduled_quantities(
     schedule: &[RateScheduleEntry],
 ) -> Result<(Vec<RateLine>, EstimateCost), String> {
     validate_rate_schedule(schedule)?;
+    // Index validated schedule entries once rather than scanning for each takeoff.
+    let rates: std::collections::BTreeMap<&str, &RateScheduleEntry> = schedule
+        .iter()
+        .map(|entry| (entry.code.trim(), entry))
+        .collect();
     let mut lines = Vec::with_capacity(quantities.len());
     for item in quantities {
-        lines.push(rate_line_from_schedule(
-            item.quantity,
-            &item.unit,
-            &item.code,
-            schedule,
-        )?);
+        let code = item.code.trim();
+        if code.is_empty() {
+            return Err("rate code is required".into());
+        }
+        let entry = rates
+            .get(code)
+            .ok_or_else(|| "rate code not found".to_owned())?;
+        if entry.unit.trim() != item.unit.trim() {
+            return Err("rate unit does not match measurement unit".into());
+        }
+        let line = RateLine {
+            quantity: item.quantity,
+            unit: item.unit.trim().to_owned(),
+            material_rate: entry.material_rate,
+            labor_rate: entry.labor_rate,
+            waste_percent: entry.waste_percent,
+        };
+        line.calculate()?;
+        lines.push(line);
     }
     let costs = aggregate_estimate_cost(&lines)?;
     Ok((lines, costs))
@@ -474,6 +492,38 @@ mod tests {
             price_scheduled_quantities(&[], &schedule).unwrap().1.total_cost,
             0.0
         );
+    }
+
+    #[test]
+    fn scheduled_pricing_resolves_trimmed_codes_and_preserves_input_order() {
+        let schedule = [
+            RateScheduleEntry {
+                code: " B ".into(),
+                unit: "each".into(),
+                material_rate: 7.0,
+                labor_rate: 2.0,
+                waste_percent: 0.0,
+            },
+            RateScheduleEntry {
+                code: "A".into(),
+                unit: "ft".into(),
+                material_rate: 3.0,
+                labor_rate: 4.0,
+                waste_percent: 0.0,
+            },
+        ];
+        let items = [
+            ScheduledQuantity { code: " A ".into(), quantity: 2.0, unit: " ft ".into() },
+            ScheduledQuantity { code: "B".into(), quantity: 1.0, unit: "each".into() },
+            ScheduledQuantity { code: "A".into(), quantity: 3.0, unit: "ft".into() },
+        ];
+        let (lines, cost) = price_scheduled_quantities(&items, &schedule).unwrap();
+        assert_eq!(lines.iter().map(|line| line.unit.as_str()).collect::<Vec<_>>(), vec!["ft", "each", "ft"]);
+        assert_eq!(lines.iter().map(|line| line.quantity).collect::<Vec<_>>(), vec![2.0, 1.0, 3.0]);
+        assert_eq!(cost.material_cost, 22.0);
+        assert_eq!(cost.labor_cost, 22.0);
+        assert_eq!(cost.total_cost, 44.0);
+        assert!(price_scheduled_quantities(&items, &[schedule[0].clone(), schedule[0].clone()]).is_err());
     }
 
     #[test]
