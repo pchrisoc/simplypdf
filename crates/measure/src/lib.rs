@@ -3,10 +3,10 @@
 //! annotations use the measurement intents of line, polygon and polyline annotations (§12.5.6).
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
-pub mod snapshot_manifest;
 pub mod hvac;
 pub mod presets;
 pub mod snap;
+pub mod snapshot_manifest;
 #[cfg(not(target_arch = "wasm32"))]
 pub mod xlsx;
 
