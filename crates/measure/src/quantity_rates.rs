@@ -94,6 +94,23 @@ pub fn aggregate_rates(lines: &[RateLine]) -> Result<Option<RateTotal>, String> 
 }
 
 
+/// Aggregate mixed-unit takeoffs into separate quantity totals for each unit.
+/// Material and labor costs remain attached to the corresponding physical unit.
+pub fn aggregate_rates_by_unit(lines: &[RateLine]) -> Result<Vec<RateTotal>, String> {
+    let mut groups = std::collections::BTreeMap::<String, Vec<RateLine>>::new();
+    for line in lines {
+        line.calculate()?;
+        groups.entry(line.unit.trim().to_owned()).or_default().push(line.clone());
+    }
+    let mut totals = Vec::with_capacity(groups.len());
+    for group in groups.into_values() {
+        if let Some(total) = aggregate_rates(&group)? {
+            totals.push(total);
+        }
+    }
+    Ok(totals)
+}
+
 /// Currency-only totals can combine rates for different physical units.
 /// The caller must ensure every rate is denominated in the same currency.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -168,6 +185,22 @@ mod tests {
         huge.labor_rate = 1.0;
         huge.waste_percent = 0.0;
         assert!(aggregate_estimate_cost(&[\n            huge.clone(),\n            huge.clone(),\n            huge.clone(),\n            huge.clone(),\n            huge,\n        ])\n        .is_err());
+    }
+
+    #[test]
+    fn grouped_estimates_keep_units_separate_and_sorted() {
+        let lines = [line(2.0, "each"), line(10.0, "ft"), line(5.0, "ft")];
+        let groups = aggregate_rates_by_unit(&lines).unwrap();
+        assert_eq!(groups.len(), 2);
+        assert_eq!(groups[0].unit, "each");
+        assert_eq!(groups[0].billable_quantity, 2.2);
+        assert_eq!(groups[1].unit, "ft");
+        assert_eq!(groups[1].billable_quantity, 16.5);
+        assert_eq!(groups[1].total_cost, 78.0);
+        assert!(aggregate_rates_by_unit(&[]).unwrap().is_empty());
+        let mut invalid = line(1.0, "ft");
+        invalid.quantity = f64::NAN;
+        assert!(aggregate_rates_by_unit(&[invalid]).is_err());
     }
 
     #[test]
