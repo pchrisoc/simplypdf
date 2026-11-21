@@ -295,3 +295,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - At head `02a66ca`, Nix, SonarCloud, Windows ARM64 and FreeBSD passed. Ubuntu CI failed only at `cargo fmt --all -- --check`, with five exact layout diffs in `review_metadata.rs`; commit `0fd125f` applies the formatting shown in the job log.
 - Commit `ca0bec3` adds case-insensitive `matches_package` and a focused test for missing, matching and nonmatching package values. These commits require new CI verification; do not merge on the older successful checks.
 - PRs #82, #84 and #85 are not currently mergeable; #73 is merged. ENG-09.06 remains unchecked because persistence and UI/register integration are incomplete.
+
+## ENG-09.06 CI and filter checkpoint — 2026-11-20 PST
+
+- PR #87 head `7010e4c`: Nix, SonarCloud, Windows ARM64, FreeBSD passed; Ubuntu CI failed only at `Lockfile unchanged`, with Cargo reordering `serde` and `serde_json` in `simplypdf-measure`.
+- Commit `8170d17` fixes canonical lockfile order. Commit `4d76f92` adds case-insensitive, whitespace-tolerant `matches_assignee` and `matches_priority` with missing/nonmatching cases in `assignee_and_priority_filters_handle_case_whitespace_and_missing_values`.
+- New head requires CI verification. UI and annotation persistence integration remain unimplemented; ENG-09.06 remains unchecked. The overall README engineering backlog remains the objective.
