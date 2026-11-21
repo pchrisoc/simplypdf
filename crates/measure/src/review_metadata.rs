@@ -78,6 +78,20 @@ impl ReviewMetadata {
         Ok(())
     }
 
+    /// Set a specification reference without losing prior valid metadata on errors.
+    pub fn set_specification(&mut self, specification: Option<String>) -> Result<(), String> {
+        let mut next = self.clone();
+        next.specification = specification;
+        next.validate()?;
+        *self = next;
+        Ok(())
+    }
+
+    /// Match specification references for review-register filtering.
+    pub fn matches_specification(&self, specification: &str) -> bool {
+        self.specification.as_ref().is_some_and(|value| value.trim().eq_ignore_ascii_case(specification.trim()))
+    }
+
     /// Match a review package without treating missing packages as matches.
     pub fn matches_package(&self, package: &str) -> bool {
         self.package.as_ref().is_some_and(|value| value.trim().eq_ignore_ascii_case(package.trim()))
@@ -115,6 +129,19 @@ mod tests {
         let encoded = serde_json::to_string(&metadata).unwrap();
         let restored: ReviewMetadata = serde_json::from_str(&encoded).unwrap();
         assert_eq!(restored, metadata);
+    }
+
+    #[test]
+    fn specification_updates_and_filtering_preserve_valid_values() {
+        let mut metadata = ReviewMetadata::default();
+        assert!(!metadata.matches_specification("23 05 00"));
+        metadata.set_specification(Some("23 05 00".into())).unwrap();
+        assert!(metadata.matches_specification(" 23 05 00 "));
+        assert!(!metadata.matches_specification("23 07 00"));
+        assert!(metadata.set_specification(Some(" ".into())).is_err());
+        assert_eq!(metadata.specification.as_deref(), Some("23 05 00"));
+        metadata.set_specification(None).unwrap();
+        assert!(!metadata.matches_specification("23 05 00"));
     }
 
     #[test]
