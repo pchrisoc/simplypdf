@@ -97,18 +97,34 @@ pub fn aggregate_rates(lines: &[RateLine]) -> Result<Option<RateTotal>, String> 
 /// Aggregate mixed-unit takeoffs into separate quantity totals for each unit.
 /// Material and labor costs remain attached to the corresponding physical unit.
 pub fn aggregate_rates_by_unit(lines: &[RateLine]) -> Result<Vec<RateTotal>, String> {
-    let mut groups = std::collections::BTreeMap::<String, Vec<RateLine>>::new();
+    let mut groups = std::collections::BTreeMap::<String, RateTotal>::new();
     for line in lines {
-        line.calculate()?;
-        groups.entry(line.unit.trim().to_owned()).or_default().push(line.clone());
-    }
-    let mut totals = Vec::with_capacity(groups.len());
-    for group in groups.into_values() {
-        if let Some(total) = aggregate_rates(&group)? {
-            totals.push(total);
+        let next = line.calculate()?;
+        let unit = line.unit.trim();
+        let total = groups.entry(unit.to_owned()).or_insert_with(|| RateTotal {
+            billable_quantity: 0.0,
+            material_cost: 0.0,
+            labor_cost: 0.0,
+            total_cost: 0.0,
+            unit: unit.to_owned(),
+        });
+        total.billable_quantity += next.billable_quantity;
+        total.material_cost += next.material_cost;
+        total.labor_cost += next.labor_cost;
+        total.total_cost += next.total_cost;
+        if ![
+            total.billable_quantity,
+            total.material_cost,
+            total.labor_cost,
+            total.total_cost,
+        ]
+        .iter()
+        .all(|value| value.is_finite())
+        {
+            return Err("rate aggregation overflow".into());
         }
     }
-    Ok(totals)
+    Ok(groups.into_values().collect())
 }
 
 /// Currency-only totals can combine rates for different physical units.
@@ -156,7 +172,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn mixed_units_can_sum_costs_but_not_quantities() {
         let lines = [line(10.0, "ft"), line(2.0, "each")];
@@ -184,7 +199,14 @@ mod tests {
         huge.material_rate = 1.0;
         huge.labor_rate = 1.0;
         huge.waste_percent = 0.0;
-        assert!(aggregate_estimate_cost(&[\n            huge.clone(),\n            huge.clone(),\n            huge.clone(),\n            huge.clone(),\n            huge,\n        ])\n        .is_err());
+        assert!(aggregate_estimate_cost(&[
+            huge.clone(),
+            huge.clone(),
+            huge.clone(),
+            huge.clone(),
+            huge,
+        ])
+        .is_err());
     }
 
     #[test]
@@ -201,6 +223,27 @@ mod tests {
         let mut invalid = line(1.0, "ft");
         invalid.quantity = f64::NAN;
         assert!(aggregate_rates_by_unit(&[invalid]).is_err());
+    }
+
+    #[test]
+    fn grouped_estimates_trim_units_and_reject_group_overflow() {
+        let lines = [line(2.0, " ft "), line(3.0, "ft")];
+        let groups = aggregate_rates_by_unit(&lines).unwrap();
+        assert_eq!(groups.len(), 1);
+        assert_eq!(groups[0].unit, "ft");
+        assert_eq!(groups[0].billable_quantity, 5.5);
+        let mut huge = line(f64::MAX / 4.0, "ft");
+        huge.material_rate = 1.0;
+        huge.labor_rate = 1.0;
+        huge.waste_percent = 0.0;
+        assert!(aggregate_rates_by_unit(&[
+            huge.clone(),
+            huge.clone(),
+            huge.clone(),
+            huge.clone(),
+            huge,
+        ])
+        .is_err());
     }
 
     #[test]
