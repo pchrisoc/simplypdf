@@ -240,3 +240,22 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Follow-up source commit `f2ec8f4` validates that a published token has the exact current version prefix and 16 lowercase hexadecimal hash digits. Previously malformed same-version tokens were incorrectly reported as stale rather than incompatible.
 - Regression commit `6166647` tests short, long, invalid-hex, uppercase and suffixed tokens, plus valid-shaped stale tokens. CI pending for this follow-up branch.
 - ENG-08.06 remains unchecked: automated edit/undo/redo publication, managed workbook lifecycle, lock retries, and full acceptance are still outstanding. Continue implementation after checks pass.
+
+## 2026-11-20 — ENG-09.05 review status history foundation
+
+- Branch `feat/eng-0905-review-status-history-20261120` adds `crates/measure/src/review_status.rs`: configurable unique statuses, explicit authorship and timestamps, append-only transitions, duplicate suppression, and focused regression tests.
+- Acceptance remains incomplete: persist histories with annotation IDs, expose desktop/MCP controls, integrate imports and undo/redo, and verify CI. ENG-09.05 stays unchecked.
+- Continue ENG-08 PRs #82/#84/#85 and the rest of ENG-09 onward; do not treat this foundation as completion of the 214-item backlog.
+
+## 2026-11-20 — ENG-09.05 chronological status history follow-up
+
+- PR #86 commit `c2efa75` fixes the CI Clippy `double_ended_iterator_last` error in historical status queries and rejects out-of-order transitions before mutating history, with a focused regression test.
+- SonarCloud previously passed on `75cddb6`; CI failed at Clippy. New head checks require verification before merge.
+- ENG-09.05 is not yet complete: annotation persistence, UI/MCP exposure, stable annotation identity and undo/redo handling remain. No README checkbox changed.
+- Open PRs #82, #84 and #85 need rebasing/conflict resolution and check verification; prioritize coherent milestones rather than merging unverified foundations.
+
+## 2026-11-20 — ENG-09.05 audited history restoration
+
+- PR #86 commit `40a1520`: repair Clippy `filter_next` failure using `rfind`; implement `ReviewStatus::from_history` to validate imported/stored event sequences and `transition_counts` for per-author audit summaries.
+- Focused tests cover restoration, author counts, and rejection of nonchronological history. CI and SonarCloud must be rerun on the new head before merge.
+- Remaining acceptance: bind review statuses to persistent annotation IDs, document save/load, UI and MCP controls, integration tests. ENG-09.05 remains unchecked; continue all remaining ENG milestones.
