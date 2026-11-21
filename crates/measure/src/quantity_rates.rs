@@ -205,6 +205,34 @@ pub fn rate_line_from_schedule(
     Ok(line)
 }
 
+/// A takeoff quantity associated with a rate schedule code.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ScheduledQuantity {
+    pub code: String,
+    pub quantity: f64,
+    pub unit: String,
+}
+
+/// Resolve a complete takeoff estimate against a rate schedule.
+/// All lines are validated before a result is returned, so callers never
+/// receive a partially priced estimate after a missing or invalid code.
+pub fn price_scheduled_quantities(
+    quantities: &[ScheduledQuantity],
+    schedule: &[RateScheduleEntry],
+) -> Result<(Vec<RateLine>, EstimateCost), String> {
+    let mut lines = Vec::with_capacity(quantities.len());
+    for item in quantities {
+        lines.push(rate_line_from_schedule(
+            item.quantity,
+            &item.unit,
+            &item.code,
+            schedule,
+        )?);
+    }
+    let costs = aggregate_estimate_cost(&lines)?;
+    Ok((lines, costs))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -359,6 +387,79 @@ mod tests {
         assert_eq!(total.labor_cost, 45.0);
         assert_eq!(total.total_cost, 78.0);
         assert!(aggregate_rates(&[line(1.0, "ft"), line(1.0, "m")]).is_err());
+    }
+
+    #[test]
+    fn scheduled_takeoffs_price_multiple_units_without_combining_quantities() {
+        let schedule = [
+            RateScheduleEntry {
+                code: "PIPE".into(),
+                unit: "ft".into(),
+                material_rate: 2.0,
+                labor_rate: 3.0,
+                waste_percent: 10.0,
+            },
+            RateScheduleEntry {
+                code: "VALVE".into(),
+                unit: "each".into(),
+                material_rate: 10.0,
+                labor_rate: 5.0,
+                waste_percent: 0.0,
+            },
+        ];
+        let items = [
+            ScheduledQuantity {
+                code: "PIPE".into(),
+                quantity: 10.0,
+                unit: "ft".into(),
+            },
+            ScheduledQuantity {
+                code: "VALVE".into(),
+                quantity: 2.0,
+                unit: "each".into(),
+            },
+        ];
+        let (lines, costs) = price_scheduled_quantities(&items, &schedule).unwrap();
+        assert_eq!(lines.len(), 2);
+        assert_eq!(costs.material_cost, 42.0);
+        assert_eq!(costs.labor_cost, 40.0);
+        assert_eq!(costs.total_cost, 82.0);
+        assert_eq!(
+            price_scheduled_quantities(&[], &schedule).unwrap().1.total_cost,
+            0.0
+        );
+    }
+
+    #[test]
+    fn scheduled_takeoffs_reject_invalid_later_rows_and_overflow() {
+        let schedule = [RateScheduleEntry {
+            code: "PIPE".into(),
+            unit: "ft".into(),
+            material_rate: 2.0,
+            labor_rate: 3.0,
+            waste_percent: 0.0,
+        }];
+        let good = ScheduledQuantity {
+            code: "PIPE".into(),
+            quantity: 1.0,
+            unit: "ft".into(),
+        };
+        let bad = ScheduledQuantity {
+            code: "MISSING".into(),
+            quantity: 2.0,
+            unit: "ft".into(),
+        };
+        assert!(price_scheduled_quantities(&[good.clone(), bad], &schedule).is_err());
+        let wrong_unit = ScheduledQuantity {
+            unit: "m".into(),
+            ..good.clone()
+        };
+        assert!(price_scheduled_quantities(&[good.clone(), wrong_unit], &schedule).is_err());
+        let huge = ScheduledQuantity {
+            quantity: f64::MAX,
+            ..good
+        };
+        assert!(price_scheduled_quantities(&[huge], &schedule).is_err());
     }
 
     #[test]
