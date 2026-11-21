@@ -265,3 +265,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #86 (ENG-09.05 review-status history foundation) merged as `098872bf84a74a5757f773bee4e911e19afb10b7` after CI and SonarCloud passed on `12c8df6`. Full ENG-09.05 acceptance still requires annotation persistence and UI/MCP integration, so the checkbox remains unchecked.
 - Branch `feat/eng-0906-review-metadata-20261120` implements a serializable `ReviewMetadata` type with discipline, assignee, priority, specification, package and case-insensitive tags. Validation rejects empty fields, oversized values and duplicate tags. Focused tests cover JSON round trips and invalid input without mutation.
 - ENG-09.06 remains unchecked pending annotation association, register editing/filtering, UI/MCP exposure and full CI acceptance. Continue all other unchecked ENG tasks, including existing ENG-08 feature PRs.
+
+## ENG-09.06 follow-up — 2026-11-20 PST
+
+- Commit `5fac82b7c6c86a9f65e5393eb3ed358e71f4bd12` on PR #87 bounds metadata to 64 tags, adds case-insensitive tag removal without mutating unrelated tags, and trims discipline matching.
+- Focused regression tests added: `tag_removal_is_case_insensitive_and_preserves_other_tags` and `tag_limit_rejects_overflow_without_mutation`. Tests are committed but not yet verified by CI at this head.
+- PR #87 remains open pending required checks. UI/register persistence integration is not yet implemented; ENG-09.06 remains unchecked.
+- PR #73 is merged; PRs #82, #84, #85 remain open and need integration/mergeability repair.
