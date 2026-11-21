@@ -307,3 +307,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - At PR #87 head `678f5ea`, Nix, SonarCloud, Windows ARM64 and FreeBSD passed; Ubuntu CI failed solely on two rustfmt diffs in review assignee/priority matchers. Commit `26e8c7176eca5070c21aa9895326cc364cecc15e` applies the exact CI formatting corrections.
 - Commit `9c65a369e5c578a6e11d3f9f55131ee0037d64cd` adds atomic specification updates and case/whitespace-tolerant filtering with a focused test covering missing values, invalid updates and clearing values.
 - CI on these latest commits has not yet been verified. No README checkbox is complete: annotation persistence, register/UI integration and end-to-end tests remain.
+
+## ENG-09.06 stable annotation metadata registry — 2026-11-21 PST
+
+- PR #87 merged after CI, Nix, SonarCloud, Windows ARM64, FreeBSD passed at head `6422c52`; squash commit `5074331bc6ea54c9f15af1b3b1e055f8654ae874`.
+- New branch `feat/eng-0906-annotation-metadata-registry-20261121`, commit `9de825c5d5df0fdbdff98d4297eb4256d3c04b82` adds `ReviewMetadataRegistry` keyed by stable annotation ID, validated atomic updates, removal, capacity limits, and JSON roundtrip/invalid-replacement regression test.
+- Tests are committed but not yet verified by CI. The registry is a persistence data model, not yet connected to PDF annotation save/reopen or UI; ENG-09.06 remains unchecked.
