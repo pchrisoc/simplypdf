@@ -319,3 +319,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #88 initial CI run `44883525707` failed at rustfmt in `review_metadata.rs` (blank line and two compact struct literals); SonarCloud run `44883525541` passed.
 - Commit `ba0e6effbe119efe027482747b61264046416e1e` applies the reported formatting changes and implements bounded atomic `ReviewMetadataRegistry::set_many` with last-write-wins duplicate ID semantics. Test `registry_batch_is_atomic_and_last_duplicate_wins` covers rollback after invalid metadata and duplicate resolution.
 - Required CI checks for the updated head remain pending. Registry remains an in-memory/serializable foundation: PDF annotation persistence and UI integration are not complete. Do not mark ENG-09.06 complete.
+
+## ENG-09.06 deterministic registry filtering — 2026-11-21 PST
+
+- PR #88 merged as `a20320898ea89f672818a2040a0e134c467d0305` after CI and SonarCloud succeeded at head `a4dcb36`.
+- New branch `feat/eng-0906-registry-query-20261121`, commit `08b21fe3dfd4398c77e2f52aa45b8a69d4f68bee`, adds composable discipline/assignee/priority/specification/package/tag filters on stable-ID registry records and deterministic ID ordering. Regression test `registry_filters_are_combined_and_results_sorted_by_stable_id` covers multi-filter matching, order, and absent matches.
+- Checks on this new branch are not yet verified. Actual PDF save/reopen and desktop register integration remain incomplete, so ENG-09.06 stays unchecked. ENG-08 PRs #82/#84/#85 remain open.
