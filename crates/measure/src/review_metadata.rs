@@ -78,6 +78,11 @@ impl ReviewMetadata {
         Ok(())
     }
 
+    /// Match a review package without treating missing packages as matches.
+    pub fn matches_package(&self, package: &str) -> bool {
+        self.package.as_ref().is_some_and(|value| value.trim().eq_ignore_ascii_case(package.trim()))
+    }
+
     pub fn matches_tag(&self, tag: &str) -> bool {
         self.tags.iter().any(|value| value.trim().eq_ignore_ascii_case(tag.trim()))
     }
@@ -100,6 +105,15 @@ mod tests {
         let encoded = serde_json::to_string(&metadata).unwrap();
         let restored: ReviewMetadata = serde_json::from_str(&encoded).unwrap();
         assert_eq!(restored, metadata);
+    }
+
+    #[test]
+    fn package_filter_handles_missing_and_case_insensitive_values() {
+        let mut metadata = ReviewMetadata::default();
+        assert!(!metadata.matches_package("Package A"));
+        metadata.package = Some(" Package A ".into());
+        assert!(metadata.matches_package("package a"));
+        assert!(!metadata.matches_package("package b"));
     }
 
     #[test]
