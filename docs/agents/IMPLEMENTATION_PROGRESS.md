@@ -331,3 +331,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #89 CI `44892584787` failed at rustfmt in `review_metadata.rs`; SonarCloud `44892584754` passed. Commit `a6018f2245e22539d613a5cae6f8a91168c08b69` applies the reported formatting fixes and implements `ReviewMetadataRegistry::filter_page` with exclusive stable-ID cursor and a maximum 1,000 rows per page.
 - Test `registry_filter_pages_use_exclusive_stable_id_cursors` covers zero limit, first page, missing cursor ID and end of listing. New head CI not yet verified; no README checkbox changed.
 - PDF annotation save/reopen and desktop register integration remain necessary to complete ENG-09.06; broader README backlog remains open.
+
+## ENG-09.06 filtered counts and CI repair — 2026-11-21
+
+- PR #89 commit `c8471121dc6a229c52ab721d0299f477469e8871` adds `count_filtered`, an allocation-free matching-record count that uses the same filter predicate as paginated register results; `filtered_count_matches_pages_and_respects_empty_query` covers filtered, paginated and unfiltered counts.
+- The same commit applies the two precise `cargo fmt --check` changes reported by failed Ubuntu CI run 44898022052. SonarCloud passed on the preceding head; new-head CI remains unverified.
+- ENG-09.06 is not complete: persist metadata with PDF annotations, wire the desktop register, and verify save/reopen and end-to-end acceptance before checking README.
