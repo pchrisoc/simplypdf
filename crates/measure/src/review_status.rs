@@ -27,7 +27,7 @@ impl ReviewStatus {
     /// Returns the status active at or before the supplied sortable timestamp.
     /// Timestamps must use one consistent lexicographically sortable format.
     pub fn status_at(&self, timestamp: &str) -> Option<&str> {
-        self.history.iter().filter(|event| event.timestamp.as_str() <= timestamp).last().map(|event| event.status.as_str())
+        self.history.iter().filter(|event| event.timestamp.as_str() <= timestamp).next_back().map(|event| event.status.as_str())
     }
 
     /// Returns a chronological snapshot of transitions by the specified author.
@@ -43,6 +43,9 @@ impl ReviewStatus {
         let target = self.allowed.iter().find(|s| s.eq_ignore_ascii_case(status.trim())).ok_or_else(|| "unknown review status".to_string())?;
         if author.trim().is_empty() || timestamp.trim().is_empty() {
             return Err("review transition requires author and timestamp".into());
+        }
+        if self.history.last().is_some_and(|event| event.timestamp.as_str() > timestamp) {
+            return Err("review timestamps must be chronological".into());
         }
         if self.current().is_some_and(|current| current == target) {
             return Ok(false);
@@ -74,6 +77,14 @@ mod tests {
         assert_eq!(review.status_at("2026-11-20T10:30:00Z"), Some("Open"));
         assert_eq!(review.status_at("2026-11-20T12:00:00Z"), Some("Resolved"));
         assert_eq!(review.transitions_by("BOB").len(), 1);
+    }
+    #[test]
+    fn rejects_out_of_order_transitions_without_mutating_history() {
+        let mut review = ReviewStatus::new(vec!["Open".into(), "Resolved".into()]).unwrap();
+        review.transition("Open", "alice", "2026-11-20T11:00:00Z").unwrap();
+        assert!(review.transition("Resolved", "bob", "2026-11-20T10:00:00Z").is_err());
+        assert_eq!(review.current(), Some("Open"));
+        assert_eq!(review.history.len(), 1);
     }
     #[test]
     fn invalid_status_and_missing_authorship_do_not_change_history() {
