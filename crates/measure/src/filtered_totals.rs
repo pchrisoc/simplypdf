@@ -20,9 +20,10 @@ pub struct QuantityTotal {
 pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Result<Vec<QuantityTotal>, String> {
     let mut totals: BTreeMap<String, (usize, f64)> = BTreeMap::new();
     for m in measurements {
-        if filter.label.as_ref().is_some_and(|s| !m.label.eq_ignore_ascii_case(s)) ||
-            filter.author.as_ref().is_some_and(|s| !m.author.eq_ignore_ascii_case(s)) ||
-            filter.unit.as_ref().is_some_and(|s| !m.reading.unit.eq_ignore_ascii_case(s)) {
+        if filter.label.as_ref().is_some_and(|s| !m.label.eq_ignore_ascii_case(s))
+            || filter.author.as_ref().is_some_and(|s| !m.author.eq_ignore_ascii_case(s))
+            || filter.unit.as_ref().is_some_and(|s| !m.reading.unit.eq_ignore_ascii_case(s))
+        {
             continue;
         }
         let value = m.reading.value;
