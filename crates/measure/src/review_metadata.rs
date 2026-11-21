@@ -87,6 +87,20 @@ impl ReviewMetadata {
         self.tags.iter().any(|value| value.trim().eq_ignore_ascii_case(tag.trim()))
     }
 
+    /// Filter review records by assignee, including whitespace-tolerant comparisons.
+    pub fn matches_assignee(&self, assignee: &str) -> bool {
+        self.assignee
+            .as_ref()
+            .is_some_and(|value| value.trim().eq_ignore_ascii_case(assignee.trim()))
+    }
+
+    /// Filter review records by priority without changing stored values.
+    pub fn matches_priority(&self, priority: &str) -> bool {
+        self.priority
+            .as_ref()
+            .is_some_and(|value| value.trim().eq_ignore_ascii_case(priority.trim()))
+    }
+
     pub fn matches_discipline(&self, discipline: &str) -> bool {
         self.discipline.as_ref().is_some_and(|value| value.trim().eq_ignore_ascii_case(discipline.trim()))
     }
@@ -114,6 +128,19 @@ mod tests {
         metadata.package = Some(" Package A ".into());
         assert!(metadata.matches_package("package a"));
         assert!(!metadata.matches_package("package b"));
+    }
+
+    #[test]
+    fn assignee_and_priority_filters_handle_case_whitespace_and_missing_values() {
+        let mut metadata = ReviewMetadata::default();
+        assert!(!metadata.matches_assignee("Engineer"));
+        assert!(!metadata.matches_priority("High"));
+        metadata.set_assignee(Some("Engineer".into())).unwrap();
+        metadata.set_priority(Some("High".into())).unwrap();
+        assert!(metadata.matches_assignee(" engineer "));
+        assert!(metadata.matches_priority(" high "));
+        assert!(!metadata.matches_assignee("Other"));
+        assert!(!metadata.matches_priority("Low"));
     }
 
     #[test]
