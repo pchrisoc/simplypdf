@@ -213,6 +213,31 @@ pub struct ScheduledQuantity {
     pub unit: String,
 }
 
+/// Validate the entire editable rate schedule before pricing any takeoff rows.
+/// This catches duplicate or invalid *unused* entries before they can be persisted.
+pub fn validate_rate_schedule(schedule: &[RateScheduleEntry]) -> Result<(), String> {
+    let mut codes = std::collections::BTreeSet::new();
+    for entry in schedule {
+        let code = entry.code.trim();
+        let unit = entry.unit.trim();
+        if code.is_empty() || unit.is_empty() {
+            return Err("rate code and unit are required".into());
+        }
+        if !codes.insert(code) {
+            return Err("duplicate rate code".into());
+        }
+        RateLine {
+            quantity: 1.0,
+            unit: unit.to_owned(),
+            material_rate: entry.material_rate,
+            labor_rate: entry.labor_rate,
+            waste_percent: entry.waste_percent,
+        }
+        .calculate()?;
+    }
+    Ok(())
+}
+
 /// Resolve a complete takeoff estimate against a rate schedule.
 /// All lines are validated before a result is returned, so callers never
 /// receive a partially priced estimate after a missing or invalid code.
@@ -220,6 +245,7 @@ pub fn price_scheduled_quantities(
     quantities: &[ScheduledQuantity],
     schedule: &[RateScheduleEntry],
 ) -> Result<(Vec<RateLine>, EstimateCost), String> {
+    validate_rate_schedule(schedule)?;
     let mut lines = Vec::with_capacity(quantities.len());
     for item in quantities {
         lines.push(rate_line_from_schedule(
@@ -247,6 +273,26 @@ mod tests {
         }
     }
 
+
+    #[test]
+    fn schedule_validation_rejects_unused_invalid_entries() {
+        let valid = RateScheduleEntry {
+            code: "PIPE".into(),
+            unit: "ft".into(),
+            material_rate: 2.0,
+            labor_rate: 3.0,
+            waste_percent: 0.0,
+        };
+        assert!(validate_rate_schedule(&[valid.clone()]).is_ok());
+        assert!(validate_rate_schedule(&[valid.clone(), valid.clone()]).is_err());
+        let mut invalid = valid.clone();
+        invalid.code = " ".into();
+        assert!(validate_rate_schedule(&[valid.clone(), invalid]).is_err());
+        let mut invalid = valid.clone();
+        invalid.code = "OTHER".into();
+        invalid.material_rate = f64::NAN;
+        assert!(price_scheduled_quantities(&[], &[valid, invalid]).is_err());
+    }
 
     #[test]
     fn schedule_resolves_named_rate_and_calculates_cost() {
