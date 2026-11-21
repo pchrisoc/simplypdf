@@ -29,8 +29,7 @@ impl ReviewStatus {
     }
 
     pub fn transition(&mut self, status: &str, author: &str, timestamp: &str) -> Result<bool, String> {
-        let target = self.allowed.iter().find(|s| s.eq_ignore_ascii_case(status.trim()))
-            .ok_or_else(|| "unknown review status".to_string())?;
+        let target = self.allowed.iter().find(|s| s.eq_ignore_ascii_case(status.trim())).ok_or_else(|| "unknown review status".to_string())?;
         if author.trim().is_empty() || timestamp.trim().is_empty() {
             return Err("review transition requires author and timestamp".into());
         }
