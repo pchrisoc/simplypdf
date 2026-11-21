@@ -180,9 +180,26 @@ impl ReviewMetadataRegistry {
     /// Query registry entries by review metadata without mutating their stable IDs.
     /// Results are sorted by annotation ID for deterministic register navigation.
     pub fn filter<'a>(&'a self, query: &ReviewMetadataFilter) -> Vec<(&'a str, &'a ReviewMetadata)> {
+        self.entries.iter().filter(|(_, metadata)| query.matches(metadata)).map(|(id, metadata)| (id.as_str(), metadata)).collect()
+    }
+
+    /// Return a bounded page after an exclusive stable-ID cursor.
+    /// The cursor is an ID boundary, even if that ID is not in the registry.
+    pub fn filter_page<'a>(
+        &'a self,
+        query: &ReviewMetadataFilter,
+        after_id: Option<&str>,
+        limit: usize,
+    ) -> Vec<(&'a str, &'a ReviewMetadata)> {
+        if limit == 0 {
+            return Vec::new();
+        }
         self.entries
             .iter()
-            .filter(|(_, metadata)| query.matches(metadata))
+            .filter(|(id, metadata)| {
+                after_id.is_none_or(|cursor| id.as_str() > cursor) && query.matches(metadata)
+            })
+            .take(limit.min(1_000))
             .map(|(id, metadata)| (id.as_str(), metadata))
             .collect()
     }
@@ -216,16 +233,24 @@ mod tests {
         registry.set("z".into(), hvac.clone()).unwrap();
         registry.set("a".into(), hvac).unwrap();
         registry.set("m".into(), ReviewMetadata::default()).unwrap();
-        let filter = ReviewMetadataFilter {
-            discipline: Some(" mechanical ".into()),
-            tag: Some("hvac".into()),
-            ..ReviewMetadataFilter::default()
-        };
+        let filter = ReviewMetadataFilter { discipline: Some(" mechanical ".into()), tag: Some("hvac".into()), ..ReviewMetadataFilter::default() };
         assert_eq!(registry.filter(&filter).iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec!["a", "z"]);
         let missing = ReviewMetadataFilter { assignee: Some("Nobody".into()), ..filter };
         assert!(registry.filter(&missing).is_empty());
     }
 
+    #[test]
+    fn registry_filter_pages_use_exclusive_stable_id_cursors() {
+        let mut registry = ReviewMetadataRegistry::default();
+        for id in ["a", "c", "e"] {
+            registry.set(id.into(), ReviewMetadata::default()).unwrap();
+        }
+        let query = ReviewMetadataFilter::default();
+        assert!(registry.filter_page(&query, None, 0).is_empty());
+        assert_eq!(registry.filter_page(&query, None, 2).iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec!["a", "c"]);
+        assert_eq!(registry.filter_page(&query, Some("b"), 2).iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec!["c", "e"]);
+        assert_eq!(registry.filter_page(&query, Some("e"), 2).len(), 0);
+    }
 
     #[test]
     fn registry_batch_is_atomic_and_last_duplicate_wins() {
