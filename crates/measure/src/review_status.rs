@@ -27,12 +27,32 @@ impl ReviewStatus {
     /// Returns the status active at or before the supplied sortable timestamp.
     /// Timestamps must use one consistent lexicographically sortable format.
     pub fn status_at(&self, timestamp: &str) -> Option<&str> {
-        self.history.iter().filter(|event| event.timestamp.as_str() <= timestamp).next_back().map(|event| event.status.as_str())
+        self.history.iter().rfind(|event| event.timestamp.as_str() <= timestamp).map(|event| event.status.as_str())
     }
 
     /// Returns a chronological snapshot of transitions by the specified author.
     pub fn transitions_by<'a>(&'a self, author: &str) -> Vec<&'a StatusEvent> {
         self.history.iter().filter(|event| event.author.eq_ignore_ascii_case(author)).collect()
+    }
+
+    /// Returns the number of actual status changes made by each author.
+    pub fn transition_counts(&self) -> std::collections::BTreeMap<String, usize> {
+        let mut counts = std::collections::BTreeMap::new();
+        for event in &self.history {
+            *counts.entry(event.author.clone()).or_insert(0) += 1;
+        }
+        counts
+    }
+
+    /// Rebuilds the current state from a stored audit trail, validating each event.
+    pub fn from_history(allowed: Vec<String>, history: Vec<StatusEvent>) -> Result<Self, String> {
+        let mut review = Self::new(allowed)?;
+        for event in history {
+            if !review.transition(&event.status, &event.author, &event.timestamp)? {
+                return Err("duplicate consecutive review status".into());
+            }
+        }
+        Ok(review)
     }
 
     pub fn current(&self) -> Option<&str> {
@@ -85,6 +105,22 @@ mod tests {
         assert!(review.transition("Resolved", "bob", "2026-11-20T10:00:00Z").is_err());
         assert_eq!(review.current(), Some("Open"));
         assert_eq!(review.history.len(), 1);
+    }
+    #[test]
+    fn rehydration_validates_audit_trail_and_counts_authors() {
+        let allowed = vec!["Open".into(), "Resolved".into()];
+        let events = vec![
+            StatusEvent { status: "Open".into(), author: "alice".into(), timestamp: "t1".into() },
+            StatusEvent { status: "Resolved".into(), author: "bob".into(), timestamp: "t2".into() },
+            StatusEvent { status: "Open".into(), author: "alice".into(), timestamp: "t3".into() },
+        ];
+        let review = ReviewStatus::from_history(allowed.clone(), events.clone()).unwrap();
+        assert_eq!(review.current(), Some("Open"));
+        assert_eq!(review.transition_counts().get("alice"), Some(&2));
+        assert_eq!(review.transition_counts().get("bob"), Some(&1));
+        let mut invalid = events;
+        invalid[2].timestamp = "t0".into();
+        assert!(ReviewStatus::from_history(allowed, invalid).is_err());
     }
     #[test]
     fn invalid_status_and_missing_authorship_do_not_change_history() {
