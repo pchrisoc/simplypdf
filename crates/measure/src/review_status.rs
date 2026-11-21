@@ -24,6 +24,17 @@ impl ReviewStatus {
         Ok(Self { allowed, history: Vec::new() })
     }
 
+    /// Returns the status active at or before the supplied sortable timestamp.
+    /// Timestamps must use one consistent lexicographically sortable format.
+    pub fn status_at(&self, timestamp: &str) -> Option<&str> {
+        self.history.iter().filter(|event| event.timestamp.as_str() <= timestamp).last().map(|event| event.status.as_str())
+    }
+
+    /// Returns a chronological snapshot of transitions by the specified author.
+    pub fn transitions_by<'a>(&'a self, author: &str) -> Vec<&'a StatusEvent> {
+        self.history.iter().filter(|event| event.author.eq_ignore_ascii_case(author)).collect()
+    }
+
     pub fn current(&self) -> Option<&str> {
         self.history.last().map(|event| event.status.as_str())
     }
@@ -53,6 +64,16 @@ mod tests {
         assert_eq!(review.current(), Some("Resolved"));
         assert_eq!(review.history.len(), 2);
         assert_eq!(review.history[0].author, "alice");
+    }
+    #[test]
+    fn history_supports_temporal_queries_and_author_audits() {
+        let mut review = ReviewStatus::new(vec!["Open".into(), "Resolved".into()]).unwrap();
+        review.transition("Open", "alice", "2026-11-20T10:00:00Z").unwrap();
+        review.transition("Resolved", "bob", "2026-11-20T11:00:00Z").unwrap();
+        assert_eq!(review.status_at("2026-11-20T09:00:00Z"), None);
+        assert_eq!(review.status_at("2026-11-20T10:30:00Z"), Some("Open"));
+        assert_eq!(review.status_at("2026-11-20T12:00:00Z"), Some("Resolved"));
+        assert_eq!(review.transitions_by("BOB").len(), 1);
     }
     #[test]
     fn invalid_status_and_missing_authorship_do_not_change_history() {
