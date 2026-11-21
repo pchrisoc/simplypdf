@@ -260,3 +260,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - Commit `b7dc4f05540079d7f09b04dc337400b40eb6c397` adds `aggregate_rates_by_unit`, grouping physical quantities and costs deterministically by unit without combining incompatible quantities. Focused test `grouped_estimates_keep_units_separate_and_sorted` checks ordering, grouped totals, empty input and invalid input.
 - Verification: GitHub CI on the new head remains required; test has been committed but not locally executed. PR #82 is not yet mergeable. Do not check ENG-08.02 until persisted rate fields, desktop editing, estimate export, and end-to-end acceptance are implemented and verified.
+
+### 2026-11-21 — ENG-08.02 streaming unit aggregation
+
+- PR #82 commit `f2dcec03f8984ee8838fc5d73c1a792cb2d1f81b` replaces cloned per-unit `Vec<RateLine>` buckets with streaming `BTreeMap<String, RateTotal>` accumulation, retaining deterministic unit ordering while reducing memory growth for large takeoffs. It also fixes accidentally escaped literal newline sequences in the overflow regression test.
+- New regression `grouped_estimates_trim_units_and_reject_group_overflow` checks normalized unit grouping and finite-sum overflow rejection. Tests are committed, not yet independently verified; run `cargo fmt --all -- --check` and `cargo test -p simplypdf-measure quantity_rates`.
+- ENG-08.02 remains unchecked: rate persistence, desktop editor, estimate exports, headless automation, branch conflicts and required CI remain unresolved.
