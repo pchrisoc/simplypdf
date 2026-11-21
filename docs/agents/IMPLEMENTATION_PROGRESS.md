@@ -246,3 +246,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Branch `feat/eng-0905-review-status-history-20261120` adds `crates/measure/src/review_status.rs`: configurable unique statuses, explicit authorship and timestamps, append-only transitions, duplicate suppression, and focused regression tests.
 - Acceptance remains incomplete: persist histories with annotation IDs, expose desktop/MCP controls, integrate imports and undo/redo, and verify CI. ENG-09.05 stays unchecked.
 - Continue ENG-08 PRs #82/#84/#85 and the rest of ENG-09 onward; do not treat this foundation as completion of the 214-item backlog.
+
+## 2026-11-20 — ENG-09.05 chronological status history follow-up
+
+- PR #86 commit `c2efa75` fixes the CI Clippy `double_ended_iterator_last` error in historical status queries and rejects out-of-order transitions before mutating history, with a focused regression test.
+- SonarCloud previously passed on `75cddb6`; CI failed at Clippy. New head checks require verification before merge.
+- ENG-09.05 is not yet complete: annotation persistence, UI/MCP exposure, stable annotation identity and undo/redo handling remain. No README checkbox changed.
+- Open PRs #82, #84 and #85 need rebasing/conflict resolution and check verification; prioritize coherent milestones rather than merging unverified foundations.
