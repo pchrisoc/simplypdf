@@ -185,23 +185,21 @@ impl ReviewMetadataRegistry {
 
     /// Return a bounded page after an exclusive stable-ID cursor.
     /// The cursor is an ID boundary, even if that ID is not in the registry.
-    pub fn filter_page<'a>(
-        &'a self,
-        query: &ReviewMetadataFilter,
-        after_id: Option<&str>,
-        limit: usize,
-    ) -> Vec<(&'a str, &'a ReviewMetadata)> {
+    pub fn filter_page<'a>(&'a self, query: &ReviewMetadataFilter, after_id: Option<&str>, limit: usize) -> Vec<(&'a str, &'a ReviewMetadata)> {
         if limit == 0 {
             return Vec::new();
         }
         self.entries
             .iter()
-            .filter(|(id, metadata)| {
-                after_id.is_none_or(|cursor| id.as_str() > cursor) && query.matches(metadata)
-            })
+            .filter(|(id, metadata)| after_id.is_none_or(|cursor| id.as_str() > cursor) && query.matches(metadata))
             .take(limit.min(1_000))
             .map(|(id, metadata)| (id.as_str(), metadata))
             .collect()
+    }
+
+    /// Return the total number of matching records without allocating a result list.
+    pub fn count_filtered(&self, query: &ReviewMetadataFilter) -> usize {
+        self.entries.values().filter(|metadata| query.matches(metadata)).count()
     }
 
     pub fn remove(&mut self, annotation_id: &str) -> Option<ReviewMetadata> {
@@ -220,6 +218,19 @@ impl ReviewMetadataRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn filtered_count_matches_pages_and_respects_empty_query() {
+        let mut registry = ReviewMetadataRegistry::default();
+        registry.set("a".into(), ReviewMetadata { discipline: Some("Mechanical".into()), ..ReviewMetadata::default() }).unwrap();
+        registry.set("b".into(), ReviewMetadata { discipline: Some("Electrical".into()), ..ReviewMetadata::default() }).unwrap();
+        registry.set("c".into(), ReviewMetadata { discipline: Some("Mechanical".into()), ..ReviewMetadata::default() }).unwrap();
+        let query = ReviewMetadataFilter { discipline: Some("mechanical".into()), ..ReviewMetadataFilter::default() };
+        assert_eq!(registry.count_filtered(&query), 2);
+        assert_eq!(registry.filter_page(&query, None, 1).len(), 1);
+        assert_eq!(registry.filter_page(&query, Some("a"), 1).len(), 1);
+        assert_eq!(registry.count_filtered(&ReviewMetadataFilter::default()), 3);
+    }
 
     #[test]
     fn registry_filters_are_combined_and_results_sorted_by_stable_id() {
