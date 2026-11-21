@@ -116,7 +116,6 @@ impl ReviewMetadata {
     }
 }
 
-
 /// Review metadata keyed by stable annotation IDs, suitable for serialized document sidecars.
 /// A missing key means no review metadata was assigned to that annotation.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -142,6 +141,20 @@ impl ReviewMetadataRegistry {
         Ok(())
     }
 
+    /// Apply a batch of updates only when every ID and metadata record is valid.
+    /// Duplicate IDs in the batch use the final value.
+    pub fn set_many(&mut self, updates: Vec<(String, ReviewMetadata)>) -> Result<(), String> {
+        if updates.len() > 100_000 {
+            return Err("review metadata batch is too large".into());
+        }
+        let mut next = self.clone();
+        for (id, metadata) in updates {
+            next.set(id, metadata)?;
+        }
+        *self = next;
+        Ok(())
+    }
+
     pub fn remove(&mut self, annotation_id: &str) -> Option<ReviewMetadata> {
         self.entries.remove(annotation_id)
     }
@@ -160,20 +173,27 @@ mod tests {
     use super::*;
 
     #[test]
+    fn registry_batch_is_atomic_and_last_duplicate_wins() {
+        let mut registry = ReviewMetadataRegistry::default();
+        let first = ReviewMetadata::default();
+        let second = ReviewMetadata { priority: Some("High".into()), ..ReviewMetadata::default() };
+        registry.set_many(vec![("a".into(), first.clone()), ("a".into(), second.clone())]).unwrap();
+        assert_eq!(registry.get("a"), Some(&second));
+        let invalid = ReviewMetadata { assignee: Some(" ".into()), ..ReviewMetadata::default() };
+        assert!(registry.set_many(vec![("b".into(), first), ("c".into(), invalid)]).is_err());
+        assert_eq!(registry.len(), 1);
+        assert!(registry.get("b").is_none());
+    }
+
+    #[test]
     fn registry_roundtrip_and_atomic_replacement() {
         let mut registry = ReviewMetadataRegistry::default();
-        let first = ReviewMetadata {
-            discipline: Some("Mechanical".into()),
-            ..ReviewMetadata::default()
-        };
+        let first = ReviewMetadata { discipline: Some("Mechanical".into()), ..ReviewMetadata::default() };
         registry.set("markup-1".into(), first.clone()).unwrap();
         let json = serde_json::to_string(&registry).unwrap();
         let mut restored: ReviewMetadataRegistry = serde_json::from_str(&json).unwrap();
         assert_eq!(restored.get("markup-1"), Some(&first));
-        let invalid = ReviewMetadata {
-            priority: Some(" ".into()),
-            ..ReviewMetadata::default()
-        };
+        let invalid = ReviewMetadata { priority: Some(" ".into()), ..ReviewMetadata::default() };
         assert!(restored.set("markup-1".into(), invalid).is_err());
         assert_eq!(restored.get("markup-1"), Some(&first));
         assert!(restored.set(" ".into(), first.clone()).is_err());
