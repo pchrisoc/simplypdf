@@ -6,6 +6,7 @@
 pub mod classifications;
 pub mod hvac;
 pub mod presets;
+pub mod review_metadata;
 pub mod review_status;
 pub mod snap;
 #[cfg(not(target_arch = "wasm32"))]
