@@ -116,6 +116,28 @@ impl ReviewMetadata {
     }
 }
 
+/// Optional review-register filters. Multiple specified fields are combined with AND.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReviewMetadataFilter {
+    pub discipline: Option<String>,
+    pub assignee: Option<String>,
+    pub priority: Option<String>,
+    pub specification: Option<String>,
+    pub package: Option<String>,
+    pub tag: Option<String>,
+}
+
+impl ReviewMetadataFilter {
+    pub fn matches(&self, metadata: &ReviewMetadata) -> bool {
+        self.discipline.as_ref().is_none_or(|v| metadata.matches_discipline(v))
+            && self.assignee.as_ref().is_none_or(|v| metadata.matches_assignee(v))
+            && self.priority.as_ref().is_none_or(|v| metadata.matches_priority(v))
+            && self.specification.as_ref().is_none_or(|v| metadata.matches_specification(v))
+            && self.package.as_ref().is_none_or(|v| metadata.matches_package(v))
+            && self.tag.as_ref().is_none_or(|v| metadata.matches_tag(v))
+    }
+}
+
 /// Review metadata keyed by stable annotation IDs, suitable for serialized document sidecars.
 /// A missing key means no review metadata was assigned to that annotation.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -155,6 +177,31 @@ impl ReviewMetadataRegistry {
         Ok(())
     }
 
+    /// Query registry entries by review metadata without mutating their stable IDs.
+    /// Results are sorted by annotation ID for deterministic register navigation.
+    pub fn filter<'a>(&'a self, query: &ReviewMetadataFilter) -> Vec<(&'a str, &'a ReviewMetadata)> {
+        self.entries.iter().filter(|(_, metadata)| query.matches(metadata)).map(|(id, metadata)| (id.as_str(), metadata)).collect()
+    }
+
+    /// Return a bounded page after an exclusive stable-ID cursor.
+    /// The cursor is an ID boundary, even if that ID is not in the registry.
+    pub fn filter_page<'a>(&'a self, query: &ReviewMetadataFilter, after_id: Option<&str>, limit: usize) -> Vec<(&'a str, &'a ReviewMetadata)> {
+        if limit == 0 {
+            return Vec::new();
+        }
+        self.entries
+            .iter()
+            .filter(|(id, metadata)| after_id.is_none_or(|cursor| id.as_str() > cursor) && query.matches(metadata))
+            .take(limit.min(1_000))
+            .map(|(id, metadata)| (id.as_str(), metadata))
+            .collect()
+    }
+
+    /// Return the total number of matching records without allocating a result list.
+    pub fn count_filtered(&self, query: &ReviewMetadataFilter) -> usize {
+        self.entries.values().filter(|metadata| query.matches(metadata)).count()
+    }
+
     pub fn remove(&mut self, annotation_id: &str) -> Option<ReviewMetadata> {
         self.entries.remove(annotation_id)
     }
@@ -171,6 +218,50 @@ impl ReviewMetadataRegistry {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn filtered_count_matches_pages_and_respects_empty_query() {
+        let mut registry = ReviewMetadataRegistry::default();
+        registry.set("a".into(), ReviewMetadata { discipline: Some("Mechanical".into()), ..ReviewMetadata::default() }).unwrap();
+        registry.set("b".into(), ReviewMetadata { discipline: Some("Electrical".into()), ..ReviewMetadata::default() }).unwrap();
+        registry.set("c".into(), ReviewMetadata { discipline: Some("Mechanical".into()), ..ReviewMetadata::default() }).unwrap();
+        let query = ReviewMetadataFilter { discipline: Some("mechanical".into()), ..ReviewMetadataFilter::default() };
+        assert_eq!(registry.count_filtered(&query), 2);
+        assert_eq!(registry.filter_page(&query, None, 1).len(), 1);
+        assert_eq!(registry.filter_page(&query, Some("a"), 1).len(), 1);
+        assert_eq!(registry.count_filtered(&ReviewMetadataFilter::default()), 3);
+    }
+
+    #[test]
+    fn registry_filters_are_combined_and_results_sorted_by_stable_id() {
+        let mut registry = ReviewMetadataRegistry::default();
+        let hvac = ReviewMetadata {
+            discipline: Some("Mechanical".into()),
+            assignee: Some("Alex".into()),
+            tags: vec!["HVAC".into()],
+            ..ReviewMetadata::default()
+        };
+        registry.set("z".into(), hvac.clone()).unwrap();
+        registry.set("a".into(), hvac).unwrap();
+        registry.set("m".into(), ReviewMetadata::default()).unwrap();
+        let filter = ReviewMetadataFilter { discipline: Some(" mechanical ".into()), tag: Some("hvac".into()), ..ReviewMetadataFilter::default() };
+        assert_eq!(registry.filter(&filter).iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec!["a", "z"]);
+        let missing = ReviewMetadataFilter { assignee: Some("Nobody".into()), ..filter };
+        assert!(registry.filter(&missing).is_empty());
+    }
+
+    #[test]
+    fn registry_filter_pages_use_exclusive_stable_id_cursors() {
+        let mut registry = ReviewMetadataRegistry::default();
+        for id in ["a", "c", "e"] {
+            registry.set(id.into(), ReviewMetadata::default()).unwrap();
+        }
+        let query = ReviewMetadataFilter::default();
+        assert!(registry.filter_page(&query, None, 0).is_empty());
+        assert_eq!(registry.filter_page(&query, None, 2).iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec!["a", "c"]);
+        assert_eq!(registry.filter_page(&query, Some("b"), 2).iter().map(|(id, _)| *id).collect::<Vec<_>>(), vec!["c", "e"]);
+        assert_eq!(registry.filter_page(&query, Some("e"), 2).len(), 0);
+    }
 
     #[test]
     fn registry_batch_is_atomic_and_last_duplicate_wins() {
