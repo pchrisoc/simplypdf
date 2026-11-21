@@ -14,18 +14,8 @@ pub struct ReviewMetadata {
 
 impl ReviewMetadata {
     pub fn validate(&self) -> Result<(), String> {
-        let fields = [
-            &self.discipline,
-            &self.assignee,
-            &self.priority,
-            &self.specification,
-            &self.package,
-        ];
-        if fields
-            .into_iter()
-            .flatten()
-            .any(|s| s.trim().is_empty() || s.len() > 256)
-        {
+        let fields = [&self.discipline, &self.assignee, &self.priority, &self.specification, &self.package];
+        if fields.into_iter().flatten().any(|s| s.trim().is_empty() || s.len() > 256) {
             return Err("review metadata fields must be nonempty and at most 256 characters".into());
         }
         if self.tags.len() > 64 {
@@ -58,11 +48,7 @@ impl ReviewMetadata {
 
     /// Update a tag atomically; duplicate or invalid replacements leave metadata untouched.
     pub fn rename_tag(&mut self, old: &str, new: String) -> Result<bool, String> {
-        let Some(index) = self
-            .tags
-            .iter()
-            .position(|tag| tag.trim().eq_ignore_ascii_case(old.trim()))
-        else {
+        let Some(index) = self.tags.iter().position(|tag| tag.trim().eq_ignore_ascii_case(old.trim())) else {
             return Ok(false);
         };
         let mut next = self.clone();
@@ -93,15 +79,11 @@ impl ReviewMetadata {
     }
 
     pub fn matches_tag(&self, tag: &str) -> bool {
-        self.tags
-            .iter()
-            .any(|value| value.trim().eq_ignore_ascii_case(tag.trim()))
+        self.tags.iter().any(|value| value.trim().eq_ignore_ascii_case(tag.trim()))
     }
 
     pub fn matches_discipline(&self, discipline: &str) -> bool {
-        self.discipline
-            .as_ref()
-            .is_some_and(|value| value.trim().eq_ignore_ascii_case(discipline.trim()))
+        self.discipline.as_ref().is_some_and(|value| value.trim().eq_ignore_ascii_case(discipline.trim()))
     }
 }
 
@@ -111,10 +93,7 @@ mod tests {
 
     #[test]
     fn metadata_roundtrip_and_case_insensitive_matching() {
-        let mut metadata = ReviewMetadata {
-            discipline: Some("Mechanical".into()),
-            ..ReviewMetadata::default()
-        };
+        let mut metadata = ReviewMetadata { discipline: Some("Mechanical".into()), ..ReviewMetadata::default() };
         metadata.add_tag("HVAC".into()).unwrap();
         assert!(metadata.matches_tag("hvac"));
         assert!(metadata.matches_discipline("mechanical"));
