@@ -242,3 +242,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #84 adds unit-separated filtered quantity aggregation; CI formatting failure still needs repair and integration with source PDFs and additional filter fields.
 - PR #85 adds serializable snapshot manifests and tests; CI formatting failures still need repair.
 - The full engineering backlog remains in scope; no task was marked complete on partial acceptance evidence.
+
+### 2026-11-21 — ENG-08.02 rate aggregation continuation
+
+- PR #82: `601d0ad` adds unit-checked aggregate rate totals, finite-sum overflow handling, and focused same-unit/mixed-unit/overflow tests; `7b29f15` formats the overflow test.
+- Focused test commands for CI: `cargo test -p simplypdf-measure quantity_rates` and `cargo fmt --all -- --check`. These were not executed locally; GitHub checks on the new head are pending.
+- ENG-08.02 remains unchecked: persisted rate fields, desktop editing, estimate export, full acceptance verification, and green required CI are outstanding. PR #82 is not currently mergeable.
