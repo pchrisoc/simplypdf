@@ -6216,6 +6216,7 @@ version = "0.18.1"
 dependencies = [
  "rust_xlsxwriter",
  "serde",
+ "serde_json",
  "simplypdf-annot",
  "simplypdf-content",
  "simplypdf-cos",

@@ -259,3 +259,51 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #86 commit `40a1520`: repair Clippy `filter_next` failure using `rfind`; implement `ReviewStatus::from_history` to validate imported/stored event sequences and `transition_counts` for per-author audit summaries.
 - Focused tests cover restoration, author counts, and rejection of nonchronological history. CI and SonarCloud must be rerun on the new head before merge.
 - Remaining acceptance: bind review statuses to persistent annotation IDs, document save/load, UI and MCP controls, integration tests. ENG-09.05 remains unchecked; continue all remaining ENG milestones.
+
+## 2026-11-20 — Review workflows and ENG-09.06 metadata foundation
+
+- PR #86 (ENG-09.05 review-status history foundation) merged as `098872bf84a74a5757f773bee4e911e19afb10b7` after CI and SonarCloud passed on `12c8df6`. Full ENG-09.05 acceptance still requires annotation persistence and UI/MCP integration, so the checkbox remains unchecked.
+- Branch `feat/eng-0906-review-metadata-20261120` implements a serializable `ReviewMetadata` type with discipline, assignee, priority, specification, package and case-insensitive tags. Validation rejects empty fields, oversized values and duplicate tags. Focused tests cover JSON round trips and invalid input without mutation.
+- ENG-09.06 remains unchecked pending annotation association, register editing/filtering, UI/MCP exposure and full CI acceptance. Continue all other unchecked ENG tasks, including existing ENG-08 feature PRs.
+
+## ENG-09.06 follow-up — 2026-11-20 PST
+
+- Commit `5fac82b7c6c86a9f65e5393eb3ed358e71f4bd12` on PR #87 bounds metadata to 64 tags, adds case-insensitive tag removal without mutating unrelated tags, and trims discipline matching.
+- Focused regression tests added: `tag_removal_is_case_insensitive_and_preserves_other_tags` and `tag_limit_rejects_overflow_without_mutation`. Tests are committed but not yet verified by CI at this head.
+- PR #87 remains open pending required checks. UI/register persistence integration is not yet implemented; ENG-09.06 remains unchecked.
+- PR #73 is merged; PRs #82, #84, #85 remain open and need integration/mergeability repair.
+
+## ENG-09.06 tag rename checkpoint — 2026-11-20 PST
+
+- PR #87 commit `2ee80f5bd68f3ce942f585155f6ee97230b76d54` implements atomic case-insensitive tag rename with duplicate validation and an associated regression test.
+- Checks on the latest head remain unverified; do not merge or check the README until required checks pass and UI/register/persistence acceptance is satisfied.
+
+## ENG-09.06 assignment and priority checkpoint — 2026-11-20 PST
+
+- Commit `ba7fa47ecf19707fc2010a25fc7e94702e719e17` adds atomic `set_assignee` and `set_priority` operations, preserving valid prior values on rejected updates; `assignee_and_priority_updates_are_atomic` tests the behavior.
+- The feature remains a metadata foundation. No annotation storage, UI/register editing or end-to-end acceptance has been verified; do not check ENG-09.06.
+- PR #87 latest CI, SonarCloud and platform checks need to finish successfully before any merge.
+
+## ENG-09.06 CI repair — 2026-11-20 PST
+
+- At PR #87 head `894b3ded`, SonarCloud passed, while CI failed at rustfmt, and Git dependency, Windows ARM64, and FreeBSD jobs failed because `Cargo.lock` omitted the new `serde_json` dev dependency for `simplypdf-measure`.
+- Commit `7ca131a` adds `serde_json` to the measure package's lockfile dependency list; `d7dbf7a` applies Rust formatting changes to review metadata. Both fixes require fresh workflow verification.
+- ENG-09.06 remains unchecked until annotation persistence, UI/register integration, and full acceptance checks pass.
+
+## ENG-09.06 CI and package filtering — 2026-11-20 PST
+
+- At head `02a66ca`, Nix, SonarCloud, Windows ARM64 and FreeBSD passed. Ubuntu CI failed only at `cargo fmt --all -- --check`, with five exact layout diffs in `review_metadata.rs`; commit `0fd125f` applies the formatting shown in the job log.
+- Commit `ca0bec3` adds case-insensitive `matches_package` and a focused test for missing, matching and nonmatching package values. These commits require new CI verification; do not merge on the older successful checks.
+- PRs #82, #84 and #85 are not currently mergeable; #73 is merged. ENG-09.06 remains unchecked because persistence and UI/register integration are incomplete.
+
+## ENG-09.06 CI and filter checkpoint — 2026-11-20 PST
+
+- PR #87 head `7010e4c`: Nix, SonarCloud, Windows ARM64, FreeBSD passed; Ubuntu CI failed only at `Lockfile unchanged`, with Cargo reordering `serde` and `serde_json` in `simplypdf-measure`.
+- Commit `8170d17` fixes canonical lockfile order. Commit `4d76f92` adds case-insensitive, whitespace-tolerant `matches_assignee` and `matches_priority` with missing/nonmatching cases in `assignee_and_priority_filters_handle_case_whitespace_and_missing_values`.
+- New head requires CI verification. UI and annotation persistence integration remain unimplemented; ENG-09.06 remains unchecked. The overall README engineering backlog remains the objective.
+
+## ENG-09.06 specification review checkpoint — 2026-11-20 PST
+
+- At PR #87 head `678f5ea`, Nix, SonarCloud, Windows ARM64 and FreeBSD passed; Ubuntu CI failed solely on two rustfmt diffs in review assignee/priority matchers. Commit `26e8c7176eca5070c21aa9895326cc364cecc15e` applies the exact CI formatting corrections.
+- Commit `9c65a369e5c578a6e11d3f9f55131ee0037d64cd` adds atomic specification updates and case/whitespace-tolerant filtering with a focused test covering missing values, invalid updates and clearing values.
+- CI on these latest commits has not yet been verified. No README checkbox is complete: annotation persistence, register/UI integration and end-to-end tests remain.
