@@ -1,5 +1,5 @@
 //! Filter and aggregate measured quantities without mixing incompatible units.
-use crate::Measurement;
+use crate::{invalid, Measurement, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -17,24 +17,24 @@ pub struct QuantityTotal {
     pub quantity: f64,
 }
 
-pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Result<Vec<QuantityTotal>, String> {
+pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Result<Vec<QuantityTotal>> {
     let mut totals: BTreeMap<String, (usize, f64)> = BTreeMap::new();
     for m in measurements {
         if filter.label.as_ref().is_some_and(|s| !m.label.eq_ignore_ascii_case(s))
             || filter.author.as_ref().is_some_and(|s| !m.author.eq_ignore_ascii_case(s))
-            || filter.unit.as_ref().is_some_and(|s| !m.reading.unit.eq_ignore_ascii_case(s))
+            || filter.unit.as_ref().is_some_and(|s| m.reading.unit != *s)
         {
             continue;
         }
         let value = m.reading.value;
         if !value.is_finite() || value < 0.0 {
-            return Err("invalid quantity in filtered takeoff".into());
+            return Err(invalid("invalid quantity in filtered takeoff"));
         }
         let entry = totals.entry(m.reading.unit.clone()).or_insert((0, 0.0));
         entry.0 += 1;
         entry.1 += value;
         if !entry.1.is_finite() {
-            return Err("filtered quantity overflow".into());
+            return Err(invalid("filtered quantity overflow"));
         }
     }
     Ok(totals.into_iter().map(|(unit, (count, quantity))| QuantityTotal { unit, count, quantity }).collect())
@@ -43,6 +43,17 @@ pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Resul
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn unit_filter_is_case_sensitive() {
+        let filter = QuantityFilter { label: None, author: None, unit: Some("mm".into()) };
+        assert_eq!(filter.unit.as_deref(), Some("mm"));
+        assert_ne!(filter.unit.as_deref(), Some("Mm"));
+    }
+    #[test]
+    fn errors_use_measurement_error_contract() {
+        let result: crate::Result<Vec<QuantityTotal>> = aggregate(&[], &QuantityFilter::default());
+        assert_eq!(result.unwrap(), Vec::<QuantityTotal>::new());
+    }
     #[test]
     fn empty_selection_has_no_totals() {
         assert!(aggregate(&[], &QuantityFilter::default()).unwrap().is_empty());
