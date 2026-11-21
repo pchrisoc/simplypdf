@@ -313,3 +313,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #87 merged after CI, Nix, SonarCloud, Windows ARM64, FreeBSD passed at head `6422c52`; squash commit `5074331bc6ea54c9f15af1b3b1e055f8654ae874`.
 - New branch `feat/eng-0906-annotation-metadata-registry-20261121`, commit `9de825c5d5df0fdbdff98d4297eb4256d3c04b82` adds `ReviewMetadataRegistry` keyed by stable annotation ID, validated atomic updates, removal, capacity limits, and JSON roundtrip/invalid-replacement regression test.
 - Tests are committed but not yet verified by CI. The registry is a persistence data model, not yet connected to PDF annotation save/reopen or UI; ENG-09.06 remains unchecked.
+
+## ENG-09.06 annotation metadata batch update — 2026-11-21 PST
+
+- PR #88 initial CI run `44883525707` failed at rustfmt in `review_metadata.rs` (blank line and two compact struct literals); SonarCloud run `44883525541` passed.
+- Commit `ba0e6effbe119efe027482747b61264046416e1e` applies the reported formatting changes and implements bounded atomic `ReviewMetadataRegistry::set_many` with last-write-wins duplicate ID semantics. Test `registry_batch_is_atomic_and_last_duplicate_wins` covers rollback after invalid metadata and duplicate resolution.
+- Required CI checks for the updated head remain pending. Registry remains an in-memory/serializable foundation: PDF annotation persistence and UI integration are not complete. Do not mark ENG-09.06 complete.
