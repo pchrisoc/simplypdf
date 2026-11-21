@@ -325,3 +325,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #88 merged as `a20320898ea89f672818a2040a0e134c467d0305` after CI and SonarCloud succeeded at head `a4dcb36`.
 - New branch `feat/eng-0906-registry-query-20261121`, commit `08b21fe3dfd4398c77e2f52aa45b8a69d4f68bee`, adds composable discipline/assignee/priority/specification/package/tag filters on stable-ID registry records and deterministic ID ordering. Regression test `registry_filters_are_combined_and_results_sorted_by_stable_id` covers multi-filter matching, order, and absent matches.
 - Checks on this new branch are not yet verified. Actual PDF save/reopen and desktop register integration remain incomplete, so ENG-09.06 stays unchecked. ENG-08 PRs #82/#84/#85 remain open.
+
+## ENG-09.06 bounded register navigation — 2026-11-21 PST
+
+- PR #89 CI `44892584787` failed at rustfmt in `review_metadata.rs`; SonarCloud `44892584754` passed. Commit `a6018f2245e22539d613a5cae6f8a91168c08b69` applies the reported formatting fixes and implements `ReviewMetadataRegistry::filter_page` with exclusive stable-ID cursor and a maximum 1,000 rows per page.
+- Test `registry_filter_pages_use_exclusive_stable_id_cursors` covers zero limit, first page, missing cursor ID and end of listing. New head CI not yet verified; no README checkbox changed.
+- PDF annotation save/reopen and desktop register integration remain necessary to complete ENG-09.06; broader README backlog remains open.
