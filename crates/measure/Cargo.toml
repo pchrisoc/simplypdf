@@ -21,4 +21,5 @@ rust_xlsxwriter = "0.102"
 tempfile = "3.27"
 
 [dev-dependencies]
+serde_json = { workspace = true }
 simplypdf-testkit = { workspace = true }
