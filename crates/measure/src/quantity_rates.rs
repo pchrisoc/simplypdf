@@ -513,17 +513,37 @@ mod tests {
             },
         ];
         let items = [
-            ScheduledQuantity { code: " A ".into(), quantity: 2.0, unit: " ft ".into() },
-            ScheduledQuantity { code: "B".into(), quantity: 1.0, unit: "each".into() },
-            ScheduledQuantity { code: "A".into(), quantity: 3.0, unit: "ft".into() },
+            ScheduledQuantity {
+                code: " A ".into(),
+                quantity: 2.0,
+                unit: " ft ".into(),
+            },
+            ScheduledQuantity {
+                code: "B".into(),
+                quantity: 1.0,
+                unit: "each".into(),
+            },
+            ScheduledQuantity {
+                code: "A".into(),
+                quantity: 3.0,
+                unit: "ft".into(),
+            },
         ];
         let (lines, cost) = price_scheduled_quantities(&items, &schedule).unwrap();
-        assert_eq!(lines.iter().map(|line| line.unit.as_str()).collect::<Vec<_>>(), vec!["ft", "each", "ft"]);
-        assert_eq!(lines.iter().map(|line| line.quantity).collect::<Vec<_>>(), vec![2.0, 1.0, 3.0]);
+        assert_eq!(
+            lines.iter().map(|line| line.unit.as_str()).collect::<Vec<_>>(),
+            vec!["ft", "each", "ft"]
+        );
+        assert_eq!(
+            lines.iter().map(|line| line.quantity).collect::<Vec<_>>(),
+            vec![2.0, 1.0, 3.0]
+        );
         assert_eq!(cost.material_cost, 22.0);
         assert_eq!(cost.labor_cost, 22.0);
         assert_eq!(cost.total_cost, 44.0);
-        assert!(price_scheduled_quantities(&items, &[schedule[0].clone(), schedule[0].clone()]).is_err());
+        assert!(
+            price_scheduled_quantities(&items, &[schedule[0].clone(), schedule[0].clone()]).is_err()
+        );
     }
 
     #[test]
