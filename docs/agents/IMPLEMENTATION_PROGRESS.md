@@ -259,3 +259,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #86 commit `40a1520`: repair Clippy `filter_next` failure using `rfind`; implement `ReviewStatus::from_history` to validate imported/stored event sequences and `transition_counts` for per-author audit summaries.
 - Focused tests cover restoration, author counts, and rejection of nonchronological history. CI and SonarCloud must be rerun on the new head before merge.
 - Remaining acceptance: bind review statuses to persistent annotation IDs, document save/load, UI and MCP controls, integration tests. ENG-09.05 remains unchecked; continue all remaining ENG milestones.
+
+## 2026-11-20 — Review workflows and ENG-09.06 metadata foundation
+
+- PR #86 (ENG-09.05 review-status history foundation) merged as `098872bf84a74a5757f773bee4e911e19afb10b7` after CI and SonarCloud passed on `12c8df6`. Full ENG-09.05 acceptance still requires annotation persistence and UI/MCP integration, so the checkbox remains unchecked.
+- Branch `feat/eng-0906-review-metadata-20261120` implements a serializable `ReviewMetadata` type with discipline, assignee, priority, specification, package and case-insensitive tags. Validation rejects empty fields, oversized values and duplicate tags. Focused tests cover JSON round trips and invalid input without mutation.
+- ENG-09.06 remains unchecked pending annotation association, register editing/filtering, UI/MCP exposure and full CI acceptance. Continue all other unchecked ENG tasks, including existing ENG-08 feature PRs.
