@@ -6215,8 +6215,8 @@ name = "simplypdf-measure"
 version = "0.18.1"
 dependencies = [
  "rust_xlsxwriter",
- "serde_json",
  "serde",
+ "serde_json",
  "simplypdf-annot",
  "simplypdf-content",
  "simplypdf-cos",
