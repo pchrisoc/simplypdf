@@ -233,3 +233,11 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #79 merged to main as `f14261230f7ca629882c340422491ccebd2572cd` after CI and SonarCloud success. CSV and XLSX automation now share validated snapshot status.
 - New feature branch `feat/eng-0806-publication-state-20261120`: `7a90d23` adds typed `PublicationState` (unpublished/current/stale/incompatible_schema); `4a1aeef` adds transition/version-mismatch regression tests; `3abfbdb` exposes state in both automation export responses; `4b1d7f8` formats tests.
 - This is a diagnostic component of ENG-08.06, not full live-refresh acceptance. Required next: managed workbook lifecycle, edit/undo/redo event wiring, transient-lock retry, and CI verification. README engineering checkboxes remain unchecked.
+
+## 2026-11-20 — Multi-branch ENG-08 integration checkpoint
+
+- PR #81 merged after CI/SonarCloud; PR #83 merged after CI/SonarCloud. These are foundations, not full milestone acceptance.
+- PR #82 quantity-rate calculations and regression tests: CI/SonarCloud succeeded at `ffbcf8a`; a later documentation-only head requires current-head verification before merging.
+- PR #84 filtered totals: CI detected rustfmt layout failure; fixed in `bfc678b`. Full multi-PDF/metadata filtering is still unimplemented.
+- PR #85 snapshot manifest: CI detected rustfmt module ordering failure; fixed in `13cfe75`. Added required SnapshotStatus/PublicationState Deserialize support in `a916379` for JSON roundtrip. Required checks pending.
+- All ENG-08 README items remain unchecked pending complete acceptance. Next: merge verified foundations, add workbook lifecycle + automatic refresh, then progress to ENG-09 and later milestones.
