@@ -93,6 +93,38 @@ pub fn aggregate_rates(lines: &[RateLine]) -> Result<Option<RateTotal>, String> 
     Ok(Some(total))
 }
 
+
+/// Currency-only totals can combine rates for different physical units.
+/// The caller must ensure every rate is denominated in the same currency.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct EstimateCost {
+    pub material_cost: f64,
+    pub labor_cost: f64,
+    pub total_cost: f64,
+}
+
+/// Aggregate estimate costs without adding incompatible physical quantities.
+pub fn aggregate_estimate_cost(lines: &[RateLine]) -> Result<EstimateCost, String> {
+    let mut costs = EstimateCost {
+        material_cost: 0.0,
+        labor_cost: 0.0,
+        total_cost: 0.0,
+    };
+    for line in lines {
+        let next = line.calculate()?;
+        costs.material_cost += next.material_cost;
+        costs.labor_cost += next.labor_cost;
+        costs.total_cost += next.total_cost;
+        if ![costs.material_cost, costs.labor_cost, costs.total_cost]
+            .iter()
+            .all(|value| value.is_finite())
+        {
+            return Err("estimate cost aggregation overflow".into());
+        }
+    }
+    Ok(costs)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -105,6 +137,37 @@ mod tests {
             labor_rate: 3.0,
             waste_percent: 10.0,
         }
+    }
+
+
+    #[test]
+    fn mixed_units_can_sum_costs_but_not_quantities() {
+        let lines = [line(10.0, "ft"), line(2.0, "each")];
+        assert!(aggregate_rates(&lines).is_err());
+        let costs = aggregate_estimate_cost(&lines).unwrap();
+        assert_eq!(costs.material_cost, 26.4);
+        assert_eq!(costs.labor_cost, 36.0);
+        assert!((costs.total_cost - 62.4).abs() < 1e-10);
+        assert_eq!(
+            aggregate_estimate_cost(&[]).unwrap(),
+            EstimateCost {
+                material_cost: 0.0,
+                labor_cost: 0.0,
+                total_cost: 0.0,
+            }
+        );
+    }
+
+    #[test]
+    fn estimate_cost_rejects_invalid_lines_and_overflow() {
+        let mut invalid = line(1.0, "ft");
+        invalid.labor_rate = f64::INFINITY;
+        assert!(aggregate_estimate_cost(&[invalid]).is_err());
+        let mut huge = line(f64::MAX / 4.0, "ft");
+        huge.material_rate = 1.0;
+        huge.labor_rate = 1.0;
+        huge.waste_percent = 0.0;
+        assert!(aggregate_estimate_cost(&[\n            huge.clone(),\n            huge.clone(),\n            huge.clone(),\n            huge.clone(),\n            huge,\n        ])\n        .is_err());
     }
 
     #[test]
