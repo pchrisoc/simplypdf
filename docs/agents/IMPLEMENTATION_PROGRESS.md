@@ -279,3 +279,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #82 commit `ed0b645371cb1227422b9fea04ca8f5a2b7d5ef3` introduces `ScheduledQuantity` and `price_scheduled_quantities`, resolving each measurement against a named rate schedule and returning either all priced lines plus a mixed-unit-safe currency total or an error (never a partial estimate).
 - Added focused tests `scheduled_takeoffs_price_multiple_units_without_combining_quantities` and `scheduled_takeoffs_reject_invalid_later_rows_and_overflow`, covering mixed physical units, empty estimates, invalid later rows, unit mismatches, and overflow.
 - Verification pending: `cargo test -p simplypdf-measure quantity_rates` and repository CI. PR #82 remains unmergeable and needs main-branch conflict resolution. Persisted schedules, desktop editing, estimate export and headless integration are not yet implemented. ENG-08.02 and the remaining README backlog stay unchecked.
+
+## ENG-08.02 full schedule validation — 2026-11-21
+
+- PR #82 feature commit `e688a659a8963572f349cca3f18076135de620e2` adds `validate_rate_schedule` and calls it before batch pricing. It rejects empty codes/units, duplicate codes, invalid and overflowing rates even for unused entries, preventing a partially validated schedule from producing an estimate.
+- Focused regression `schedule_validation_rejects_unused_invalid_entries` covers valid entries, duplicate entries, blank codes and an invalid unused rate with empty takeoff input.
+- Test command for CI: `cargo test -p simplypdf-measure quantity_rates`; run formatting and Clippy. GitHub-only connector cannot execute Cargo locally. Await verified CI and mergeability; do not check ENG-08.02 until persistence, desktop editing, export and automation acceptance are complete.
