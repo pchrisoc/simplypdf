@@ -913,7 +913,7 @@ pub fn snapshot_needs_refresh(listing: &Listing, published: Option<&str>) -> Res
 }
 
 /// Explain why a published takeoff snapshot needs to be refreshed.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PublicationState {
     Unpublished,
@@ -923,7 +923,7 @@ pub enum PublicationState {
 }
 
 /// Validated snapshot metadata for publication status and refresh decisions.
-#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub struct SnapshotStatus {
     pub schema_version: u32,
     pub fingerprint: String,
