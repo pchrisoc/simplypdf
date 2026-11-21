@@ -283,3 +283,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Commit `ba7fa47ecf19707fc2010a25fc7e94702e719e17` adds atomic `set_assignee` and `set_priority` operations, preserving valid prior values on rejected updates; `assignee_and_priority_updates_are_atomic` tests the behavior.
 - The feature remains a metadata foundation. No annotation storage, UI/register editing or end-to-end acceptance has been verified; do not check ENG-09.06.
 - PR #87 latest CI, SonarCloud and platform checks need to finish successfully before any merge.
+
+## ENG-09.06 CI repair — 2026-11-20 PST
+
+- At PR #87 head `894b3ded`, SonarCloud passed, while CI failed at rustfmt, and Git dependency, Windows ARM64, and FreeBSD jobs failed because `Cargo.lock` omitted the new `serde_json` dev dependency for `simplypdf-measure`.
+- Commit `7ca131a` adds `serde_json` to the measure package's lockfile dependency list; `d7dbf7a` applies Rust formatting changes to review metadata. Both fixes require fresh workflow verification.
+- ENG-09.06 remains unchecked until annotation persistence, UI/register integration, and full acceptance checks pass.
