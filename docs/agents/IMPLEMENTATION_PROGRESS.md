@@ -266,3 +266,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #82 commit `f2dcec03f8984ee8838fc5d73c1a792cb2d1f81b` replaces cloned per-unit `Vec<RateLine>` buckets with streaming `BTreeMap<String, RateTotal>` accumulation, retaining deterministic unit ordering while reducing memory growth for large takeoffs. It also fixes accidentally escaped literal newline sequences in the overflow regression test.
 - New regression `grouped_estimates_trim_units_and_reject_group_overflow` checks normalized unit grouping and finite-sum overflow rejection. Tests are committed, not yet independently verified; run `cargo fmt --all -- --check` and `cargo test -p simplypdf-measure quantity_rates`.
 - ENG-08.02 remains unchecked: rate persistence, desktop editor, estimate exports, headless automation, branch conflicts and required CI remain unresolved.
+
+## ENG-08.02 rate schedule resolution — 2026-11-21
+
+- Feature commit `89e9d1f403082fae3973f63cdbf624ff90eda4e9` on PR #82 adds serializable named `RateScheduleEntry` and `rate_line_from_schedule` with code lookup, duplicate-code rejection, physical-unit matching, and reuse of checked cost arithmetic.
+- Two focused Rust regression tests cover successful schedule-based material/labor/waste estimates and rejection of missing/duplicate codes, incompatible units, invalid quantities, and negative rates.
+- Tests were committed but not executed in this GitHub-only run; no GitHub Actions runs or combined statuses were returned for previous PR head `444c45d`. Do not claim a green build or merge.
+- Remaining: persisted rate schedules and measurement rate associations, desktop editing, export/automation integration, PR branch conflict resolution, and required passing CI. ENG-08.02 remains unchecked. Continue all other ENG milestones afterward.
