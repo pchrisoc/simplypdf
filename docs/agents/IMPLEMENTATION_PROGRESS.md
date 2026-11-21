@@ -289,3 +289,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - At PR #87 head `894b3ded`, SonarCloud passed, while CI failed at rustfmt, and Git dependency, Windows ARM64, and FreeBSD jobs failed because `Cargo.lock` omitted the new `serde_json` dev dependency for `simplypdf-measure`.
 - Commit `7ca131a` adds `serde_json` to the measure package's lockfile dependency list; `d7dbf7a` applies Rust formatting changes to review metadata. Both fixes require fresh workflow verification.
 - ENG-09.06 remains unchecked until annotation persistence, UI/register integration, and full acceptance checks pass.
+
+## ENG-09.06 CI and package filtering — 2026-11-20 PST
+
+- At head `02a66ca`, Nix, SonarCloud, Windows ARM64 and FreeBSD passed. Ubuntu CI failed only at `cargo fmt --all -- --check`, with five exact layout diffs in `review_metadata.rs`; commit `0fd125f` applies the formatting shown in the job log.
+- Commit `ca0bec3` adds case-insensitive `matches_package` and a focused test for missing, matching and nonmatching package values. These commits require new CI verification; do not merge on the older successful checks.
+- PRs #82, #84 and #85 are not currently mergeable; #73 is merged. ENG-09.06 remains unchecked because persistence and UI/register integration are incomplete.
