@@ -248,3 +248,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #82: `601d0ad` adds unit-checked aggregate rate totals, finite-sum overflow handling, and focused same-unit/mixed-unit/overflow tests; `7b29f15` formats the overflow test.
 - Focused test commands for CI: `cargo test -p simplypdf-measure quantity_rates` and `cargo fmt --all -- --check`. These were not executed locally; GitHub checks on the new head are pending.
 - ENG-08.02 remains unchecked: persisted rate fields, desktop editing, estimate export, full acceptance verification, and green required CI are outstanding. PR #82 is not currently mergeable.
+
+
+### 2026-11-21 — ENG-08.02 mixed-unit estimate totals
+
+- PR #82 commit `f2d39d040117bd7c75ce122840862ee4218a83c8` adds `aggregate_estimate_cost` and `EstimateCost`: material, labor, and total monetary costs can be summed across physical units without falsely summing quantities. Callers must ensure the rate currency matches.
+- Focused regression tests `mixed_units_can_sum_costs_but_not_quantities` and `estimate_cost_rejects_invalid_lines_and_overflow` cover cross-unit monetary aggregation, zero-line estimates, invalid input and overflow. These are committed but not yet executed/verified; check `cargo test -p simplypdf-measure quantity_rates` and `cargo fmt --all -- --check` in CI.
+- GitHub returned no workflow runs or commit statuses for this new head at inspection. PR #82 remains unmergeable; do not merge or mark ENG-08.02 complete. Outstanding: persist/edit rate fields in desktop, integrate estimate exports and headless automation, resolve branch conflicts, and verify required CI.
