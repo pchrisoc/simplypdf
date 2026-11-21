@@ -272,3 +272,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Focused regression tests added: `tag_removal_is_case_insensitive_and_preserves_other_tags` and `tag_limit_rejects_overflow_without_mutation`. Tests are committed but not yet verified by CI at this head.
 - PR #87 remains open pending required checks. UI/register persistence integration is not yet implemented; ENG-09.06 remains unchecked.
 - PR #73 is merged; PRs #82, #84, #85 remain open and need integration/mergeability repair.
+
+## ENG-09.06 tag rename checkpoint — 2026-11-20 PST
+
+- PR #87 commit `2ee80f5bd68f3ce942f585155f6ee97230b76d54` implements atomic case-insensitive tag rename with duplicate validation and an associated regression test.
+- Checks on the latest head remain unverified; do not merge or check the README until required checks pass and UI/register/persistence acceptance is satisfied.
