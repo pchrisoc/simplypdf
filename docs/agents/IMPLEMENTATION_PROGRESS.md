@@ -233,3 +233,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #79 merged to main as `f14261230f7ca629882c340422491ccebd2572cd` after CI and SonarCloud success. CSV and XLSX automation now share validated snapshot status.
 - New feature branch `feat/eng-0806-publication-state-20261120`: `7a90d23` adds typed `PublicationState` (unpublished/current/stale/incompatible_schema); `4a1aeef` adds transition/version-mismatch regression tests; `3abfbdb` exposes state in both automation export responses; `4b1d7f8` formats tests.
 - This is a diagnostic component of ENG-08.06, not full live-refresh acceptance. Required next: managed workbook lifecycle, edit/undo/redo event wiring, transient-lock retry, and CI verification. README engineering checkboxes remain unchecked.
+
+## 2026-11-21 — ENG-08.07 review fixes (PR #84)
+
+- Commit `8322732` changes quantity-unit filtering to exact case-sensitive comparison (`mm` and `Mm` are distinct) and uses the measurement crate's `Result` / `MeasureError` instead of `String` errors. Added focused contract tests.
+- This addresses two reported PR review concerns. GitHub-only editing could not run local Rust tests; CI, merge conflicts, and full multi-document aggregation acceptance remain to be verified. Do not mark ENG-08.07 complete.
