@@ -253,3 +253,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - SonarCloud previously passed on `75cddb6`; CI failed at Clippy. New head checks require verification before merge.
 - ENG-09.05 is not yet complete: annotation persistence, UI/MCP exposure, stable annotation identity and undo/redo handling remain. No README checkbox changed.
 - Open PRs #82, #84 and #85 need rebasing/conflict resolution and check verification; prioritize coherent milestones rather than merging unverified foundations.
+
+## 2026-11-20 — ENG-09.05 audited history restoration
+
+- PR #86 commit `40a1520`: repair Clippy `filter_next` failure using `rfind`; implement `ReviewStatus::from_history` to validate imported/stored event sequences and `transition_counts` for per-author audit summaries.
+- Focused tests cover restoration, author counts, and rejection of nonchronological history. CI and SonarCloud must be rerun on the new head before merge.
+- Remaining acceptance: bind review statuses to persistent annotation IDs, document save/load, UI and MCP controls, integration tests. ENG-09.05 remains unchecked; continue all remaining ENG milestones.
