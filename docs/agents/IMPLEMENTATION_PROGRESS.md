@@ -301,3 +301,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #87 head `7010e4c`: Nix, SonarCloud, Windows ARM64, FreeBSD passed; Ubuntu CI failed only at `Lockfile unchanged`, with Cargo reordering `serde` and `serde_json` in `simplypdf-measure`.
 - Commit `8170d17` fixes canonical lockfile order. Commit `4d76f92` adds case-insensitive, whitespace-tolerant `matches_assignee` and `matches_priority` with missing/nonmatching cases in `assignee_and_priority_filters_handle_case_whitespace_and_missing_values`.
 - New head requires CI verification. UI and annotation persistence integration remain unimplemented; ENG-09.06 remains unchecked. The overall README engineering backlog remains the objective.
+
+## ENG-09.06 specification review checkpoint — 2026-11-20 PST
+
+- At PR #87 head `678f5ea`, Nix, SonarCloud, Windows ARM64 and FreeBSD passed; Ubuntu CI failed solely on two rustfmt diffs in review assignee/priority matchers. Commit `26e8c7176eca5070c21aa9895326cc364cecc15e` applies the exact CI formatting corrections.
+- Commit `9c65a369e5c578a6e11d3f9f55131ee0037d64cd` adds atomic specification updates and case/whitespace-tolerant filtering with a focused test covering missing values, invalid updates and clearing values.
+- CI on these latest commits has not yet been verified. No README checkbox is complete: annotation persistence, register/UI integration and end-to-end tests remain.
