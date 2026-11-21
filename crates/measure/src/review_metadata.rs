@@ -52,6 +52,20 @@ impl ReviewMetadata {
         self.tags.len() != before
     }
 
+    /// Update a tag atomically; duplicate or invalid replacements leave metadata untouched.
+    pub fn rename_tag(&mut self, old: &str, new: String) -> Result<bool, String> {
+        let Some(index) = self.tags.iter().position(|tag| tag.trim().eq_ignore_ascii_case(old.trim())) else {
+            return Ok(false);
+        };
+        let mut next = self.clone();
+        if let Some(tag) = next.tags.get_mut(index) {
+            *tag = new;
+        }
+        next.validate()?;
+        *self = next;
+        Ok(true)
+    }
+
     pub fn matches_tag(&self, tag: &str) -> bool {
         self.tags.iter().any(|value| value.trim().eq_ignore_ascii_case(tag.trim()))
     }
@@ -74,6 +88,18 @@ mod tests {
         let encoded = serde_json::to_string(&metadata).unwrap();
         let restored: ReviewMetadata = serde_json::from_str(&encoded).unwrap();
         assert_eq!(restored, metadata);
+    }
+
+    #[test]
+    fn tag_rename_is_atomic_and_rejects_duplicates() {
+        let mut metadata = ReviewMetadata::default();
+        metadata.add_tag("Pipe".into()).unwrap();
+        metadata.add_tag("Duct".into()).unwrap();
+        assert!(metadata.rename_tag(" pipe ", "Valve".into()).unwrap());
+        assert_eq!(metadata.tags, vec!["Valve", "Duct"]);
+        assert!(metadata.rename_tag("Valve", " duct ".into()).is_err());
+        assert_eq!(metadata.tags, vec!["Valve", "Duct"]);
+        assert!(!metadata.rename_tag("missing", "Other".into()).unwrap());
     }
 
     #[test]
