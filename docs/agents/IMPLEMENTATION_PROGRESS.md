@@ -244,3 +244,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #84 commit `ed746434df4c25ae8fb7c689bad2dbaea25ca869` introduces `QuantitySource` and `aggregate_sources` for aggregating per-unit totals across multiple PDFs with stable source identifiers and optional exact source filtering. Duplicate, empty, and oversized source IDs are rejected; counts use checked addition and totals reject nonfinite overflow.
 - Focused tests `multi_pdf_sources_reject_duplicate_and_missing_ids` and `multi_pdf_empty_sources_and_source_selection` cover invalid source identities and empty/missing source selections. CI has not yet verified this head.
 - Still outstanding: subject/color/layer/custom-field filters, real multi-document integration, desktop and automation exposure, conflict resolution, passing required CI, and complete ENG-08.07 acceptance. README remains unchecked.
+
+## ENG-08.07 source-attributed totals — 2026-11-21
+
+- Commit `9cd23b28fe567e4b5e9b4fa1871bd453ae3243a8` on PR #84 adds `aggregate_by_source` and serializable `SourceQuantityTotals` so callers can inspect filtered totals per source PDF, including empty sources, while retaining original source order. Both cross-source and per-source APIs reject whitespace-only source IDs; per-source output rejects duplicate IDs before returning results.
+- Added focused tests `per_source_breakdown_preserves_order_and_empty_sources` and `per_source_breakdown_rejects_duplicate_and_blank_ids`. Tests have not been run locally; verify GitHub CI before merging. Still required: actual PDF integration, subject/layer/color/custom classification, UI/automation wiring, and conflict resolution. ENG-08.07 remains unchecked.
