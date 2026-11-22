@@ -275,3 +275,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Focused regression `hvac_classification_filters_exclude_unclassified_measurements` covers matching pipe quantities, case normalization, nonmatching materials, and duct service selection.
 - Verification requested: `cargo test --locked -p simplypdf-measure filtered_totals` and `cargo fmt --check`; no passing execution or GitHub CI is claimed for this commit. PR #84 must not merge before required checks pass and merge conflicts are resolved.
 - Remaining ENG-08.07: actual PDF import and incomplete-scan handling, subject/layer/color/custom-field support where annotation metadata permits, desktop/automation exposure, integration tests and passing CI. README remains unchecked.
+
+## 2026-11-21 — ENG-08.07 inclusive PDF page ranges
+
+- PR #84 commit `d40de6a802453445339091437ae43d7d215d7cbf` adds inclusive `page_start` / `page_end` quantity filters, composes them with exact-page selection, and rejects reversed ranges even for empty measurement input.
+- Focused regression test `inclusive_page_ranges_compose_with_exact_page_and_reject_reverse_ranges` checks inclusive boundaries, counts, quantities, exact-page intersection, nonmatching pages, and invalid ranges.
+- Verification still required: `cargo test -p simplypdf-measure filtered_totals`, rustfmt/Clippy and required GitHub checks on the latest PR head. ENG-08.07 remains unchecked until real PDF import, desktop and automation integration, mergeability, and full acceptance are satisfied. Continue the entire README engineering backlog.
