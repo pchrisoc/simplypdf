@@ -7,6 +7,14 @@ use std::collections::BTreeMap;
 pub struct QuantityFilter {
     pub label: Option<String>,
     pub author: Option<String>,
+    /// Match an HVAC takeoff's material (case-insensitive).
+    pub material: Option<String>,
+    /// Match an HVAC takeoff's service/system (case-insensitive).
+    pub service: Option<String>,
+    /// Match an HVAC takeoff's profile (case-insensitive).
+    pub profile: Option<String>,
+    /// Match an HVAC takeoff's nominal size (case-insensitive).
+    pub size: Option<String>,
     pub unit: Option<String>,
     /// Restrict quantities to a zero-based PDF page index.
     pub page: Option<usize>,
@@ -27,6 +35,10 @@ pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Resul
         if filter.label.as_ref().is_some_and(|s| !m.label.eq_ignore_ascii_case(s))
             || filter.author.as_ref().is_some_and(|s| !m.author.eq_ignore_ascii_case(s))
             || filter.unit.as_ref().is_some_and(|s| m.reading.unit != *s)
+            || filter.material.as_ref().is_some_and(|s| !m.hvac.as_ref().is_some_and(|h| h.material.eq_ignore_ascii_case(s)))
+            || filter.service.as_ref().is_some_and(|s| !m.hvac.as_ref().is_some_and(|h| h.service.eq_ignore_ascii_case(s)))
+            || filter.profile.as_ref().is_some_and(|s| !m.hvac.as_ref().is_some_and(|h| h.profile.eq_ignore_ascii_case(s)))
+            || filter.size.as_ref().is_some_and(|s| !m.hvac.as_ref().is_some_and(|h| h.size.eq_ignore_ascii_case(s)))
             || filter.page.is_some_and(|page| m.page != page)
             || filter.visible.is_some_and(|visible| m.visible != visible)
         {
@@ -220,6 +232,30 @@ mod tests {
         let sources = [QuantitySource { source_id: "selected", measurements: empty }];
         assert!(aggregate_sources(&sources, Some("missing"), &QuantityFilter::default()).is_err());
         assert!(aggregate_sources(&sources, Some("selected"), &QuantityFilter::default()).unwrap().is_empty());
+    }
+    #[test]
+    fn hvac_classification_filters_exclude_unclassified_measurements() {
+        let scale = crate::Scale::default();
+        let points = vec![[0.0, 0.0], [72.0, 0.0]];
+        let reading = crate::reading(crate::Kind::Distance, &points, &scale).unwrap();
+        let make = |hvac| Measurement {
+            visible: true, page: 0, index: 0, id: "id".into(),
+            author: "engineer".into(), label: "route".into(),
+            points: points.clone(), scale: scale.clone(), reading: reading.clone(), hvac,
+        };
+        let measurements = [make(Some(crate::hvac::Takeoff::pipe())), make(Some(crate::hvac::Takeoff::duct())), make(None)];
+        let filter = QuantityFilter {
+            material: Some("COPPER".into()), service: Some("hhw supply".into()),
+            profile: Some("PIPE".into()), size: Some("3 IN".into()), ..Default::default()
+        };
+        let totals = aggregate(&measurements, &filter).unwrap();
+        assert_eq!(totals.len(), 1);
+        assert_eq!(totals[0].count, 1);
+        assert_eq!(totals[0].quantity, reading.value);
+        let filter = QuantityFilter { material: Some("unavailable".into()), ..Default::default() };
+        assert!(aggregate(&measurements, &filter).unwrap().is_empty());
+        let filter = QuantityFilter { service: Some("SA".into()), ..Default::default() };
+        assert_eq!(aggregate(&measurements, &filter).unwrap()[0].count, 1);
     }
     #[test]
     fn unit_filter_is_case_sensitive() {
