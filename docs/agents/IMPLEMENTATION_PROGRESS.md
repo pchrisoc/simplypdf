@@ -418,3 +418,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - This is substantive headless integration, **not** ENG-08.09 completion. Still required: full CI and dependency audit, managed same-path workbook publishing, desktop user controls, and real Excel Refresh All acceptance test. README remains unchecked. Continue the entire engineering backlog after acceptance.
 
 - Confirmed previous CI job `137321129996` (run `45059206301`) passed earlier gate stages and failed at `cargo deny`: RUSTSEC-2026-0592, stack overflow in `Url::origin()` for nested `blob:` URLs. The dependency is still locked at vulnerable `url` 2.5.8. Resolver-generated lockfile update to >=2.5.9 is needed; no guessed checksum or advisory suppression was committed.
+
+## ENG-08.09 Power Query scale metadata validation — 2026-11-22
+
+- PR #90 commits `1225596`, `474639a`, `50c304f`: reviewed existing query exporter, retained its original atomic no-overwrite implementation, and added a generated-M guard that rejects missing/blank/nontext `Scale` values before type conversion. A focused Rust regression `power_query_rejects_missing_scale_metadata_before_type_conversion` checks the emitted guard and processing order. Earlier redundant exporter code was removed in follow-up commits; only one exporter definition remains.
+- Verification: GitHub connector cannot execute Rust tests directly; no CI runs were yet returned for latest head `50c304f`. **Not a verified pass.** Existing source-level regression expectations for Power Query type conversion remain intact.
+- Blockers: CI `cargo deny` continues to require a resolver-generated update from `url` 2.5.8 to a patched version; real Excel refresh, desktop integration, and managed workbook publishing remain unverified or unimplemented. No README checkbox checked and no PR merged. Continue across all ENG milestones after this one meets acceptance.
