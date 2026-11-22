@@ -193,8 +193,67 @@ pub fn aggregate_by_author(sources: &[QuantitySource<'_>], filter: &QuantityFilt
     Ok(result)
 }
 
+/// A page-level quantity breakdown retaining the source PDF identity.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct PageQuantityTotals {
+    pub source_id: String,
+    pub page: usize,
+    pub totals: Vec<QuantityTotal>,
+}
+
+/// Group measurements by source and zero-based page without combining unrelated sheets.
+/// Existing quantity filters apply before a page contributes to the result.
+pub fn aggregate_by_page(sources: &[QuantitySource<'_>], filter: &QuantityFilter) -> Result<Vec<PageQuantityTotals>> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut result = Vec::new();
+    for source in sources {
+        if source.source_id.trim().is_empty() || source.source_id.len() > 1024 || !seen.insert(source.source_id) {
+            return Err(invalid("source IDs must be nonempty, unique, and at most 1024 bytes"));
+        }
+        let mut pages: BTreeMap<usize, Vec<Measurement>> = BTreeMap::new();
+        for measurement in source.measurements {
+            pages.entry(measurement.page).or_default().push(measurement.clone());
+        }
+        for (page, measurements) in pages {
+            let totals = aggregate(&measurements, filter)?;
+            if !totals.is_empty() {
+                result.push(PageQuantityTotals { source_id: source.source_id.to_owned(), page, totals });
+            }
+        }
+    }
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn page_totals_preserve_source_and_page_boundaries() {
+        let scale = crate::Scale::default();
+        let points = vec![[0.0, 0.0], [72.0, 0.0]];
+        let reading = crate::reading(crate::Kind::Distance, &points, &scale).unwrap();
+        let make = |page| Measurement {
+            visible: true, page, index: 0, id: "shared".into(),
+            author: "engineer".into(), label: "pipe".into(),
+            points: points.clone(), scale: scale.clone(), reading: reading.clone(), hvac: None,
+        };
+        let first = [make(2), make(0)];
+        let second = [make(0)];
+        let sources = [
+            QuantitySource { source_id: "a", measurements: &first },
+            QuantitySource { source_id: "b", measurements: &second },
+        ];
+        let rows = aggregate_by_page(&sources, &QuantityFilter::default()).unwrap();
+        assert_eq!(rows.len(), 3);
+        assert_eq!((rows[0].source_id.as_str(), rows[0].page), ("a", 0));
+        assert_eq!((rows[1].source_id.as_str(), rows[1].page), ("a", 2));
+        assert_eq!((rows[2].source_id.as_str(), rows[2].page), ("b", 0));
+        assert!(rows.iter().all(|row| row.totals[0].count == 1));
+        let filter = QuantityFilter { page_start: Some(1), ..Default::default() };
+        let selected = aggregate_by_page(&sources, &filter).unwrap();
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].page, 2);
+    }
+
     use super::*;
     #[test]
     fn grouped_authors_across_pdfs_respect_filters_and_source_validation() {
