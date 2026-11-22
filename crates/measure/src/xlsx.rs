@@ -66,6 +66,12 @@ in
 /// The source workbook need not exist yet, allowing estimate setup before publication.
 pub fn write_excel_power_query_new(query_path: &Path, workbook_path: &Path) -> Result<(), String> {
     let script = excel_power_query_source(workbook_path)?;
+    if !query_path.is_absolute() || !query_path.to_string_lossy().to_ascii_lowercase().ends_with(".pq") {
+        return Err("Excel Power Query output must be an absolute .pq path".into());
+    }
+    if query_path == workbook_path {
+        return Err("Excel Power Query output cannot replace its source workbook".into());
+    }
     let parent = query_path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
     let mut staged = tempfile::NamedTempFile::new_in(parent).map_err(|e| e.to_string())?;
     use std::io::Write;
@@ -194,6 +200,16 @@ mod tests {
         assert!(!query.exists());
         assert!(write_excel_power_query_new(&query, &dir.path().join("source.csv")).is_err());
         assert!(!query.exists());
+    }
+
+    #[test]
+    fn power_query_file_requires_absolute_pq_destination() {
+        let dir = tempfile::tempdir().expect("temporary query directory");
+        let workbook = dir.path().join("source.xlsx");
+        assert!(write_excel_power_query_new(Path::new("relative.pq"), &workbook).is_err());
+        assert!(write_excel_power_query_new(&dir.path().join("wrong.xlsx"), &workbook).is_err());
+        assert!(!dir.path().join("wrong.xlsx").exists());
+        assert!(write_excel_power_query_new(&dir.path().join("valid.PQ"), &workbook).is_ok());
     }
 
     #[test]
