@@ -41,12 +41,14 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     VersionChecked = if List.AnyTrue(List.Transform(Table.Column(SchemaChecked, "Schema version"), each _ <> {TAKEOFF_SCHEMA_VERSION})) then error "Unsupported SimplyPDF takeoff schema version" else SchemaChecked,
     Ids = List.Transform(Table.Column(VersionChecked, "Annotation ID"), each if _ is text then Text.Trim(_) else null),
     IdentityChecked = if List.Contains(Ids, null) or List.Contains(Ids, "") or List.Count(Ids) <> List.Count(List.Distinct(Ids)) then error "SimplyPDF takeoff has missing or duplicate annotation IDs" else VersionChecked,
-    Positions = Table.SelectColumns(IdentityChecked, {"Page", "Index"}),
+    Positions = Table.SelectColumns(IdentityChecked, {{"Page", "Index"}}),
     PositionsChecked = if List.AnyTrue(List.Transform(Table.ToRows(Positions), each List.AnyTrue(List.Transform(_, (n) => if n is number then n < 1 or n <> Number.RoundDown(n) else true)))) then error "SimplyPDF takeoff has invalid page or index positions" else IdentityChecked,
     Quantities = Table.Column(PositionsChecked, "Value"),
     Units = Table.Column(IdentityChecked, "Unit"),
     QuantityChecked = if List.AnyTrue(List.Transform(Quantities, each not (_ is number))) or List.AnyTrue(List.Transform(Units, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has invalid quantities or missing units" else IdentityChecked,
-    Typed = Table.TransformColumnTypes(QuantityChecked, {{
+    Types = Table.Column(QuantityChecked, "Type"),
+    TypeChecked = if List.AnyTrue(List.Transform(Types, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has missing measurement types" else QuantityChecked,
+    Typed = Table.TransformColumnTypes(TypeChecked, {{
         {{"Page", Int64.Type}}, {{"Index", Int64.Type}}, {{"Type", type text}},
         {{"Value", type number}}, {{"Unit", type text}}, {{"Label", type text}},
         {{"Author", type text}}, {{"Scale", type text}},
@@ -141,9 +143,18 @@ mod tests {
         assert!(m.contains("missing or duplicate annotation IDs"));
         assert!(m.contains("Text.Trim(_)"));
         assert!(m.contains("invalid quantities or missing units"));
-        assert!(m.contains("Table.TransformColumnTypes(QuantityChecked"));
+        assert!(m.contains("Table.TransformColumnTypes(TypeChecked"));
 
         assert!(m.contains("Unsupported SimplyPDF takeoff schema version"));
+    }
+
+    #[test]
+    fn excel_query_validates_measurement_types_and_format_braces() {
+        let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid query");
+        assert!(m.contains("Positions = Table.SelectColumns(IdentityChecked, {\"Page\", \"Index\"})"));
+        assert!(m.contains("TypeChecked = if List.AnyTrue"));
+        assert!(m.contains("missing measurement types"));
+        assert!(m.contains("Table.TransformColumnTypes(TypeChecked"));
     }
 
     #[test]
