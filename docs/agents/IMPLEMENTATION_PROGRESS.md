@@ -349,3 +349,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #90 previous head `fe2220a30f2c63ae8ddb0f2d1f307f23062436cf` passed CI run `45001190114` and SonarCloud run `45001189937`.
 - New commits `9f4f646642517e1a04ab5d5f735da2b321542fee` and `a9ec4f6c9b1789435bc6c71251d01a7e44f976aa` implement a Power Query schema guard: exact 14-column header matching and per-row schema version validation prevent silent quantity misinterpretation after source changes. The existing query regression test now asserts both guard steps. The second commit corrects M string quoting for expected columns.
 - New-head CI is not yet verified. PR remains draft; no README checkbox changed. Outstanding: desktop/CLI integration, same-path managed publication, actual Excel smoke test and final CI.
+
+## ENG-08.09 Excel source identity validation — 2026-11-22
+
+- CI run `45005770475` failed solely at `cargo fmt --all -- --check` (rustfmt wanted a single-line `TAKEOFF_COLUMNS` mapping). SonarCloud run `45005770567` passed.
+- PR #90 commit `f298b339d8c807e4993a58ef32c72703a42e974b` applies that exact formatting and adds Power Query refresh-time rejection of blank/null and duplicate `Annotation ID` values, preventing ambiguous estimate reconciliation. Focused generator assertions verify the duplicate-ID guard and typed query uses validated rows.
+- New-head CI is not yet verified; PR remains draft. Full ENG-08.09 still needs Excel smoke test, user-facing entry point, and managed same-path publication before README completion.
