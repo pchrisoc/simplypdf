@@ -434,3 +434,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - Ubuntu CI run `45072520326` passed formatting and reached `cargo deny`, which rejected `url` 2.5.8 under RUSTSEC-2026-0592. PR #90 commit `16db026b6d570c6e96aedde39e75d4a929a63052` updates `Cargo.lock` to patched `url` 2.5.9 and its required `form_urlencoded` 1.2.3. Both checksums were verified directly against the corresponding version entries in the official `rust-lang/crates.io-index` GitHub repository; existing locked `idna` 1.1.0 and `percent-encoding` 2.3.2 satisfy the patched version requirements. This is a real dependency resolution, not a cargo-deny exception or advisory suppression.
 - New-head CI and Excel integration acceptance remain to be verified. No merge or README checkbox is claimed until all required checks and user-facing acceptance tests pass.
+
+## ENG-08.09 validation-stage propagation repair — 2026-11-22
+
+- PR #90 commits `1098edea6d451ddaea05f5341bb7edee3803e86a` and `c837879859ac8f6c1cd42fabe34f98f2b4525e81` repair the Power Query `QuantityChecked` successful branch to return `PositionsChecked`, so page/index validation cannot be bypassed by subsequent steps. Added `excel_query_keeps_validated_positions_in_quantity_pipeline` regression; corrected its Rust literal quoting in the follow-up commit.
+- Preceding PR head `dd4b020c749d68f3a4b8ca3a1182d29f914c4d9f` passed CI, SonarCloud, Nix, FreeBSD and Windows ARM64. These new changes require fresh CI verification; no merge or README checkbox is claimed. Remaining ENG-08.09 acceptance: managed same-path workbook publishing, desktop workflow and real Excel refresh smoke test.
