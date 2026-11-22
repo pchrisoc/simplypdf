@@ -249,3 +249,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - Commit `9cd23b28fe567e4b5e9b4fa1871bd453ae3243a8` on PR #84 adds `aggregate_by_source` and serializable `SourceQuantityTotals` so callers can inspect filtered totals per source PDF, including empty sources, while retaining original source order. Both cross-source and per-source APIs reject whitespace-only source IDs; per-source output rejects duplicate IDs before returning results.
 - Added focused tests `per_source_breakdown_preserves_order_and_empty_sources` and `per_source_breakdown_rejects_duplicate_and_blank_ids`. Tests have not been run locally; verify GitHub CI before merging. Still required: actual PDF integration, subject/layer/color/custom classification, UI/automation wiring, and conflict resolution. ENG-08.07 remains unchecked.
+
+## ENG-08.07 page/visibility filtering — 2026-11-21
+
+- PR #84 commit `a1f815b7537caf344fd33acd48663d03ed247465` adds optional zero-based PDF page and annotation visibility selectors to `QuantityFilter`, applied before quantity aggregation. Existing label/author/unit semantics remain unchanged. The focused `page_and_visibility_filters_apply_to_quantities` regression constructs actual distance measurements and checks selected counts, quantity and missing-page behavior.
+- Suggested verification: `cargo fmt --all -- --check` and `cargo test --locked -p simplypdf-measure filtered_totals`. GitHub returned zero PR-triggered workflow runs and no commit statuses for the head when checked; neither command has been executed in this GitHub-only run. No README task has been marked complete.
+- Still needed: actual PDF session integration, subject/layer/color/custom-field classification, desktop/automation wiring, conflict resolution and green CI/SonarCloud before merge.
