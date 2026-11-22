@@ -29,7 +29,9 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     if path.chars().any(|c| c.is_control()) {
         return Err("Excel Power Query source path contains control characters".into());
     }
-    let escaped = path.replace('"', "\"\"");
+    // Power Query M interprets #(...) escape sequences inside text literals.
+    // Escape # first so filenames such as #(lf).xlsx remain literal paths.
+    let escaped = path.replace('#', "#(#)").replace('"', "\"\"");
     let columns = TAKEOFF_COLUMNS.iter().map(|name| format!(r#""{}""#, name.replace('"', "\"\""))).collect::<Vec<_>>().join(", ");
     Ok(format!(
         r#"let
@@ -152,6 +154,14 @@ mod tests {
         assert!(m.contains("Table.TransformColumnTypes(TypeChecked"));
 
         assert!(m.contains("Unsupported SimplyPDF takeoff schema version"));
+    }
+
+    #[test]
+    fn excel_query_escapes_m_escape_sequences_in_workbook_paths() {
+        let path = if cfg!(windows) { Path::new(r"C:\\takeoff\\job #(lf).xlsx") } else { Path::new("/tmp/job #(lf).xlsx") };
+        let m = excel_power_query_source(path).expect("absolute workbook path");
+        assert!(m.contains("job #(#)(lf).xlsx"));
+        assert!(!m.contains("job #(lf).xlsx"));
     }
 
     #[test]
