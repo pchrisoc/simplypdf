@@ -255,3 +255,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #84 commit `a1f815b7537caf344fd33acd48663d03ed247465` adds optional zero-based PDF page and annotation visibility selectors to `QuantityFilter`, applied before quantity aggregation. Existing label/author/unit semantics remain unchanged. The focused `page_and_visibility_filters_apply_to_quantities` regression constructs actual distance measurements and checks selected counts, quantity and missing-page behavior.
 - Suggested verification: `cargo fmt --all -- --check` and `cargo test --locked -p simplypdf-measure filtered_totals`. GitHub returned zero PR-triggered workflow runs and no commit statuses for the head when checked; neither command has been executed in this GitHub-only run. No README task has been marked complete.
 - Still needed: actual PDF session integration, subject/layer/color/custom-field classification, desktop/automation wiring, conflict resolution and green CI/SonarCloud before merge.
+
+## ENG-08.07 multi-source regression checkpoint — 2026-11-21
+
+- Commit `3e722cdef80253df0421972871b62d6d579b1438` on PR #84 adds a focused synthetic two-PDF measurement regression covering case-insensitive label filtering, duplicate annotation IDs across distinct sources, per-source provenance, combined quantity totals, and exact source selection.
+- Changed `aggregate` to use checked count addition, avoiding overflow on untrusted measurement collections.
+- Focused verification command: `cargo test --locked -p simplypdf-measure filtered_totals::tests`. **Not executed in this GitHub-only run; CI status must be checked before merging.**
+- Remaining: actual PDF import integration, subject/layer/color/custom-field classification (not available on the current measurement model), desktop and automation exposure, conflicts, and passing required checks. README ENG-08.07 remains unchecked.
