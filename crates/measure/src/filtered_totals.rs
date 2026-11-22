@@ -161,9 +161,76 @@ pub fn aggregate_by_label(sources: &[QuantitySource<'_>], filter: &QuantityFilte
     Ok(result)
 }
 
+/// An author-attributed quantity group across independent source PDFs.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AuthorQuantityTotals {
+    pub author: String,
+    pub totals: Vec<QuantityTotal>,
+}
+
+/// Group selected measurements by their recorded author while retaining unit
+/// boundaries. Empty author names remain visible as a distinct review group.
+pub fn aggregate_by_author(sources: &[QuantitySource<'_>], filter: &QuantityFilter) -> Result<Vec<AuthorQuantityTotals>> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut groups: BTreeMap<String, Vec<Measurement>> = BTreeMap::new();
+    for source in sources {
+        if source.source_id.trim().is_empty() || source.source_id.len() > 1024 || !seen.insert(source.source_id) {
+            return Err(invalid("source IDs must be nonblank, unique, and at most 1024 bytes"));
+        }
+        for measurement in source.measurements {
+            groups.entry(measurement.author.clone()).or_default().push(measurement.clone());
+        }
+    }
+    // Validate ranges even when there are no sources or measurements.
+    aggregate(&[], filter)?;
+    let mut result = Vec::new();
+    for (author, measurements) in groups {
+        let totals = aggregate(&measurements, filter)?;
+        if !totals.is_empty() {
+            result.push(AuthorQuantityTotals { author, totals });
+        }
+    }
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn grouped_authors_across_pdfs_respect_filters_and_source_validation() {
+        let scale = crate::Scale::default();
+        let points = vec![[0.0, 0.0], [72.0, 0.0]];
+        let reading = crate::reading(crate::Kind::Distance, &points, &scale).unwrap();
+        let make = |author: &str, page: usize| Measurement {
+            visible: true, page, index: 0, id: "same-id".into(),
+            author: author.into(), label: "pipe".into(),
+            points: points.clone(), scale: scale.clone(), reading: reading.clone(), hvac: None,
+        };
+        let a = [make("Alice", 0), make("Bob", 1)];
+        let b = [make("Alice", 1)];
+        let sources = [
+            QuantitySource { source_id: "first", measurements: &a },
+            QuantitySource { source_id: "second", measurements: &b },
+        ];
+        let grouped = aggregate_by_author(&sources, &QuantityFilter::default()).unwrap();
+        assert_eq!(grouped.len(), 2);
+        assert_eq!(grouped[0].author, "Alice");
+        assert_eq!(grouped[0].totals[0].count, 2);
+        assert_eq!(grouped[1].author, "Bob");
+        let filter = QuantityFilter { page: Some(0), ..Default::default() };
+        let selected = aggregate_by_author(&sources, &filter).unwrap();
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].author, "Alice");
+        assert_eq!(selected[0].totals[0].count, 1);
+        let invalid = QuantityFilter { page_start: Some(4), page_end: Some(2), ..Default::default() };
+        assert!(aggregate_by_author(&[], &invalid).is_err());
+        let duplicates = [
+            QuantitySource { source_id: "first", measurements: &a },
+            QuantitySource { source_id: "first", measurements: &b },
+        ];
+        assert!(aggregate_by_author(&duplicates, &QuantityFilter::default()).is_err());
+    }
+
 
     #[test]
     fn grouped_labels_across_sources_keep_units_and_filter_matches() {
