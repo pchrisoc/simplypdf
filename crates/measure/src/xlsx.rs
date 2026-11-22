@@ -91,6 +91,22 @@ pub fn write_new_checked(path: &Path, listing: &Listing) -> Result<(), String> {
     write_snapshot(path, &listing.measurements, Some(&fingerprint))
 }
 
+/// Atomically replace a managed workbook with a validated complete snapshot.
+/// Unix-only foundation: the desktop must explicitly opt in before using this operation.
+#[cfg(unix)]
+pub fn replace_managed_checked(path: &Path, listing: &Listing) -> Result<(), String> {
+    let fingerprint = crate::snapshot_fingerprint(listing).map_err(|e| e.to_string())?;
+    if std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
+        return Err("managed workbook destination must not be a symbolic link".into());
+    }
+    let parent = path.parent().ok_or("managed workbook needs a parent directory")?;
+    let dir = tempfile::tempdir_in(parent).map_err(|e| e.to_string())?;
+    let staged = dir.path().join("takeoff.xlsx");
+    write_snapshot(&staged, &listing.measurements, Some(&fingerprint))?;
+    std::fs::rename(&staged, path).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
 /// Write a workbook beside its destination and publish it only if the path is free.
 pub fn write_new(path: &Path, measurements: &[Measurement]) -> Result<(), String> {
     write_snapshot(path, measurements, None)
@@ -321,6 +337,34 @@ mod tests {
         assert!(checked_bytes.starts_with(b"PK"));
         assert!(legacy_bytes.starts_with(b"PK"));
         assert_ne!(checked_bytes, legacy_bytes, "checked workbook must carry its publication fingerprint");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_snapshot_replaces_existing_workbook_and_rejects_incomplete_scan() {
+        let dir = tempfile::tempdir().expect("temporary export directory");
+        let path = dir.path().join("managed.xlsx");
+        let first = Listing::default();
+        replace_managed_checked(&path, &first).expect("first managed publication");
+        let original = std::fs::read(&path).expect("first workbook");
+        let incomplete = Listing { truncated: true, ..Listing::default() };
+        assert!(replace_managed_checked(&path, &incomplete).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        replace_managed_checked(&path, &first).expect("replace existing workbook");
+        assert!(std::fs::read(&path).unwrap().starts_with(b"PK"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_snapshot_refuses_symlink_destination() {
+        use std::os::unix::fs::symlink;
+        let dir = tempfile::tempdir().expect("temporary export directory");
+        let protected = dir.path().join("protected.xlsx");
+        std::fs::write(&protected, b"protected").unwrap();
+        let link = dir.path().join("managed.xlsx");
+        symlink(&protected, &link).unwrap();
+        assert!(replace_managed_checked(&link, &Listing::default()).is_err());
+        assert_eq!(std::fs::read(&protected).unwrap(), b"protected");
     }
 
     #[cfg(unix)]
