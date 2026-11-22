@@ -40,7 +40,7 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     Headers = Table.PromoteHeaders(Takeoff, [PromoteAllScalars=true]),
     ExpectedColumns = {{{columns}}},
     SchemaChecked = if Table.ColumnNames(Headers) <> ExpectedColumns then error "SimplyPDF takeoff schema columns have changed" else Headers,
-    VersionChecked = if List.AnyTrue(List.Transform(Table.Column(SchemaChecked, "Schema version"), each if _ is number then _ <> {TAKEOFF_SCHEMA_VERSION} else true)) then error "Unsupported SimplyPDF takeoff schema version" else SchemaChecked,
+    VersionChecked = if List.AnyTrue(List.Transform(Table.Column(SchemaChecked, "Schema version"), each if _ is number then Number.IsNaN(_) or Number.Abs(_) = #infinity or _ <> {TAKEOFF_SCHEMA_VERSION} else true)) then error "Unsupported SimplyPDF takeoff schema version" else SchemaChecked,
     Ids = List.Transform(Table.Column(VersionChecked, "Annotation ID"), each if _ is text then Text.Trim(_) else null),
     IdentityChecked = if List.Contains(Ids, null) or List.Contains(Ids, "") or List.Count(Ids) <> List.Count(List.Distinct(Ids)) then error "SimplyPDF takeoff has missing or duplicate annotation IDs" else VersionChecked,
     Positions = Table.SelectColumns(IdentityChecked, {{"Page", "Index"}}),
@@ -177,7 +177,7 @@ mod tests {
     fn excel_query_rejects_invalid_page_and_index_positions() {
         let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid path");
         assert!(m.contains("Positions = Table.SelectColumns(IdentityChecked"));
-        assert!(m.contains("if n is number then n < 1 or n <> Number.RoundDown(n) else true"));
+        assert!(m.contains("Number.IsNaN(n) or Number.Abs(n) = #infinity or n < 1 or n <> Number.RoundDown(n) else true"));
         assert!(m.contains("Quantities = Table.Column(PositionsChecked"));
         assert!(m.contains("invalid page or index positions"));
     }
@@ -185,9 +185,16 @@ mod tests {
     #[test]
     fn excel_query_rejects_missing_schema_versions_and_non_finite_positions() {
         let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid query");
-        assert!(m.contains("each if _ is number then _ <> 1 else true"));
+        assert!(m.contains("each if _ is number then Number.IsNaN(_) or Number.Abs(_) = #infinity or _ <> 1 else true"));
         assert!(m.contains("Number.IsNaN(n) or Number.Abs(n) = #infinity"));
         assert!(m.contains("n < 1 or n <> Number.RoundDown(n)"));
+    }
+
+    #[test]
+    fn excel_query_rejects_non_finite_schema_versions() {
+        let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid query");
+        assert!(m.contains("Number.IsNaN(_) or Number.Abs(_) = #infinity or _ <> 1"));
+        assert!(m.contains("Unsupported SimplyPDF takeoff schema version"));
     }
 
     #[test]
