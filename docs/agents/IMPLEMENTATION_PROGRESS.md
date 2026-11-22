@@ -439,3 +439,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #90 commits `1098edea6d451ddaea05f5341bb7edee3803e86a` and `c837879859ac8f6c1cd42fabe34f98f2b4525e81` repair the Power Query `QuantityChecked` successful branch to return `PositionsChecked`, so page/index validation cannot be bypassed by subsequent steps. Added `excel_query_keeps_validated_positions_in_quantity_pipeline` regression; corrected its Rust literal quoting in the follow-up commit.
 - Preceding PR head `dd4b020c749d68f3a4b8ca3a1182d29f914c4d9f` passed CI, SonarCloud, Nix, FreeBSD and Windows ARM64. These new changes require fresh CI verification; no merge or README checkbox is claimed. Remaining ENG-08.09 acceptance: managed same-path workbook publishing, desktop workflow and real Excel refresh smoke test.
+
+## ENG-08.05 managed workbook replacement foundation — 2026-11-22
+
+- PR #90 commit `90f70dccf2cbd405fa676ee085a09f2a5b1e21ba` adds Unix `replace_managed_checked`: validate the complete measurement listing and fingerprint, stage a fresh XLSX on the same filesystem, then rename over an existing workbook. The API is intentionally not wired to automatic background publishing. Tests cover initial publication, replacement, refusal of truncated scans without damaging the old workbook, and rejection of symlink destinations.
+- Pending CI on this new head. This is not ENG-08.05 acceptance: Windows atomic replacement strategy, explicit start/status/refresh/stop controls, lock handling, refresh scheduling, stale scan reporting, and end-to-end Excel smoke testing remain. No README checkmark or merge claimed.
