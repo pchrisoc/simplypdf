@@ -30,7 +30,8 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
         return Err("Excel Power Query source path contains control characters".into());
     }
     let escaped = path.replace('"', "\"\"");
-    Ok(format!(r#"let
+    Ok(format!(
+        r#"let
     Source = Excel.Workbook(File.Contents("{escaped}"), null, true),
     Takeoff = Source{{[Item="TakeoffData", Kind="DefinedName"]}}[Data],
     Headers = Table.PromoteHeaders(Takeoff, [PromoteAllScalars=true]),
@@ -44,7 +45,8 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     }})
 in
     Typed
-"#))
+"#
+    ))
 }
 
 /// Publish a validated, versioned measurement snapshot without incomplete row identity.
@@ -103,7 +105,7 @@ mod tests {
 
     #[test]
     fn excel_query_uses_named_range_and_escapes_path_quotes() {
-        let path = if cfg!(windows) { Path::new("C:\\takeoff\\job \"A\".xlsx") } else { Path::new("/tmp/job \"A\".xlsx") };
+        let path = if cfg!(windows) { Path::new(r#"C:\takeoff\job "A".xlsx"#) } else { Path::new("/tmp/job \"A\".xlsx") };
         let m = excel_power_query_source(path).expect("absolute workbook path");
         assert!(m.contains("Item=\"TakeoffData\", Kind=\"DefinedName\""));
         assert!(m.contains("job \"\"A\"\".xlsx"));
@@ -117,8 +119,6 @@ mod tests {
         assert!(excel_power_query_source(Path::new("/tmp/source.csv")).is_err());
         assert!(excel_power_query_source(Path::new("/tmp/bad\nname.xlsx")).is_err());
     }
-
-
 
     #[test]
     fn excel_row_bounds_allow_last_measurement_and_reject_overflow() {
