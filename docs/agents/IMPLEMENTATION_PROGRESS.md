@@ -286,3 +286,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - Commit `2c43b17a18969ca661469dc5caf1753ed6447b06` adds `LabeledQuantityTotals` and `aggregate_by_label`, producing deterministic label-grouped, unit-separated totals across distinct PDF sources while retaining existing filters and validating source IDs. Added `grouped_labels_across_sources_keep_units_and_filter_matches` covering grouping, page filtering, source identity, and invalid page ranges.
 - Verification required: `cargo test -p simplypdf-measure filtered_totals` (confirm actual package name before invoking), GitHub CI and required checks. The feature remains partial: PDF import, desktop/MCP exposure, PR conflict resolution, and broader acceptance are outstanding. Do not check off ENG-08.07 yet.
+
+## 2026-11-21 — ENG-08.07 author-grouped multi-PDF quantities
+
+- PR #84 commit `e0cd51eeda7894abb97c64fb114c82bb6510ae46` adds `AuthorQuantityTotals` and `aggregate_by_author`, grouping filtered measurements by author across distinct source PDFs while retaining unit separation and deterministic ordering. Blank author values remain a separate review group.
+- Focused regression `grouped_authors_across_pdfs_respect_filters_and_source_validation` exercises multi-source aggregation, exact page filtering, duplicate source rejection, and invalid ranges on empty input.
+- Verification pending: `cargo fmt --check`, `cargo test --locked -p simplypdf-measure filtered_totals`, and all required GitHub checks. No local tests executed via GitHub-only connector. This is partial ENG-08.07 progress; actual PDF integration, desktop/automation exposure, additional metadata filters and merge conflicts remain. Do not mark README complete or merge until acceptance and CI pass.
