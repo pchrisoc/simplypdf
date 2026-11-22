@@ -39,9 +39,12 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     ExpectedColumns = {{{columns}}},
     SchemaChecked = if Table.ColumnNames(Headers) <> ExpectedColumns then error "SimplyPDF takeoff schema columns have changed" else Headers,
     VersionChecked = if List.AnyTrue(List.Transform(Table.Column(SchemaChecked, "Schema version"), each _ <> {TAKEOFF_SCHEMA_VERSION})) then error "Unsupported SimplyPDF takeoff schema version" else SchemaChecked,
-    Ids = Table.Column(VersionChecked, "Annotation ID"),
+    Ids = List.Transform(Table.Column(VersionChecked, "Annotation ID"), each if _ is text then Text.Trim(_) else null),
     IdentityChecked = if List.Contains(Ids, null) or List.Contains(Ids, "") or List.Count(Ids) <> List.Count(List.Distinct(Ids)) then error "SimplyPDF takeoff has missing or duplicate annotation IDs" else VersionChecked,
-    Typed = Table.TransformColumnTypes(IdentityChecked, {{
+    Quantities = Table.Column(IdentityChecked, "Value"),
+    Units = Table.Column(IdentityChecked, "Unit"),
+    QuantityChecked = if List.AnyTrue(List.Transform(Quantities, each not (_ is number))) or List.AnyTrue(List.Transform(Units, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has invalid quantities or missing units" else IdentityChecked,
+    Typed = Table.TransformColumnTypes(QuantityChecked, {{
         {{"Page", Int64.Type}}, {{"Index", Int64.Type}}, {{"Type", type text}},
         {{"Value", type number}}, {{"Unit", type text}}, {{"Label", type text}},
         {{"Author", type text}}, {{"Scale", type text}},
@@ -121,7 +124,9 @@ mod tests {
         assert!(m.contains("VersionChecked"));
         assert!(m.contains("List.Count(List.Distinct(Ids))"));
         assert!(m.contains("missing or duplicate annotation IDs"));
-        assert!(m.contains("Table.TransformColumnTypes(IdentityChecked"));
+        assert!(m.contains("Text.Trim(_)"));
+        assert!(m.contains("invalid quantities or missing units"));
+        assert!(m.contains("Table.TransformColumnTypes(QuantityChecked"));
 
         assert!(m.contains("Unsupported SimplyPDF takeoff schema version"));
     }
