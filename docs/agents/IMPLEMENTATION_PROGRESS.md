@@ -292,3 +292,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #84 commit `e0cd51eeda7894abb97c64fb114c82bb6510ae46` adds `AuthorQuantityTotals` and `aggregate_by_author`, grouping filtered measurements by author across distinct source PDFs while retaining unit separation and deterministic ordering. Blank author values remain a separate review group.
 - Focused regression `grouped_authors_across_pdfs_respect_filters_and_source_validation` exercises multi-source aggregation, exact page filtering, duplicate source rejection, and invalid ranges on empty input.
 - Verification pending: `cargo fmt --check`, `cargo test --locked -p simplypdf-measure filtered_totals`, and all required GitHub checks. No local tests executed via GitHub-only connector. This is partial ENG-08.07 progress; actual PDF integration, desktop/automation exposure, additional metadata filters and merge conflicts remain. Do not mark README complete or merge until acceptance and CI pass.
+
+## ENG-08.07 per-sheet breakdown — 2026-11-21 PST
+
+- PR #84 commit `b9b8083488e2df741df7fffecdb848aa5bee590a` adds `PageQuantityTotals` and `aggregate_by_page`, retaining source PDF IDs and zero-based page numbers in filtered quantity totals. A focused regression test covers independent PDFs with overlapping annotation IDs, stable source/page ordering, and page-range selection.
+- At inspection, main README contained 21 checked and 214 unchecked checkboxes across the entire checklist. ENG-08.07 remains unchecked: actual document loading, UI and automation integration, PR conflict resolution, and CI verification remain outstanding.
+- Tests are committed but not yet verified by a passing workflow; do not merge until required checks pass.
