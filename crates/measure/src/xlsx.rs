@@ -47,7 +47,7 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     PositionsChecked = if List.AnyTrue(List.Transform(Table.ToRows(Positions), each List.AnyTrue(List.Transform(_, (n) => if n is number then n < 1 or n <> Number.RoundDown(n) else true)))) then error "SimplyPDF takeoff has invalid page or index positions" else IdentityChecked,
     Quantities = Table.Column(PositionsChecked, "Value"),
     Units = Table.Column(IdentityChecked, "Unit"),
-    QuantityChecked = if List.AnyTrue(List.Transform(Quantities, each not (_ is number))) or List.AnyTrue(List.Transform(Units, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has invalid quantities or missing units" else IdentityChecked,
+    QuantityChecked = if List.AnyTrue(List.Transform(Quantities, each if _ is number then Number.IsNaN(_) or Number.Abs(_) = #infinity else true)) or List.AnyTrue(List.Transform(Units, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has invalid quantities or missing units" else IdentityChecked,
     Types = Table.Column(QuantityChecked, "Type"),
     TypeChecked = if List.AnyTrue(List.Transform(Types, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has missing measurement types" else QuantityChecked,
     Typed = Table.TransformColumnTypes(TypeChecked, {{
@@ -180,6 +180,14 @@ mod tests {
         assert!(m.contains("if n is number then n < 1 or n <> Number.RoundDown(n) else true"));
         assert!(m.contains("Quantities = Table.Column(PositionsChecked"));
         assert!(m.contains("invalid page or index positions"));
+    }
+
+    #[test]
+    fn excel_query_rejects_non_finite_quantities() {
+        let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid query");
+        assert!(m.contains("Number.IsNaN(_) or Number.Abs(_) = #infinity"));
+        assert!(m.contains("if _ is number then"));
+        assert!(m.contains("invalid quantities or missing units"));
     }
 
     #[test]
