@@ -281,3 +281,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #84 commit `d40de6a802453445339091437ae43d7d215d7cbf` adds inclusive `page_start` / `page_end` quantity filters, composes them with exact-page selection, and rejects reversed ranges even for empty measurement input.
 - Focused regression test `inclusive_page_ranges_compose_with_exact_page_and_reject_reverse_ranges` checks inclusive boundaries, counts, quantities, exact-page intersection, nonmatching pages, and invalid ranges.
 - Verification still required: `cargo test -p simplypdf-measure filtered_totals`, rustfmt/Clippy and required GitHub checks on the latest PR head. ENG-08.07 remains unchecked until real PDF import, desktop and automation integration, mergeability, and full acceptance are satisfied. Continue the entire README engineering backlog.
+
+## 2026-11-21 — ENG-08.07 label-grouped multi-PDF quantities
+
+- Commit `2c43b17a18969ca661469dc5caf1753ed6447b06` adds `LabeledQuantityTotals` and `aggregate_by_label`, producing deterministic label-grouped, unit-separated totals across distinct PDF sources while retaining existing filters and validating source IDs. Added `grouped_labels_across_sources_keep_units_and_filter_matches` covering grouping, page filtering, source identity, and invalid page ranges.
+- Verification required: `cargo test -p simplypdf-measure filtered_totals` (confirm actual package name before invoking), GitHub CI and required checks. The feature remains partial: PDF import, desktop/MCP exposure, PR conflict resolution, and broader acceptance are outstanding. Do not check off ENG-08.07 yet.
