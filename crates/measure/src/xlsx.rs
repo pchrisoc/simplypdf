@@ -14,6 +14,39 @@ fn data_row(offset: usize) -> Result<u32, String> {
     u32::try_from(offset + 1).map_err(|e| e.to_string())
 }
 
+/// Build an Excel Power Query (M) source for a published SimplyPDF takeoff workbook.
+/// Excel users paste this into Data > Get Data > Blank Query > Advanced Editor.
+/// Refresh All then reloads the named TakeoffData range without editing the estimate.
+pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> {
+    if !workbook_path.is_absolute() {
+        return Err("Excel Power Query source must be an absolute workbook path".into());
+    }
+    let path = workbook_path.to_str().ok_or("Excel Power Query source path is not UTF-8")?;
+    if !path.to_ascii_lowercase().ends_with(".xlsx") {
+        return Err("Excel Power Query source must be an .xlsx workbook".into());
+    }
+    // M text literals escape quotes by doubling them. Reject control characters.
+    if path.chars().any(|c| c.is_control()) {
+        return Err("Excel Power Query source path contains control characters".into());
+    }
+    let escaped = path.replace('"', "\"\"");
+    Ok(format!(r#"let
+    Source = Excel.Workbook(File.Contents("{escaped}"), null, true),
+    Takeoff = Source{{[Item="TakeoffData", Kind="DefinedName"]}}[Data],
+    Headers = Table.PromoteHeaders(Takeoff, [PromoteAllScalars=true]),
+    Typed = Table.TransformColumnTypes(Headers, {{
+        {{"Page", Int64.Type}}, {{"Index", Int64.Type}}, {{"Type", type text}},
+        {{"Value", type number}}, {{"Unit", type text}}, {{"Label", type text}},
+        {{"Author", type text}}, {{"Scale", type text}},
+        {{"Annotation ID", type text}}, {{"HVAC profile", type text}},
+        {{"Material", type text}}, {{"Nominal size", type text}},
+        {{"System", type text}}, {{"Schema version", Int64.Type}}
+    }})
+in
+    Typed
+"#))
+}
+
 /// Publish a validated, versioned measurement snapshot without incomplete row identity.
 pub fn write_new_checked(path: &Path, listing: &Listing) -> Result<(), String> {
     let fingerprint = crate::snapshot_fingerprint(listing).map_err(|e| e.to_string())?;
@@ -67,6 +100,25 @@ fn write_snapshot(path: &Path, measurements: &[Measurement], fingerprint: Option
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn excel_query_uses_named_range_and_escapes_path_quotes() {
+        let path = if cfg!(windows) { Path::new("C:\\\\takeoff\\\\job \\\"A\\\".xlsx") } else { Path::new("/tmp/job \\\"A\\\".xlsx") };
+        let m = excel_power_query_source(path).expect("absolute workbook path");
+        assert!(m.contains("Item=\\\"TakeoffData\\\", Kind=\\\"DefinedName\\\""));
+        assert!(m.contains("job \\\"\\\"A\\\"\\\".xlsx"));
+        assert!(m.contains("Table.PromoteHeaders"));
+        assert!(m.contains("Annotation ID"));
+    }
+
+    #[test]
+    fn excel_query_rejects_relative_or_non_xlsx_paths() {
+        assert!(excel_power_query_source(Path::new("relative.xlsx")).is_err());
+        assert!(excel_power_query_source(Path::new("/tmp/source.csv")).is_err());
+        assert!(excel_power_query_source(Path::new("/tmp/bad\\nname.xlsx")).is_err());
+    }
+
+
 
     #[test]
     fn excel_row_bounds_allow_last_measurement_and_reject_overflow() {
