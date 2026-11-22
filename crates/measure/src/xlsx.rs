@@ -42,7 +42,7 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     Ids = List.Transform(Table.Column(VersionChecked, "Annotation ID"), each if _ is text then Text.Trim(_) else null),
     IdentityChecked = if List.Contains(Ids, null) or List.Contains(Ids, "") or List.Count(Ids) <> List.Count(List.Distinct(Ids)) then error "SimplyPDF takeoff has missing or duplicate annotation IDs" else VersionChecked,
     Positions = Table.SelectColumns(IdentityChecked, {"Page", "Index"}),
-    PositionsChecked = if List.AnyTrue(List.Transform(Table.ToRows(Positions), each List.AnyTrue(List.Transform(_, (n) => not (n is number) or n < 1 or n <> Number.RoundDown(n))))) then error "SimplyPDF takeoff has invalid page or index positions" else IdentityChecked,
+    PositionsChecked = if List.AnyTrue(List.Transform(Table.ToRows(Positions), each List.AnyTrue(List.Transform(_, (n) => if n is number then n < 1 or n <> Number.RoundDown(n) else true)))) then error "SimplyPDF takeoff has invalid page or index positions" else IdentityChecked,
     Quantities = Table.Column(PositionsChecked, "Value"),
     Units = Table.Column(IdentityChecked, "Unit"),
     QuantityChecked = if List.AnyTrue(List.Transform(Quantities, each not (_ is number))) or List.AnyTrue(List.Transform(Units, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has invalid quantities or missing units" else IdentityChecked,
@@ -150,7 +150,7 @@ mod tests {
     fn excel_query_rejects_invalid_page_and_index_positions() {
         let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid path");
         assert!(m.contains("Positions = Table.SelectColumns(IdentityChecked"));
-        assert!(m.contains("n < 1 or n <> Number.RoundDown(n)"));
+        assert!(m.contains("if n is number then n < 1 or n <> Number.RoundDown(n) else true"));
         assert!(m.contains("Quantities = Table.Column(PositionsChecked"));
         assert!(m.contains("invalid page or index positions"));
     }
