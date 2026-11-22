@@ -429,3 +429,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #90 commit `370360b5a75967ab2a140ad6b15aaa2309c5d867` fixes the successful branch of `TypeChecked` to return `ScaleChecked` rather than bypassing that stage through `QuantityChecked`. Focused test `excel_query_keeps_validated_scale_stage_in_type_pipeline` checks the generated script's stage linkage. Also removed an extra blank line before the test module reported by Ubuntu CI run 45070585061 (`cargo fmt --all -- --check`).
 - At commit time, new-head workflow results were not yet available; no test pass, merge, or checkbox completion claimed. Remaining requirements include passing CI, Excel smoke test, desktop UX, and managed workbook refresh.
+
+## ENG-08.09 security gate repair — 2026-11-22 PST
+
+- Ubuntu CI run `45072520326` passed formatting and reached `cargo deny`, which rejected `url` 2.5.8 under RUSTSEC-2026-0592. PR #90 commit `16db026b6d570c6e96aedde39e75d4a929a63052` updates `Cargo.lock` to patched `url` 2.5.9 and its required `form_urlencoded` 1.2.3. Both checksums were verified directly against the corresponding version entries in the official `rust-lang/crates.io-index` GitHub repository; existing locked `idna` 1.1.0 and `percent-encoding` 2.3.2 satisfy the patched version requirements. This is a real dependency resolution, not a cargo-deny exception or advisory suppression.
+- New-head CI and Excel integration acceptance remain to be verified. No merge or README checkbox is claimed until all required checks and user-facing acceptance tests pass.
