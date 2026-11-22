@@ -397,3 +397,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Focused regression: `excel_query_rejects_non_finite_quantities` in `crates/measure/src/xlsx.rs` asserts generated M includes both `Number.IsNaN` and the infinity check. This test has been committed but has **not yet been confirmed passing by CI**.
 - Prior PR head `e13d431` passed SonarCloud run `45041997052` and failed CI run `45041997254`; the new commit requires fresh CI. No README checkbox is justified by this partial change.
 - Outstanding: dependency audit failure for `url` 2.5.8, user-facing export integration, managed same-path workbook publishing, and real Excel refresh acceptance testing. ENG-08.09 remains unchecked.
+
+## ENG-08.09 schema and position guards — 2026-11-22
+
+- PR #90 commit `be5d600133bf949a684b77b4e5db04567d453241` changes generated Excel Power Query M to reject null/non-numeric schema versions explicitly, and NaN/infinite page and index values before rounding or converting. Added focused `excel_query_rejects_missing_schema_versions_and_non_finite_positions` regression assertions in `crates/measure/src/xlsx.rs`.
+- Prior head `953d4b0`: SonarCloud run 45047853702 succeeded; Ubuntu CI run 45047853782 failed. New head CI not yet verified. The locked `url` version remains 2.5.8; resolve the lockfile through Cargo rather than inventing a registry checksum.
+- No README checkbox is complete from these guards alone. Outstanding: CI/security audit, desktop/CLI workflow, managed same-path publishing, and Excel refresh acceptance testing. Continue remaining ENG milestones after this coherent milestone.
