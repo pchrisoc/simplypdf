@@ -343,3 +343,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Branch `feat/eng-0809-excel-powerquery-20261122`, commits `1097057a03330cf07c6c0b4d88ef60e225337cc8` and `be792eee5d6e3ea694e8c3c3c0d55c3b067ce3e8`: `excel_power_query_source` generates a typed Power Query M import of the existing `TakeoffData` defined range with path validation and quote escaping. Focused unit tests cover path validation, named-range selection, and escaped strings.
 - `docs/EXCEL_TAKEOFF_LINK.md` documents loading a separate Excel estimate and refreshing a named-range query, plus the crucial limitation that immutable snapshots cannot yet be overwritten at the same source path.
 - ENG-08.09 remains unchecked pending user-facing desktop/CLI entry point, actual Excel smoke test, same-path managed publication (ENG-08.05/08.06), and passing CI. Do not report a fully live Excel link before these prerequisites are implemented.
+
+## ENG-08.09 Power Query schema guard — 2026-11-22
+
+- PR #90 previous head `fe2220a30f2c63ae8ddb0f2d1f307f23062436cf` passed CI run `45001190114` and SonarCloud run `45001189937`.
+- New commits `9f4f646642517e1a04ab5d5f735da2b321542fee` and `a9ec4f6c9b1789435bc6c71251d01a7e44f976aa` implement a Power Query schema guard: exact 14-column header matching and per-row schema version validation prevent silent quantity misinterpretation after source changes. The existing query regression test now asserts both guard steps. The second commit corrects M string quoting for expected columns.
+- New-head CI is not yet verified. PR remains draft; no README checkbox changed. Outstanding: desktop/CLI integration, same-path managed publication, actual Excel smoke test and final CI.
