@@ -367,3 +367,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #90 commit `42edc82824835e6857e34a5cae11c844476a5529` adds `write_excel_power_query_new` for atomic no-clobber UTF-8 `.pq` exports, reusing the validated M generator. Focused tests cover successful output, refusal to overwrite an existing query, and rejection of invalid source paths before creating the destination.
 - Previous head `3dfe2703b0980457fb98fba23177132cc5f97d0d`: SonarCloud run `45015640089` passed, CI run `45015640008` failed. The prior reported blocker was `cargo deny` advisory RUSTSEC-2026-0592 affecting `url` 2.5.8; inspect current job logs before attributing this run's failure to that cause.
 - Still incomplete: source workbook managed publishing, desktop/CLI entry point, actual Excel refresh smoke test, and passing CI. Do not merge or check off ENG-08.09 on the basis of library tests alone.
+
+## ENG-08.09 Excel positional validation — 2026-11-22
+
+- PR #90 commits `41210b281f1a0ca21f1ac067d2468cf1bdb65263` and `7a8140ca9af0946cc74b3f109cd21ddcd6616a2c` add typed Power Query validation for 1-based positive integer page/index positions, with a focused regression test and safe type-guarded comparisons.
+- Prior head `d77937f4c3dbc8c416c7b3d7f731cf6df8067bd8`: SonarCloud run 45020545170 succeeded; CI run 45020545169 failed at cargo-deny RUSTSEC-2026-0592 (`url` 2.5.8). Rust tests passed in the gate before deny.
+- No README checkbox or merge yet. Blockers: update Cargo.lock with patched url >=2.5.9, verify latest CI, expose end-user workflow and validate real Excel refresh, and implement managed same-path publication.
