@@ -62,6 +62,11 @@ pub fn aggregate_sources(sources: &[QuantitySource<'_>], source_id: Option<&str>
         if source.source_id.trim().is_empty() || source.source_id.len() > 1024 || !seen.insert(source.source_id) {
             return Err(invalid("source IDs must be nonempty, unique, and at most 1024 bytes"));
         }
+    }
+    if source_id.is_some_and(|id| !seen.contains(id)) {
+        return Err(invalid("selected source ID was not found"));
+    }
+    for source in sources {
         if source_id.is_some_and(|id| id != source.source_id) {
             continue;
         }
@@ -197,7 +202,24 @@ mod tests {
         ];
         assert!(aggregate_sources(&sources, None, &QuantityFilter::default()).unwrap().is_empty());
         assert!(aggregate_sources(&sources, Some("sheet-b"), &QuantityFilter::default()).unwrap().is_empty());
-        assert!(aggregate_sources(&sources, Some("absent"), &QuantityFilter::default()).unwrap().is_empty());
+        assert!(aggregate_sources(&sources, Some("absent"), &QuantityFilter::default()).is_err());
+    }
+    #[test]
+    fn selected_source_validates_all_source_ids_before_aggregation() {
+        let empty: &[Measurement] = &[];
+        let sources = [
+            QuantitySource { source_id: "selected", measurements: empty },
+            QuantitySource { source_id: "selected", measurements: empty },
+        ];
+        assert!(aggregate_sources(&sources, Some("selected"), &QuantityFilter::default()).is_err());
+        let sources = [
+            QuantitySource { source_id: "selected", measurements: empty },
+            QuantitySource { source_id: " ", measurements: empty },
+        ];
+        assert!(aggregate_sources(&sources, Some("selected"), &QuantityFilter::default()).is_err());
+        let sources = [QuantitySource { source_id: "selected", measurements: empty }];
+        assert!(aggregate_sources(&sources, Some("missing"), &QuantityFilter::default()).is_err());
+        assert!(aggregate_sources(&sources, Some("selected"), &QuantityFilter::default()).unwrap().is_empty());
     }
     #[test]
     fn unit_filter_is_case_sensitive() {
