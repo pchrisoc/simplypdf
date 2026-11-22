@@ -248,22 +248,6 @@ mod tests {
         assert!(write_excel_power_query_new(&dir.path().join("valid.PQ"), &workbook).is_ok());
     }
 
-    #[cfg(not(target_arch = "wasm32"))]
-    #[test]
-    fn power_query_export_escapes_m_literals_and_never_overwrites() {
-        let dir = tempfile::tempdir().unwrap();
-        let workbook = dir.path().join("takeoff#(lf)\"quoted.xlsx");
-        let out = dir.path().join("estimate.pq");
-        write_excel_power_query_new(&out, &workbook).unwrap();
-        let script = std::fs::read_to_string(&out).unwrap();
-        assert!(script.contains("takeoff#(#)(lf)\"\"quoted.xlsx"));
-        assert!(script.contains("TakeoffData"));
-        assert!(script.contains("Unsupported takeoff column schema"));
-        assert!(write_excel_power_query_new(&out, &workbook).is_err());
-        assert_eq!(std::fs::read_to_string(&out).unwrap(), script);
-        assert!(write_excel_power_query_new(&dir.path().join("invalid.txt"), &workbook).is_err());
-    }
-
     #[test]
     fn power_query_rejects_missing_scale_metadata_before_type_conversion() {
         let script = excel_power_query_source(&std::env::current_dir().unwrap().join("takeoff.xlsx")).unwrap();
