@@ -37,7 +37,7 @@ pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Resul
             return Err(invalid("invalid quantity in filtered takeoff"));
         }
         let entry = totals.entry(m.reading.unit.clone()).or_insert((0, 0.0));
-        entry.0 += 1;
+        entry.0 = entry.0.checked_add(1).ok_or_else(|| invalid("filtered count overflow"))?;
         entry.1 += value;
         if !entry.1.is_finite() {
             return Err(invalid("filtered quantity overflow"));
@@ -102,6 +102,37 @@ pub fn aggregate_by_source(sources: &[QuantitySource<'_>], filter: &QuantityFilt
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn multi_pdf_aggregation_preserves_units_and_source_provenance() {
+        let scale = crate::Scale::default();
+        let points = vec![[0.0, 0.0], [72.0, 0.0]];
+        let reading = crate::reading(crate::Kind::Distance, &points, &scale).unwrap();
+        let make = |id: &str, label: &str| Measurement {
+            visible: true, page: 0, index: 0, id: id.into(),
+            author: "engineer".into(), label: label.into(),
+            points: points.clone(), scale: scale.clone(), reading: reading.clone(), hvac: None,
+        };
+        let a = [make("same-annotation", "pipe"), make("other", "duct")];
+        let b = [make("same-annotation", "pipe")];
+        let sources = [
+            QuantitySource { source_id: "first.pdf", measurements: &a },
+            QuantitySource { source_id: "second.pdf", measurements: &b },
+        ];
+        let filter = QuantityFilter { label: Some("PIPE".into()), ..Default::default() };
+        let combined = aggregate_sources(&sources, None, &filter).unwrap();
+        assert_eq!(combined.len(), 1);
+        assert_eq!(combined[0].unit, reading.unit);
+        assert_eq!(combined[0].count, 2);
+        assert!((combined[0].quantity - 2.0 * reading.value).abs() < 1e-9);
+        let per_source = aggregate_by_source(&sources, &filter).unwrap();
+        assert_eq!(per_source.len(), 2);
+        assert_eq!(per_source[0].source_id, "first.pdf");
+        assert_eq!(per_source[1].source_id, "second.pdf");
+        assert_eq!(per_source[0].totals[0].count, 1);
+        assert_eq!(per_source[1].totals[0].count, 1);
+        let selected = aggregate_sources(&sources, Some("second.pdf"), &filter).unwrap();
+        assert_eq!(selected[0].count, 1);
+    }
     #[test]
     fn page_and_visibility_filters_apply_to_quantities() {
         let scale = crate::Scale::default();
