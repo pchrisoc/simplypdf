@@ -96,8 +96,12 @@ pub fn write_new_checked(path: &Path, listing: &Listing) -> Result<(), String> {
 #[cfg(unix)]
 pub fn replace_managed_checked(path: &Path, listing: &Listing) -> Result<(), String> {
     let fingerprint = crate::snapshot_fingerprint(listing).map_err(|e| e.to_string())?;
-    if std::fs::symlink_metadata(path).is_ok_and(|m| m.file_type().is_symlink()) {
-        return Err("managed workbook destination must not be a symbolic link".into());
+    match std::fs::symlink_metadata(path) {
+        Ok(meta) if !meta.file_type().is_file() => {
+            return Err("managed workbook destination must be a regular file".into());
+        }
+        Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err.to_string()),
+        _ => {}
     }
     let parent = path.parent().ok_or("managed workbook needs a parent directory")?;
     let dir = tempfile::tempdir_in(parent).map_err(|e| e.to_string())?;
@@ -352,6 +356,16 @@ mod tests {
         assert_eq!(std::fs::read(&path).unwrap(), original);
         replace_managed_checked(&path, &first).expect("replace existing workbook");
         assert!(std::fs::read(&path).unwrap().starts_with(b"PK"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_snapshot_refuses_directory_destination() {
+        let dir = tempfile::tempdir().expect("temporary export directory");
+        let destination = dir.path().join("managed.xlsx");
+        std::fs::create_dir(&destination).unwrap();
+        assert!(replace_managed_checked(&destination, &Listing::default()).is_err());
+        assert!(destination.is_dir());
     }
 
     #[cfg(unix)]
