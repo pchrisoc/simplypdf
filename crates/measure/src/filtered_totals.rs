@@ -8,6 +8,10 @@ pub struct QuantityFilter {
     pub label: Option<String>,
     pub author: Option<String>,
     pub unit: Option<String>,
+    /// Restrict quantities to a zero-based PDF page index.
+    pub page: Option<usize>,
+    /// Restrict quantities to visible or hidden measurement annotations.
+    pub visible: Option<bool>,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -23,6 +27,8 @@ pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Resul
         if filter.label.as_ref().is_some_and(|s| !m.label.eq_ignore_ascii_case(s))
             || filter.author.as_ref().is_some_and(|s| !m.author.eq_ignore_ascii_case(s))
             || filter.unit.as_ref().is_some_and(|s| m.reading.unit != *s)
+            || filter.page.is_some_and(|page| m.page != page)
+            || filter.visible.is_some_and(|visible| m.visible != visible)
         {
             continue;
         }
@@ -97,6 +103,27 @@ pub fn aggregate_by_source(sources: &[QuantitySource<'_>], filter: &QuantityFilt
 mod tests {
     use super::*;
     #[test]
+    fn page_and_visibility_filters_apply_to_quantities() {
+        let scale = crate::Scale::default();
+        let points = vec![[0.0, 0.0], [72.0, 0.0]];
+        let reading = crate::reading(crate::Kind::Distance, &points, &scale).unwrap();
+        let make = |page, visible| Measurement {
+            visible, page, index: 0, id: format!("id-{page}-{visible}"),
+            author: "reviewer".into(), label: "pipe".into(),
+            points: points.clone(), scale: scale.clone(), reading: reading.clone(), hvac: None,
+        };
+        let measurements = [make(0, true), make(1, true), make(1, false)];
+        let filter = QuantityFilter { page: Some(1), visible: Some(true), ..Default::default() };
+        let totals = aggregate(&measurements, &filter).unwrap();
+        assert_eq!(totals.len(), 1);
+        assert_eq!(totals[0].count, 1);
+        assert_eq!(totals[0].quantity, reading.value);
+        let filter = QuantityFilter { page: Some(1), visible: Some(false), ..Default::default() };
+        assert_eq!(aggregate(&measurements, &filter).unwrap()[0].count, 1);
+        let filter = QuantityFilter { page: Some(2), ..Default::default() };
+        assert!(aggregate(&measurements, &filter).unwrap().is_empty());
+    }
+    #[test]
     fn per_source_breakdown_preserves_order_and_empty_sources() {
         let empty: &[Measurement] = &[];
         let sources = [
@@ -143,7 +170,7 @@ mod tests {
     }
     #[test]
     fn unit_filter_is_case_sensitive() {
-        let filter = QuantityFilter { label: None, author: None, unit: Some("mm".into()) };
+        let filter = QuantityFilter { unit: Some("mm".into()), ..Default::default() };
         assert_eq!(filter.unit.as_deref(), Some("mm"));
         assert_ne!(filter.unit.as_deref(), Some("Mm"));
     }
@@ -158,7 +185,7 @@ mod tests {
     }
     #[test]
     fn empty_selection_remains_empty_with_filters() {
-        let filter = QuantityFilter { label: Some("pipe".into()), author: None, unit: Some("ft".into()) };
+        let filter = QuantityFilter { label: Some("pipe".into()), unit: Some("ft".into()), ..Default::default() };
         assert!(aggregate(&[], &filter).unwrap().is_empty());
     }
 }
