@@ -262,3 +262,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Changed `aggregate` to use checked count addition, avoiding overflow on untrusted measurement collections.
 - Focused verification command: `cargo test --locked -p simplypdf-measure filtered_totals::tests`. **Not executed in this GitHub-only run; CI status must be checked before merging.**
 - Remaining: actual PDF import integration, subject/layer/color/custom-field classification (not available on the current measurement model), desktop and automation exposure, conflicts, and passing required checks. README ENG-08.07 remains unchecked.
+
+## ENG-08.07 source-selection validation — 2026-11-21
+
+- Commit `346d8b6a1e62ae64c0703f6d8d18824a1124d4ee` on PR #84 rejects unknown selected source IDs rather than silently returning empty totals. It validates all source identifiers before aggregation, including sources excluded by the selector, to avoid overlooking duplicate or malformed IDs.
+- Updated the existing missing-source regression and added `selected_source_validates_all_source_ids_before_aggregation` to cover duplicates, blank IDs, missing selectors, and valid empty selections.
+- Verification required: `cargo fmt --check`, `cargo test --locked -p simplypdf-measure filtered_totals`, and PR CI. Tests were committed but not run locally; do not claim success or mark ENG-08.07 complete. PR #84 still requires actual PDF integration, desktop/automation exposure, conflict resolution, and successful required checks.
