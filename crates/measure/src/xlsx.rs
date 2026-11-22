@@ -47,7 +47,7 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     PositionsChecked = if List.AnyTrue(List.Transform(Table.ToRows(Positions), each List.AnyTrue(List.Transform(_, (n) => if n is number then Number.IsNaN(n) or Number.Abs(n) = #infinity or n < 1 or n <> Number.RoundDown(n) else true)))) then error "SimplyPDF takeoff has invalid page or index positions" else IdentityChecked,
     Quantities = Table.Column(PositionsChecked, "Value"),
     Units = Table.Column(IdentityChecked, "Unit"),
-    QuantityChecked = if List.AnyTrue(List.Transform(Quantities, each if _ is number then Number.IsNaN(_) or Number.Abs(_) = #infinity else true)) or List.AnyTrue(List.Transform(Units, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has invalid quantities or missing units" else IdentityChecked,
+    QuantityChecked = if List.AnyTrue(List.Transform(Quantities, each if _ is number then Number.IsNaN(_) or Number.Abs(_) = #infinity else true)) or List.AnyTrue(List.Transform(Units, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has invalid quantities or missing units" else PositionsChecked,
     Scales = Table.Column(QuantityChecked, "Scale"),
     ScaleChecked = if List.AnyTrue(List.Transform(Scales, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has missing scale metadata" else QuantityChecked,
     Types = Table.Column(ScaleChecked, "Type"),
@@ -253,6 +253,14 @@ mod tests {
         assert!(script.contains("Table.Column(QuantityChecked, \"Scale\")"));
         assert!(script.contains("SimplyPDF takeoff has missing scale metadata"));
         assert!(script.contains("Types = Table.Column(ScaleChecked, \"Type\")"));
+    }
+
+    #[test]
+    fn excel_query_keeps_validated_positions_in_quantity_pipeline() {
+        let script = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("query script");
+        assert!(script.contains("Quantities = Table.Column(PositionsChecked, \\"Value\\")"));
+        assert!(script.contains("else PositionsChecked,"));
+        assert!(!script.contains("invalid quantities or missing units\\" else IdentityChecked"));
     }
 
     #[test]
