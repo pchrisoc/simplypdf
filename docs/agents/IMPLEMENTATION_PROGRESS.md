@@ -409,3 +409,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Commit `8f3fb311dd19a2df71fefdd1b66e05dc1c91ef79` on PR #90 rejects NaN and infinite schema-version cells in the generated Excel Power Query before accepting the schema. Also repairs stale position/version regression assertions to match the generated M expression and adds a focused regression test for non-finite schema versions.
 - Verification: regression tests were added but not executed locally (GitHub connector only); the new PR-head CI result was not yet available at the time of this entry. Do not mark ENG-08.09 complete or merge until the head passes required checks.
 - Remaining: resolve the `url` 2.5.8 cargo-deny advisory by a resolver-generated lockfile update, expose the Excel query workflow through the desktop and headless automation tools, validate Excel Refresh All against a real managed published workbook, and satisfy remaining ENG-08.09 acceptance requirements.
+
+## ENG-08.09 headless Excel query entry point — 2026-11-22
+
+- PR #90 commits `f168746`, `e575ab8`, `3b146a6`, and `68e3b87` add a public `takeoff_excel_query` automation/CLI/MCP tool with `workbook` and `out` arguments, native-only execution, XLSX/PQ extension checks, automation-root path resolution, and no-clobber script publication. The tool produces a Power Query M file targeting the existing `TakeoffData` defined name in an external workbook.
+- Added focused automation regression `excel_query_tool_exports_a_refreshable_script_without_overwriting` for generated script contents, tool registration/dispatch, overwrite refusal, and invalid source extension. GitHub CI has not yet validated these commits.
+- Prior head `8b93e15`: SonarCloud `45059206390` succeeded; CI `45059206301` failed. Inspect job logs to distinguish dependency audit failures from compilation failures.
+- This is substantive headless integration, **not** ENG-08.09 completion. Still required: full CI and dependency audit, managed same-path workbook publishing, desktop user controls, and real Excel Refresh All acceptance test. README remains unchecked. Continue the entire engineering backlog after acceptance.
