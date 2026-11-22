@@ -390,3 +390,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - Commit `1afa45a120e60f3feceb5476e7a33e2c3e35144e` escapes literal `#` characters in workbook paths before quoting them for Power Query M. This prevents a path containing `#(lf)` from being interpreted as an M newline escape. Focused `excel_query_escapes_m_escape_sequences_in_workbook_paths` regression test checks the emitted literal path.
 - This is a library safety improvement, not completion of ENG-08.09. Pending: latest CI, patched `url` lockfile, user-facing workflow, managed same-path publishing, and Excel smoke testing. Do not merge or mark README complete until acceptance criteria and required checks pass.
+
+## ENG-08.09 finite quantity guard — 2026-11-22
+
+- Commit `5b0b2a7bf57fce58fb1fc039970a7cb38947c5a7` on PR #90 adds a Power Query M guard rejecting NaN and positive/negative infinity in the `Value` column, in addition to rejecting non-numeric values. The guard executes before `Table.TransformColumnTypes` and produces the existing actionable invalid-quantity error.
+- Focused regression: `excel_query_rejects_non_finite_quantities` in `crates/measure/src/xlsx.rs` asserts generated M includes both `Number.IsNaN` and the infinity check. This test has been committed but has **not yet been confirmed passing by CI**.
+- Prior PR head `e13d431` passed SonarCloud run `45041997052` and failed CI run `45041997254`; the new commit requires fresh CI. No README checkbox is justified by this partial change.
+- Outstanding: dependency audit failure for `url` 2.5.8, user-facing export integration, managed same-path workbook publishing, and real Excel refresh acceptance testing. ENG-08.09 remains unchecked.
