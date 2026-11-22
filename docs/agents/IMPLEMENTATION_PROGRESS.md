@@ -355,3 +355,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - CI run `45005770475` failed solely at `cargo fmt --all -- --check` (rustfmt wanted a single-line `TAKEOFF_COLUMNS` mapping). SonarCloud run `45005770567` passed.
 - PR #90 commit `f298b339d8c807e4993a58ef32c72703a42e974b` applies that exact formatting and adds Power Query refresh-time rejection of blank/null and duplicate `Annotation ID` values, preventing ambiguous estimate reconciliation. Focused generator assertions verify the duplicate-ID guard and typed query uses validated rows.
 - New-head CI is not yet verified; PR remains draft. Full ENG-08.09 still needs Excel smoke test, user-facing entry point, and managed same-path publication before README completion.
+
+## ENG-08.09 Excel import data integrity — 2026-11-22
+
+- Commit `cf88184583e74c89fe0632d95c9b4da5f3b137db` adds Power Query validation of trimmed annotation IDs, numeric quantity values, and nonblank units before typed Excel table loading. Focused Rust generator regression assertions cover new validation expressions.
+- Prior head `a68963a74303d66acb23ccf345cc5928065826ab`: SonarCloud run `45011030795` succeeded; CI run `45011030830` failed **after** the Rust test suite at cargo-deny, due to RUSTSEC-2026-0592 (`url` 2.5.8, fixed in 2.5.9). This is a dependency-security gate, not an observed failing Excel test. Update Cargo.lock to a patched compatible url release via a properly resolved cargo update; do not suppress the advisory.
+- ENG-08.09 remains unchecked; the new head needs fresh CI, an actual Excel smoke test, desktop/CLI exposure, and managed same-path publication. No merge until required checks pass.
