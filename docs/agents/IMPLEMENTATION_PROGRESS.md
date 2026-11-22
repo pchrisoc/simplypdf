@@ -385,3 +385,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #90 commit `5ef57304cadd4ca888012e3c4df1205618182e6b` rejects relative and non-.pq script destinations before staging and adds `power_query_file_requires_absolute_pq_destination` covering relative paths, incorrect extension, no unexpected output, and uppercase .PQ.
 - Previous head `f196de2`: SonarCloud run 45031327979 passed; CI run 45031328003 failed only at `cargo deny` on vulnerable `url` 2.5.8 (RUSTSEC-2026-0592), after formatting and Rust tests passed. New head checks pending.
 - Remaining: update resolved Cargo.lock to patched url version; verify new CI and Excel import; expose user-facing query export and managed same-path publishing. ENG-08.09 remains unchecked; full engineering backlog remains the goal.
+
+## ENG-08.09 Power Query M path escaping — 2026-11-22
+
+- Commit `1afa45a120e60f3feceb5476e7a33e2c3e35144e` escapes literal `#` characters in workbook paths before quoting them for Power Query M. This prevents a path containing `#(lf)` from being interpreted as an M newline escape. Focused `excel_query_escapes_m_escape_sequences_in_workbook_paths` regression test checks the emitted literal path.
+- This is a library safety improvement, not completion of ENG-08.09. Pending: latest CI, patched `url` lockfile, user-facing workflow, managed same-path publishing, and Excel smoke testing. Do not merge or mark README complete until acceptance criteria and required checks pass.
