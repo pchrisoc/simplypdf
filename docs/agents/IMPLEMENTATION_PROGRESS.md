@@ -337,3 +337,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #89 commit `c8471121dc6a229c52ab721d0299f477469e8871` adds `count_filtered`, an allocation-free matching-record count that uses the same filter predicate as paginated register results; `filtered_count_matches_pages_and_respects_empty_query` covers filtered, paginated and unfiltered counts.
 - The same commit applies the two precise `cargo fmt --check` changes reported by failed Ubuntu CI run 44898022052. SonarCloud passed on the preceding head; new-head CI remains unverified.
 - ENG-09.06 is not complete: persist metadata with PDF annotations, wire the desktop register, and verify save/reopen and end-to-end acceptance before checking README.
+
+## ENG-08.09 Excel Power Query link — 2026-11-21 PST
+
+- Branch `feat/eng-0809-excel-powerquery-20261122`, commits `1097057a03330cf07c6c0b4d88ef60e225337cc8` and `be792eee5d6e3ea694e8c3c3c0d55c3b067ce3e8`: `excel_power_query_source` generates a typed Power Query M import of the existing `TakeoffData` defined range with path validation and quote escaping. Focused unit tests cover path validation, named-range selection, and escaped strings.
+- `docs/EXCEL_TAKEOFF_LINK.md` documents loading a separate Excel estimate and refreshing a named-range query, plus the crucial limitation that immutable snapshots cannot yet be overwritten at the same source path.
+- ENG-08.09 remains unchecked pending user-facing desktop/CLI entry point, actual Excel smoke test, same-path managed publication (ENG-08.05/08.06), and passing CI. Do not report a fully live Excel link before these prerequisites are implemented.
