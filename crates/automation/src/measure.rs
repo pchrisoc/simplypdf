@@ -211,6 +211,30 @@ impl Automation {
         )
     }
 
+    /// Generate an Excel Refresh All query for a separately published TakeoffData workbook.
+    /// Both paths pass through automation root restrictions; neither source nor destination
+    /// may be overwritten by this setup operation.
+    #[cfg(not(target_arch = "wasm32"))]
+    pub(crate) fn takeoff_excel_query(&self, a: &Args) -> Result<Value> {
+        let workbook = a.str("workbook")?;
+        if !Path::new(workbook).extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("xlsx")) {
+            return Err(ToolError::InvalidArgs("workbook must end in .xlsx".into()));
+        }
+        let source = self.resolve(workbook, false)?;
+        let out = a.str("out")?;
+        if !Path::new(out).extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("pq")) {
+            return Err(ToolError::InvalidArgs("out must end in .pq".into()));
+        }
+        let target = self.resolve(out, true)?;
+        measure::xlsx::write_excel_power_query_new(&target, &source).map_err(failed)?;
+        Ok(json!({"path":target,"workbook":source,"named_range":"TakeoffData","schema_version":measure::TAKEOFF_SCHEMA_VERSION}))
+    }
+
+    #[cfg(target_arch = "wasm32")]
+    pub(crate) fn takeoff_excel_query(&self, _a: &Args) -> Result<Value> {
+        Err(failed("Excel Power Query export requires the desktop CLI or app"))
+    }
+
     #[cfg(target_arch = "wasm32")]
     pub(crate) fn takeoff_export_xlsx(&self, _a: &Args) -> Result<Value> {
         Err(failed("XLSX export requires the desktop CLI or app; use measure_export for CSV in the browser"))
