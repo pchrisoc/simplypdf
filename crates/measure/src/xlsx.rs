@@ -133,6 +133,36 @@ fn write_snapshot(path: &Path, measurements: &[Measurement], fingerprint: Option
     Ok(())
 }
 
+
+#[cfg(not(target_arch = "wasm32"))]
+/// Write a Power Query M script for importing the versioned TakeoffData named range.
+/// The generated script can be pasted into Excel's Advanced Editor and refreshed.
+pub fn write_excel_power_query_new(path: &Path, workbook: &Path) -> Result<(), String> {
+    if !workbook.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("xlsx")) {
+        return Err("source must be an .xlsx workbook".into());
+    }
+    if !path.extension().and_then(|e| e.to_str()).is_some_and(|e| e.eq_ignore_ascii_case("pq")) {
+        return Err("destination must be a .pq file".into());
+    }
+    if !workbook.is_absolute() {
+        return Err("source workbook path must be absolute".into());
+    }
+    // M string literals use doubled quotes and #(escape) sequences; escape the
+    // introducer as well so a filename containing #(lf) remains literal.
+    let source = workbook.to_str().ok_or("source path must be UTF-8")?
+        .replace('#', "#(#)").replace('"', "\"\"");
+    let script = format!(
+        "let\n    Source = Excel.Workbook(File.Contents(\"{source}\"), null, true),\n    Takeoff = Source{{[Item=\"TakeoffData\",Kind=\"DefinedName\"]}}[Data],\n    Headers = Table.PromoteHeaders(Takeoff, [PromoteAllScalars=true]),\n    Required = {{\"Page\", \"Index\", \"Type\", \"Value\", \"Unit\", \"Label\", \"Author\", \"Scale\", \"ID\", \"Profile\", \"Material\", \"Size\", \"Service\", \"SchemaVersion\"}},\n    Checked = if List.IsEmpty(List.Difference(Required, Table.ColumnNames(Headers))) then Headers else error \"Unsupported takeoff column schema\",\n    Result = Checked\nin\n    Result\n"
+    );
+    let parent = path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    let mut staged = tempfile::NamedTempFile::new_in(parent).map_err(|e| e.to_string())?;
+    use std::io::Write;
+    staged.write_all(script.as_bytes()).map_err(|e| e.to_string())?;
+    staged.as_file().sync_all().map_err(|e| e.to_string())?;
+    staged.persist_noclobber(path).map_err(|e| format!("{}: {}", path.display(), e.error))?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -243,6 +273,22 @@ mod tests {
         assert!(write_excel_power_query_new(&dir.path().join("wrong.xlsx"), &workbook).is_err());
         assert!(!dir.path().join("wrong.xlsx").exists());
         assert!(write_excel_power_query_new(&dir.path().join("valid.PQ"), &workbook).is_ok());
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    #[test]
+    fn power_query_export_escapes_m_literals_and_never_overwrites() {
+        let dir = tempfile::tempdir().unwrap();
+        let workbook = dir.path().join("takeoff#(lf)\"quoted.xlsx");
+        let out = dir.path().join("estimate.pq");
+        write_excel_power_query_new(&out, &workbook).unwrap();
+        let script = std::fs::read_to_string(&out).unwrap();
+        assert!(script.contains("takeoff#(#)(lf)\"\"quoted.xlsx"));
+        assert!(script.contains("TakeoffData"));
+        assert!(script.contains("Unsupported takeoff column schema"));
+        assert!(write_excel_power_query_new(&out, &workbook).is_err());
+        assert_eq!(std::fs::read_to_string(&out).unwrap(), script);
+        assert!(write_excel_power_query_new(&dir.path().join("invalid.txt"), &workbook).is_err());
     }
 
     #[test]
