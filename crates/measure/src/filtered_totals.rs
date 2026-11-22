@@ -53,7 +53,7 @@ pub fn aggregate_sources(sources: &[QuantitySource<'_>], source_id: Option<&str>
     let mut totals: BTreeMap<String, (usize, f64)> = BTreeMap::new();
     let mut seen = std::collections::BTreeSet::new();
     for source in sources {
-        if source.source_id.is_empty() || source.source_id.len() > 1024 || !seen.insert(source.source_id) {
+        if source.source_id.trim().is_empty() || source.source_id.len() > 1024 || !seen.insert(source.source_id) {
             return Err(invalid("source IDs must be nonempty, unique, and at most 1024 bytes"));
         }
         if source_id.is_some_and(|id| id != source.source_id) {
@@ -71,9 +71,54 @@ pub fn aggregate_sources(sources: &[QuantitySource<'_>], source_id: Option<&str>
     Ok(totals.into_iter().map(|(unit, (count, quantity))| QuantityTotal { unit, count, quantity }).collect())
 }
 
+/// One source's independently aggregated quantities, preserving source provenance.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct SourceQuantityTotals {
+    pub source_id: String,
+    pub totals: Vec<QuantityTotal>,
+}
+
+/// Produce a reviewable breakdown for every source, including sources with no matches.
+/// Reject duplicate or malformed identifiers before returning any partial results.
+pub fn aggregate_by_source(sources: &[QuantitySource<'_>], filter: &QuantityFilter) -> Result<Vec<SourceQuantityTotals>> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut results = Vec::new();
+    for source in sources {
+        let id = source.source_id;
+        if id.trim().is_empty() || id.len() > 1024 || !seen.insert(id) {
+            return Err(invalid("source IDs must be nonblank, unique, and at most 1024 bytes"));
+        }
+        results.push(SourceQuantityTotals { source_id: id.to_owned(), totals: aggregate(source.measurements, filter)? });
+    }
+    Ok(results)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn per_source_breakdown_preserves_order_and_empty_sources() {
+        let empty: &[Measurement] = &[];
+        let sources = [
+            QuantitySource { source_id: "sheet-b", measurements: empty },
+            QuantitySource { source_id: "sheet-a", measurements: empty },
+        ];
+        let result = aggregate_by_source(&sources, &QuantityFilter::default()).unwrap();
+        assert_eq!(result.iter().map(|row| row.source_id.as_str()).collect::<Vec<_>>(), vec!["sheet-b", "sheet-a"]);
+        assert!(result.iter().all(|row| row.totals.is_empty()));
+    }
+    #[test]
+    fn per_source_breakdown_rejects_duplicate_and_blank_ids() {
+        let empty: &[Measurement] = &[];
+        let sources = [QuantitySource { source_id: " ", measurements: empty }];
+        assert!(aggregate_by_source(&sources, &QuantityFilter::default()).is_err());
+        assert!(aggregate_sources(&sources, None, &QuantityFilter::default()).is_err());
+        let duplicates = [
+            QuantitySource { source_id: "a", measurements: empty },
+            QuantitySource { source_id: "a", measurements: empty },
+        ];
+        assert!(aggregate_by_source(&duplicates, &QuantityFilter::default()).is_err());
+    }
     #[test]
     fn multi_pdf_sources_reject_duplicate_and_missing_ids() {
         let empty: &[Measurement] = &[];
