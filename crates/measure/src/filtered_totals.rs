@@ -125,9 +125,76 @@ pub fn aggregate_by_source(sources: &[QuantitySource<'_>], filter: &QuantityFilt
     Ok(results)
 }
 
+
+/// A labeled quantity group, keeping measurement units separate.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct LabeledQuantityTotals {
+    pub label: String,
+    pub totals: Vec<QuantityTotal>,
+}
+
+/// Group filtered quantities by label across source PDFs without losing unit identity.
+/// Labels retain their original spelling; groups are sorted deterministically.
+pub fn aggregate_by_label(sources: &[QuantitySource<'_>], filter: &QuantityFilter) -> Result<Vec<LabeledQuantityTotals>> {
+    let mut seen = std::collections::BTreeSet::new();
+    let mut groups: BTreeMap<String, Vec<&Measurement>> = BTreeMap::new();
+    for source in sources {
+        if source.source_id.trim().is_empty() || source.source_id.len() > 1024 || !seen.insert(source.source_id) {
+            return Err(invalid("source IDs must be nonblank, unique, and at most 1024 bytes"));
+        }
+        for measurement in source.measurements {
+            groups.entry(measurement.label.clone()).or_default().push(measurement);
+        }
+    }
+    let mut result = Vec::new();
+    for (label, measurements) in groups {
+        let owned: Vec<Measurement> = measurements.into_iter().cloned().collect();
+        let totals = aggregate(&owned, filter)?;
+        if !totals.is_empty() {
+            result.push(LabeledQuantityTotals { label, totals });
+        }
+    }
+    // Validate filter ranges even if no measurements exist.
+    if result.is_empty() {
+        aggregate(&[], filter)?;
+    }
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn grouped_labels_across_sources_keep_units_and_filter_matches() {
+        let scale = crate::Scale::default();
+        let points = vec![[0.0, 0.0], [72.0, 0.0]];
+        let reading = crate::reading(crate::Kind::Distance, &points, &scale).unwrap();
+        let make = |label: &str, page: usize| Measurement {
+            visible: true, page, index: 0, id: "same-id".into(),
+            author: "engineer".into(), label: label.into(),
+            points: points.clone(), scale: scale.clone(), reading: reading.clone(), hvac: None,
+        };
+        let a = [make("pipe", 0), make("duct", 1)];
+        let b = [make("pipe", 1)];
+        let sources = [
+            QuantitySource { source_id: "a.pdf", measurements: &a },
+            QuantitySource { source_id: "b.pdf", measurements: &b },
+        ];
+        let grouped = aggregate_by_label(&sources, &QuantityFilter::default()).unwrap();
+        assert_eq!(grouped.len(), 2);
+        assert_eq!(grouped[0].label, "duct");
+        assert_eq!(grouped[1].label, "pipe");
+        assert_eq!(grouped[1].totals[0].count, 2);
+        assert!((grouped[1].totals[0].quantity - reading.value * 2.0).abs() < 1e-9);
+        let filter = QuantityFilter { page: Some(0), ..Default::default() };
+        let selected = aggregate_by_label(&sources, &filter).unwrap();
+        assert_eq!(selected.len(), 1);
+        assert_eq!(selected[0].label, "pipe");
+        assert_eq!(selected[0].totals[0].count, 1);
+        let invalid = QuantityFilter { page_start: Some(2), page_end: Some(1), ..Default::default() };
+        assert!(aggregate_by_label(&[], &invalid).is_err());
+    }
     #[test]
     fn multi_pdf_aggregation_preserves_units_and_source_provenance() {
         let scale = crate::Scale::default();
