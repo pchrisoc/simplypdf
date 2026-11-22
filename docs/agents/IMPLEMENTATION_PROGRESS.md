@@ -416,3 +416,5 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Added focused automation regression `excel_query_tool_exports_a_refreshable_script_without_overwriting` for generated script contents, tool registration/dispatch, overwrite refusal, and invalid source extension. GitHub CI has not yet validated these commits.
 - Prior head `8b93e15`: SonarCloud `45059206390` succeeded; CI `45059206301` failed. Inspect job logs to distinguish dependency audit failures from compilation failures.
 - This is substantive headless integration, **not** ENG-08.09 completion. Still required: full CI and dependency audit, managed same-path workbook publishing, desktop user controls, and real Excel Refresh All acceptance test. README remains unchecked. Continue the entire engineering backlog after acceptance.
+
+- Confirmed previous CI job `137321129996` (run `45059206301`) passed earlier gate stages and failed at `cargo deny`: RUSTSEC-2026-0592, stack overflow in `Url::origin()` for nested `blob:` URLs. The dependency is still locked at vulnerable `url` 2.5.8. Resolver-generated lockfile update to >=2.5.9 is needed; no guessed checksum or advisory suppression was committed.
