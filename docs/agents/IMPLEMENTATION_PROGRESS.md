@@ -379,3 +379,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #90 Ubuntu CI run `45026168310` failed in `clippy` because the generated Power Query M list `{"Page", "Index"}` was not escaped in Rust `format!` (at `crates/measure/src/xlsx.rs:44`); SonarCloud run `45026168369` succeeded.
 - Commit `cc5f82ca709aef18790892cfab4e857d700ae634` escapes the list braces as `{{...}}` in the Rust format string and adds validation that the measurement `Type` is a nonblank string. A focused regression test asserts the generated M syntax and type guard.
 - New-head CI remains to be verified. ENG-08.09 is not complete: desktop/CLI entry point, managed same-path publishing, and Excel refresh smoke tests are outstanding. README remains unchecked.
+
+## ENG-08.09 Power Query destination validation — 2026-11-22
+
+- PR #90 commit `5ef57304cadd4ca888012e3c4df1205618182e6b` rejects relative and non-.pq script destinations before staging and adds `power_query_file_requires_absolute_pq_destination` covering relative paths, incorrect extension, no unexpected output, and uppercase .PQ.
+- Previous head `f196de2`: SonarCloud run 45031327979 passed; CI run 45031328003 failed only at `cargo deny` on vulnerable `url` 2.5.8 (RUSTSEC-2026-0592), after formatting and Rust tests passed. New head checks pending.
+- Remaining: update resolved Cargo.lock to patched url version; verify new CI and Excel import; expose user-facing query export and managed same-path publishing. ENG-08.09 remains unchecked; full engineering backlog remains the goal.
