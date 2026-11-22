@@ -204,6 +204,9 @@ pub struct PageQuantityTotals {
 /// Group measurements by source and zero-based page without combining unrelated sheets.
 /// Existing quantity filters apply before a page contributes to the result.
 pub fn aggregate_by_page(sources: &[QuantitySource<'_>], filter: &QuantityFilter) -> Result<Vec<PageQuantityTotals>> {
+    if filter.page_start.zip(filter.page_end).is_some_and(|(start, end)| start > end) {
+        return Err(invalid("page range start must not exceed end"));
+    }
     let mut seen = std::collections::BTreeSet::new();
     let mut result = Vec::new();
     for source in sources {
@@ -226,6 +229,16 @@ pub fn aggregate_by_page(sources: &[QuantitySource<'_>], filter: &QuantityFilter
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn page_aggregation_rejects_invalid_range_even_without_measurements() {
+        let empty: [Measurement; 0] = [];
+        let sources = [QuantitySource { source_id: "empty", measurements: &empty }];
+        let filter = QuantityFilter { page_start: Some(5), page_end: Some(2), ..Default::default() };
+        assert!(aggregate_by_page(&[], &filter).is_err());
+        assert!(aggregate_by_page(&sources, &filter).is_err());
+        assert!(aggregate_by_page(&sources, &QuantityFilter::default()).unwrap().is_empty());
+    }
+
     #[test]
     fn page_totals_preserve_source_and_page_boundaries() {
         let scale = crate::Scale::default();
