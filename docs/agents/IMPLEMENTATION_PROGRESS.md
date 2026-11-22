@@ -403,3 +403,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #90 commit `be5d600133bf949a684b77b4e5db04567d453241` changes generated Excel Power Query M to reject null/non-numeric schema versions explicitly, and NaN/infinite page and index values before rounding or converting. Added focused `excel_query_rejects_missing_schema_versions_and_non_finite_positions` regression assertions in `crates/measure/src/xlsx.rs`.
 - Prior head `953d4b0`: SonarCloud run 45047853702 succeeded; Ubuntu CI run 45047853782 failed. New head CI not yet verified. The locked `url` version remains 2.5.8; resolve the lockfile through Cargo rather than inventing a registry checksum.
 - No README checkbox is complete from these guards alone. Outstanding: CI/security audit, desktop/CLI workflow, managed same-path publishing, and Excel refresh acceptance testing. Continue remaining ENG milestones after this coherent milestone.
+
+## ENG-08.09 Power Query numeric schema validation — 2026-11-22
+
+- Commit `8f3fb311dd19a2df71fefdd1b66e05dc1c91ef79` on PR #90 rejects NaN and infinite schema-version cells in the generated Excel Power Query before accepting the schema. Also repairs stale position/version regression assertions to match the generated M expression and adds a focused regression test for non-finite schema versions.
+- Verification: regression tests were added but not executed locally (GitHub connector only); the new PR-head CI result was not yet available at the time of this entry. Do not mark ENG-08.09 complete or merge until the head passes required checks.
+- Remaining: resolve the `url` 2.5.8 cargo-deny advisory by a resolver-generated lockfile update, expose the Excel query workflow through the desktop and headless automation tools, validate Excel Refresh All against a real managed published workbook, and satisfy remaining ENG-08.09 acceptance requirements.
