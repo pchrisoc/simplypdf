@@ -361,3 +361,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Commit `cf88184583e74c89fe0632d95c9b4da5f3b137db` adds Power Query validation of trimmed annotation IDs, numeric quantity values, and nonblank units before typed Excel table loading. Focused Rust generator regression assertions cover new validation expressions.
 - Prior head `a68963a74303d66acb23ccf345cc5928065826ab`: SonarCloud run `45011030795` succeeded; CI run `45011030830` failed **after** the Rust test suite at cargo-deny, due to RUSTSEC-2026-0592 (`url` 2.5.8, fixed in 2.5.9). This is a dependency-security gate, not an observed failing Excel test. Update Cargo.lock to a patched compatible url release via a properly resolved cargo update; do not suppress the advisory.
 - ENG-08.09 remains unchecked; the new head needs fresh CI, an actual Excel smoke test, desktop/CLI exposure, and managed same-path publication. No merge until required checks pass.
+
+## ENG-08.09 script artifact export — 2026-11-22
+
+- PR #90 commit `42edc82824835e6857e34a5cae11c844476a5529` adds `write_excel_power_query_new` for atomic no-clobber UTF-8 `.pq` exports, reusing the validated M generator. Focused tests cover successful output, refusal to overwrite an existing query, and rejection of invalid source paths before creating the destination.
+- Previous head `3dfe2703b0980457fb98fba23177132cc5f97d0d`: SonarCloud run `45015640089` passed, CI run `45015640008` failed. The prior reported blocker was `cargo deny` advisory RUSTSEC-2026-0592 affecting `url` 2.5.8; inspect current job logs before attributing this run's failure to that cause.
+- Still incomplete: source workbook managed publishing, desktop/CLI entry point, actual Excel refresh smoke test, and passing CI. Do not merge or check off ENG-08.09 on the basis of library tests alone.
