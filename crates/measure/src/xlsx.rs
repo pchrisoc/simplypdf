@@ -30,12 +30,16 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
         return Err("Excel Power Query source path contains control characters".into());
     }
     let escaped = path.replace('"', "\"\"");
+    let columns = TAKEOFF_COLUMNS.iter().map(|name| format!("\\\"{}\\\"", name.replace('"', "\"\""))).collect::<Vec<_>>().join(", ");
     Ok(format!(
         r#"let
     Source = Excel.Workbook(File.Contents("{escaped}"), null, true),
     Takeoff = Source{{[Item="TakeoffData", Kind="DefinedName"]}}[Data],
     Headers = Table.PromoteHeaders(Takeoff, [PromoteAllScalars=true]),
-    Typed = Table.TransformColumnTypes(Headers, {{
+    ExpectedColumns = {{{columns}}},
+    SchemaChecked = if Table.ColumnNames(Headers) <> ExpectedColumns then error "SimplyPDF takeoff schema columns have changed" else Headers,
+    VersionChecked = if List.AnyTrue(List.Transform(Table.Column(SchemaChecked, "Schema version"), each _ <> {TAKEOFF_SCHEMA_VERSION})) then error "Unsupported SimplyPDF takeoff schema version" else SchemaChecked,
+    Typed = Table.TransformColumnTypes(VersionChecked, {{
         {{"Page", Int64.Type}}, {{"Index", Int64.Type}}, {{"Type", type text}},
         {{"Value", type number}}, {{"Unit", type text}}, {{"Label", type text}},
         {{"Author", type text}}, {{"Scale", type text}},
@@ -111,6 +115,9 @@ mod tests {
         assert!(m.contains("job \"\"A\"\".xlsx"));
         assert!(m.contains("Table.PromoteHeaders"));
         assert!(m.contains("Annotation ID"));
+        assert!(m.contains("SchemaChecked"));
+        assert!(m.contains("VersionChecked"));
+        assert!(m.contains("Unsupported SimplyPDF takeoff schema version"));
     }
 
     #[test]
