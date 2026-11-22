@@ -444,3 +444,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #90 commit `90f70dccf2cbd405fa676ee085a09f2a5b1e21ba` adds Unix `replace_managed_checked`: validate the complete measurement listing and fingerprint, stage a fresh XLSX on the same filesystem, then rename over an existing workbook. The API is intentionally not wired to automatic background publishing. Tests cover initial publication, replacement, refusal of truncated scans without damaging the old workbook, and rejection of symlink destinations.
 - Pending CI on this new head. This is not ENG-08.05 acceptance: Windows atomic replacement strategy, explicit start/status/refresh/stop controls, lock handling, refresh scheduling, stale scan reporting, and end-to-end Excel smoke testing remain. No README checkmark or merge claimed.
+
+## Managed workbook destination safety — 2026-11-22
+
+- PR #90 commit `56901d85d166706dd702140bedee72e7888e525e` hardens `replace_managed_checked` by rejecting directories, symlinks and other non-regular destinations, and propagating metadata errors rather than treating them as nonexistent. Test `managed_snapshot_refuses_directory_destination` verifies a directory is preserved. Prior incomplete-listing and symlink tests remain.
+- PR #73 was verified already merged on 2026-11-20; ENG-08.01 remains unchecked because its full acceptance is not established. PR #90 remains draft and pending new-head CI. Windows support, explicit publisher lifecycle, refresh and real Excel integration remain blockers; no checkbox claimed.
