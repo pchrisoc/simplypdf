@@ -30,11 +30,7 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
         return Err("Excel Power Query source path contains control characters".into());
     }
     let escaped = path.replace('"', "\"\"");
-    let columns = TAKEOFF_COLUMNS
-        .iter()
-        .map(|name| format!(r#""{}""#, name.replace('"', "\"\"")))
-        .collect::<Vec<_>>()
-        .join(", ");
+    let columns = TAKEOFF_COLUMNS.iter().map(|name| format!(r#""{}""#, name.replace('"', "\"\""))).collect::<Vec<_>>().join(", ");
     Ok(format!(
         r#"let
     Source = Excel.Workbook(File.Contents("{escaped}"), null, true),
@@ -43,7 +39,9 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     ExpectedColumns = {{{columns}}},
     SchemaChecked = if Table.ColumnNames(Headers) <> ExpectedColumns then error "SimplyPDF takeoff schema columns have changed" else Headers,
     VersionChecked = if List.AnyTrue(List.Transform(Table.Column(SchemaChecked, "Schema version"), each _ <> {TAKEOFF_SCHEMA_VERSION})) then error "Unsupported SimplyPDF takeoff schema version" else SchemaChecked,
-    Typed = Table.TransformColumnTypes(VersionChecked, {{
+    Ids = Table.Column(VersionChecked, "Annotation ID"),
+    IdentityChecked = if List.Contains(Ids, null) or List.Contains(Ids, "") or List.Count(Ids) <> List.Count(List.Distinct(Ids)) then error "SimplyPDF takeoff has missing or duplicate annotation IDs" else VersionChecked,
+    Typed = Table.TransformColumnTypes(IdentityChecked, {{
         {{"Page", Int64.Type}}, {{"Index", Int64.Type}}, {{"Type", type text}},
         {{"Value", type number}}, {{"Unit", type text}}, {{"Label", type text}},
         {{"Author", type text}}, {{"Scale", type text}},
@@ -121,6 +119,10 @@ mod tests {
         assert!(m.contains("Annotation ID"));
         assert!(m.contains("SchemaChecked"));
         assert!(m.contains("VersionChecked"));
+        assert!(m.contains("List.Count(List.Distinct(Ids))"));
+        assert!(m.contains("missing or duplicate annotation IDs"));
+        assert!(m.contains("Table.TransformColumnTypes(IdentityChecked"));
+
         assert!(m.contains("Unsupported SimplyPDF takeoff schema version"));
     }
 
