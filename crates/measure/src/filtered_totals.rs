@@ -18,6 +18,10 @@ pub struct QuantityFilter {
     pub unit: Option<String>,
     /// Restrict quantities to a zero-based PDF page index.
     pub page: Option<usize>,
+    /// Inclusive start page for a multi-page takeoff selection.
+    pub page_start: Option<usize>,
+    /// Inclusive end page for a multi-page takeoff selection.
+    pub page_end: Option<usize>,
     /// Restrict quantities to visible or hidden measurement annotations.
     pub visible: Option<bool>,
 }
@@ -30,6 +34,9 @@ pub struct QuantityTotal {
 }
 
 pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Result<Vec<QuantityTotal>> {
+    if filter.page_start.zip(filter.page_end).is_some_and(|(start, end)| start > end) {
+        return Err(invalid("page range start must not exceed end"));
+    }
     let mut totals: BTreeMap<String, (usize, f64)> = BTreeMap::new();
     for m in measurements {
         if filter.label.as_ref().is_some_and(|s| !m.label.eq_ignore_ascii_case(s))
@@ -40,6 +47,8 @@ pub fn aggregate(measurements: &[Measurement], filter: &QuantityFilter) -> Resul
             || filter.profile.as_ref().is_some_and(|s| !m.hvac.as_ref().is_some_and(|h| h.profile.eq_ignore_ascii_case(s)))
             || filter.size.as_ref().is_some_and(|s| !m.hvac.as_ref().is_some_and(|h| h.size.eq_ignore_ascii_case(s)))
             || filter.page.is_some_and(|page| m.page != page)
+            || filter.page_start.is_some_and(|start| m.page < start)
+            || filter.page_end.is_some_and(|end| m.page > end)
             || filter.visible.is_some_and(|visible| m.visible != visible)
         {
             continue;
@@ -256,6 +265,30 @@ mod tests {
         assert!(aggregate(&measurements, &filter).unwrap().is_empty());
         let filter = QuantityFilter { service: Some("SA".into()), ..Default::default() };
         assert_eq!(aggregate(&measurements, &filter).unwrap()[0].count, 1);
+    }
+    #[test]
+    fn inclusive_page_ranges_compose_with_exact_page_and_reject_reverse_ranges() {
+        let scale = crate::Scale::default();
+        let points = vec![[0.0, 0.0], [72.0, 0.0]];
+        let reading = crate::reading(crate::Kind::Distance, &points, &scale).unwrap();
+        let make = |page| Measurement {
+            visible: true, page, index: 0, id: format!("page-{page}"),
+            author: "engineer".into(), label: "pipe".into(),
+            points: points.clone(), scale: scale.clone(), reading: reading.clone(), hvac: None,
+        };
+        let measurements = [make(0), make(1), make(2), make(3)];
+        let filter = QuantityFilter { page_start: Some(1), page_end: Some(2), ..Default::default() };
+        let totals = aggregate(&measurements, &filter).unwrap();
+        assert_eq!(totals.len(), 1);
+        assert_eq!(totals[0].count, 2);
+        assert!((totals[0].quantity - reading.value * 2.0).abs() < 1e-9);
+        let exact = QuantityFilter { page: Some(2), ..filter.clone() };
+        assert_eq!(aggregate(&measurements, &exact).unwrap()[0].count, 1);
+        let outside = QuantityFilter { page: Some(3), ..filter.clone() };
+        assert!(aggregate(&measurements, &outside).unwrap().is_empty());
+        let reversed = QuantityFilter { page_start: Some(3), page_end: Some(1), ..Default::default() };
+        assert!(aggregate(&measurements, &reversed).is_err());
+        assert!(aggregate(&[], &reversed).is_err());
     }
     #[test]
     fn unit_filter_is_case_sensitive() {
