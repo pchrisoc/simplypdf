@@ -58,6 +58,19 @@ in
     ))
 }
 
+/// Export a ready-to-paste Power Query script without overwriting an existing file.
+/// The source workbook need not exist yet, allowing estimate setup before publication.
+pub fn write_excel_power_query_new(query_path: &Path, workbook_path: &Path) -> Result<(), String> {
+    let script = excel_power_query_source(workbook_path)?;
+    let parent = query_path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    let mut staged = tempfile::NamedTempFile::new_in(parent).map_err(|e| e.to_string())?;
+    use std::io::Write;
+    staged.write_all(script.as_bytes()).map_err(|e| e.to_string())?;
+    staged.as_file().sync_all().map_err(|e| e.to_string())?;
+    staged.persist_noclobber(query_path).map_err(|e| format!("{}: {}", query_path.display(), e.error))?;
+    Ok(())
+}
+
 /// Publish a validated, versioned measurement snapshot without incomplete row identity.
 pub fn write_new_checked(path: &Path, listing: &Listing) -> Result<(), String> {
     let fingerprint = crate::snapshot_fingerprint(listing).map_err(|e| e.to_string())?;
@@ -136,6 +149,29 @@ mod tests {
         assert!(excel_power_query_source(Path::new("relative.xlsx")).is_err());
         assert!(excel_power_query_source(Path::new("/tmp/source.csv")).is_err());
         assert!(excel_power_query_source(Path::new("/tmp/bad\nname.xlsx")).is_err());
+    }
+
+    #[test]
+    fn power_query_file_is_written_once_and_preserves_existing_content() {
+        let dir = tempfile::tempdir().expect("temporary query directory");
+        let query = dir.path().join("takeoff.pq");
+        let workbook = dir.path().join("takeoff.xlsx");
+        write_excel_power_query_new(&query, &workbook).expect("create query");
+        let original = std::fs::read_to_string(&query).expect("read query");
+        assert!(original.contains("TakeoffData"));
+        assert!(original.contains("Table.TransformColumnTypes"));
+        assert!(write_excel_power_query_new(&query, &workbook).is_err());
+        assert_eq!(std::fs::read_to_string(&query).expect("read original query"), original);
+    }
+
+    #[test]
+    fn power_query_file_rejects_bad_source_without_creating_destination() {
+        let dir = tempfile::tempdir().expect("temporary query directory");
+        let query = dir.path().join("takeoff.pq");
+        assert!(write_excel_power_query_new(&query, Path::new("relative.xlsx")).is_err());
+        assert!(!query.exists());
+        assert!(write_excel_power_query_new(&query, &dir.path().join("source.csv")).is_err());
+        assert!(!query.exists());
     }
 
     #[test]
