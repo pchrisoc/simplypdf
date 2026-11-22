@@ -258,9 +258,9 @@ mod tests {
     #[test]
     fn excel_query_keeps_validated_positions_in_quantity_pipeline() {
         let script = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("query script");
-        assert!(script.contains("Quantities = Table.Column(PositionsChecked, \\"Value\\")"));
+        assert!(script.contains("Quantities = Table.Column(PositionsChecked, \"Value\")"));
         assert!(script.contains("else PositionsChecked,"));
-        assert!(!script.contains("invalid quantities or missing units\\" else IdentityChecked"));
+        assert!(!script.contains("invalid quantities or missing units\" else IdentityChecked"));
     }
 
     #[test]
