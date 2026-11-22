@@ -298,3 +298,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #84 commit `b9b8083488e2df741df7fffecdb848aa5bee590a` adds `PageQuantityTotals` and `aggregate_by_page`, retaining source PDF IDs and zero-based page numbers in filtered quantity totals. A focused regression test covers independent PDFs with overlapping annotation IDs, stable source/page ordering, and page-range selection.
 - At inspection, main README contained 21 checked and 214 unchecked checkboxes across the entire checklist. ENG-08.07 remains unchecked: actual document loading, UI and automation integration, PR conflict resolution, and CI verification remain outstanding.
 - Tests are committed but not yet verified by a passing workflow; do not merge until required checks pass.
+
+## ENG-08.07 empty-source page-range validation — 2026-11-21 PST
+
+- PR #84 commit `d0803d6ced31e62df1596256a149bc5db8cf6367` rejects reversed inclusive page ranges before iterating source PDFs. Previously, empty source collections or source PDFs with zero measurements bypassed validation.
+- Regression test `page_aggregation_rejects_invalid_range_even_without_measurements` covers both empty-source cases and valid empty results. Test is committed, not verified by CI.
+- PR #84 currently reports `mergeable=false`; no PR merge or README checkbox update. Remaining: real PDF integration, desktop/MCP exposure, conflict resolution, and passing CI.
