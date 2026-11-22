@@ -51,7 +51,7 @@ pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> 
     Scales = Table.Column(QuantityChecked, "Scale"),
     ScaleChecked = if List.AnyTrue(List.Transform(Scales, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has missing scale metadata" else QuantityChecked,
     Types = Table.Column(ScaleChecked, "Type"),
-    TypeChecked = if List.AnyTrue(List.Transform(Types, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has missing measurement types" else QuantityChecked,
+    TypeChecked = if List.AnyTrue(List.Transform(Types, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has missing measurement types" else ScaleChecked,
     Typed = Table.TransformColumnTypes(TypeChecked, {{
         {{"Page", Int64.Type}}, {{"Index", Int64.Type}}, {{"Type", type text}},
         {{"Value", type number}}, {{"Unit", type text}}, {{"Label", type text}},
@@ -134,7 +134,6 @@ fn write_snapshot(path: &Path, measurements: &[Measurement], fingerprint: Option
     staged.persist_noclobber(path).map_err(|e| format!("{}: {}", path.display(), e.error))?;
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -254,6 +253,14 @@ mod tests {
         assert!(script.contains("Table.Column(QuantityChecked, \"Scale\")"));
         assert!(script.contains("SimplyPDF takeoff has missing scale metadata"));
         assert!(script.contains("Types = Table.Column(ScaleChecked, \"Type\")"));
+    }
+
+    #[test]
+    fn excel_query_keeps_validated_scale_stage_in_type_pipeline() {
+        let script = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("query script");
+        assert!(script.contains("else ScaleChecked,"));
+        assert!(script.contains("Typed = Table.TransformColumnTypes(TypeChecked"));
+        assert!(!script.contains("missing measurement types\" else QuantityChecked"));
     }
 
     #[test]
