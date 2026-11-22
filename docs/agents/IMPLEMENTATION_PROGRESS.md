@@ -373,3 +373,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #90 commits `41210b281f1a0ca21f1ac067d2468cf1bdb65263` and `7a8140ca9af0946cc74b3f109cd21ddcd6616a2c` add typed Power Query validation for 1-based positive integer page/index positions, with a focused regression test and safe type-guarded comparisons.
 - Prior head `d77937f4c3dbc8c416c7b3d7f731cf6df8067bd8`: SonarCloud run 45020545170 succeeded; CI run 45020545169 failed at cargo-deny RUSTSEC-2026-0592 (`url` 2.5.8). Rust tests passed in the gate before deny.
 - No README checkbox or merge yet. Blockers: update Cargo.lock with patched url >=2.5.9, verify latest CI, expose end-user workflow and validate real Excel refresh, and implement managed same-path publication.
+
+## ENG-08.09 Power Query compile repair and type validation — 2026-11-22
+
+- PR #90 Ubuntu CI run `45026168310` failed in `clippy` because the generated Power Query M list `{"Page", "Index"}` was not escaped in Rust `format!` (at `crates/measure/src/xlsx.rs:44`); SonarCloud run `45026168369` succeeded.
+- Commit `cc5f82ca709aef18790892cfab4e857d700ae634` escapes the list braces as `{{...}}` in the Rust format string and adds validation that the measurement `Type` is a nonblank string. A focused regression test asserts the generated M syntax and type guard.
+- New-head CI remains to be verified. ENG-08.09 is not complete: desktop/CLI entry point, managed same-path publishing, and Excel refresh smoke tests are outstanding. README remains unchecked.
