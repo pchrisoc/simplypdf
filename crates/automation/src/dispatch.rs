@@ -774,6 +774,7 @@ impl Automation {
             "measure_snap" => self.measurement_snap(&a)?,
             "measure_export" => self.measurement_export(&a)?,
             "takeoff_export_xlsx" => self.takeoff_export_xlsx(&a)?,
+            "takeoff_excel_query" => self.takeoff_excel_query(&a)?,
             "comment_list" => self.comment_list(&a)?,
             "comment_add" => self.comment_add(&a)?,
             "numbered_symbols_add" => self.numbered_symbols_add(&a)?,
