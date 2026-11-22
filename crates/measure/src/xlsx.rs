@@ -103,10 +103,10 @@ mod tests {
 
     #[test]
     fn excel_query_uses_named_range_and_escapes_path_quotes() {
-        let path = if cfg!(windows) { Path::new("C:\\\\takeoff\\\\job \\\"A\\\".xlsx") } else { Path::new("/tmp/job \\\"A\\\".xlsx") };
+        let path = if cfg!(windows) { Path::new("C:\\takeoff\\job \"A\".xlsx") } else { Path::new("/tmp/job \"A\".xlsx") };
         let m = excel_power_query_source(path).expect("absolute workbook path");
-        assert!(m.contains("Item=\\\"TakeoffData\\\", Kind=\\\"DefinedName\\\""));
-        assert!(m.contains("job \\\"\\\"A\\\"\\\".xlsx"));
+        assert!(m.contains("Item=\"TakeoffData\", Kind=\"DefinedName\""));
+        assert!(m.contains("job \"\"A\"\".xlsx"));
         assert!(m.contains("Table.PromoteHeaders"));
         assert!(m.contains("Annotation ID"));
     }
@@ -115,7 +115,7 @@ mod tests {
     fn excel_query_rejects_relative_or_non_xlsx_paths() {
         assert!(excel_power_query_source(Path::new("relative.xlsx")).is_err());
         assert!(excel_power_query_source(Path::new("/tmp/source.csv")).is_err());
-        assert!(excel_power_query_source(Path::new("/tmp/bad\\nname.xlsx")).is_err());
+        assert!(excel_power_query_source(Path::new("/tmp/bad\nname.xlsx")).is_err());
     }
 
 
