@@ -343,3 +343,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Branch `feat/eng-0605-derived-quantities-20261123`: `b452d47` adds a validated `extrude` calculation for footprint volume (`area × depth`) and lateral wall area (`perimeter × depth`) in consistent calibrated units; `74cfec7` exposes it from the measure crate.
 - Focused Rust unit tests cover a rectangular room, zero depth, negative/nonfinite inputs, and multiplication overflow. Tests are committed but have not yet been run by CI.
 - This is a reusable engine foundation, **not** full ENG-06.05 acceptance: connect depth/height inputs to measurement UI, saved markups, export and automation, verify unit conversion and PDF reopen, and pass all required checks. README checkbox remains unchecked. Continue ENG-08 open PRs and the remaining engineering backlog.
+
+## 2026-11-23 — ENG-06.05 through-opening extrusion follow-up
+
+- PR #93 commit `f9ef696` adds `extrude_with_openings` for net volume (gross footprint minus through-opening areas) and lateral wall area (outer plus interior opening perimeters), with cumulative-area, nonfinite and invalid-perimeter validation.
+- Focused tests cover a 10×10 footprint with a 2×2 opening at depth 3, the empty-opening equivalence, and invalid/cumulative excess openings. Tests are committed, not yet verified by CI.
+- Geometry containment and non-overlap remain caller responsibilities. ENG-06.05 is still unchecked pending persisted depth/height, desktop input, takeoff/export integration and end-to-end acceptance; ENG-06.04 still requires interactive area-cutout geometry.
