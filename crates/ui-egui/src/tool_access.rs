@@ -109,8 +109,8 @@ fn tool_matches(id: &str, query: &str) -> bool {
     if query.is_empty() {
         return true;
     }
+    let label = catalog::group(id).map(|group| tl!(group.label).to_lowercase()).unwrap_or_default();
     let id = id.to_lowercase();
-    let label = catalog::group(&id).map(|group| tl!(group.label).to_lowercase()).unwrap_or_default();
     query.split_whitespace().all(|word| id.contains(word) || label.contains(word))
 }
 
