@@ -105,10 +105,13 @@ pub fn show(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
 /// Match tool names and identifiers so the tool chest can be searched without
 /// changing pinned tools or the user's open-tool history.
 fn tool_matches(id: &str, query: &str) -> bool {
-    let query = query.trim();
-    query.is_empty()
-        || id.to_lowercase().contains(&query.to_lowercase())
-        || catalog::group(id).is_some_and(|group| tl!(group.label).to_lowercase().contains(&query.to_lowercase()))
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return true;
+    }
+    let id = id.to_lowercase();
+    let label = catalog::group(&id).map(|group| tl!(group.label).to_lowercase()).unwrap_or_default();
+    query.split_whitespace().all(|word| id.contains(word) || label.contains(word))
 }
 
 fn matching_tool_count(pinned: &[String], open: &[String], query: &str, pinned_only: bool) -> usize {
@@ -327,7 +330,7 @@ fn row(app: &mut SimplyPDFApp, ui: &mut egui::Ui, id: &str, active: bool, pinned
 
 #[cfg(test)]
 mod tool_chest_tests {
-    use super::{catalog_search_ids, first_matching_tool, matching_tool_count, tool_matches, ExactToolSort};
+    use super::{ExactToolSort, catalog_search_ids, first_matching_tool, matching_tool_count, tool_matches};
 
     #[test]
     fn catalog_search_does_not_repeat_pinned_or_open_tools() {
@@ -381,5 +384,8 @@ mod tool_chest_tests {
         assert!(tool_matches("measurement", "   "));
         assert!(!tool_matches("measurement", "nonexistent-tool-xyz"));
         assert!(!tool_matches("measurement", "measur xyz"));
+        assert!(tool_matches("measurement", "measure ment"));
+        assert!(tool_matches("measurement", "MENT MEASURE"));
+        assert!(!tool_matches("measurement", "measure missing"));
     }
 }
