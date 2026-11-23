@@ -208,7 +208,7 @@ mod tests {
         let result = extrude_measured_polygon(&square, &scale, 3.0, 1.0, 1.0).expect("room");
         assert_eq!(result.volume, 300.0);
         assert_eq!(result.wall_area, 120.0);
-        let metric = extrude_measured_polygon(&square, &scale, 3.048, 0.3048 * 0.3048, 0.3048).expect("metric");
+        let metric = extrude_measured_polygon(&square, &scale, 0.9144, 0.3048 * 0.3048, 0.3048).expect("metric");
         assert!((metric.volume - 300.0 * 0.3048_f64.powi(3)).abs() < 1e-10);
         assert!(extrude_measured_polygon(&square, &scale, -1.0, 1.0, 1.0).is_err());
         assert!(extrude_measured_polygon(&square, &scale, 3.0, 0.0, 1.0).is_err());
