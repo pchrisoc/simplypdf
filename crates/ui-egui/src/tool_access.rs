@@ -102,6 +102,15 @@ pub fn show(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
         });
 }
 
+/// Match tool names and identifiers so the tool chest can be searched without
+/// changing pinned tools or the user's open-tool history.
+fn tool_matches(id: &str, query: &str) -> bool {
+    let query = query.trim();
+    query.is_empty()
+        || id.to_lowercase().contains(&query.to_lowercase())
+        || catalog::group(id).is_some_and(|group| tl!(group.label).to_lowercase().contains(&query.to_lowercase()))
+}
+
 fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let current = match app.left {
         LeftPanel::Tool(id) => Some(id),
@@ -115,6 +124,13 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let pinned = app.pinned_tools.clone();
     let open: Vec<_> = app.open_tools.iter().filter(|id| !pinned.contains(id)).cloned().collect();
     let compact = app.tool_rail_collapsed;
+    let search_id = egui::Id::new("tool-chest-search");
+    let mut search = ui.ctx().data_mut(|data| data.get_temp::<String>(search_id).unwrap_or_default());
+    if !compact {
+        ui.label(egui::RichText::new("TOOL CHEST").strong().size(11.0).color(theme::Tokens::get(ui.ctx()).text_muted));
+        ui.add(egui::TextEdit::singleline(&mut search).hint_text("Find tools…").desired_width(f32::INFINITY));
+        ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
+    }
     egui::ScrollArea::vertical().id_salt("tool-access-list").max_height((ui.available_height() - 45.0).max(40.0)).show(ui, |ui| {
         if !compact {
             widgets::section_title(ui, tl!("Pinned tools"));
@@ -129,14 +145,18 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             ui.add_space(18.0);
         }
         for id in &pinned {
-            row(app, ui, id, current == Some(id.as_str()), true);
+            if tool_matches(id, &search) {
+                row(app, ui, id, current == Some(id.as_str()), true);
+            }
         }
         ui.separator();
         if !compact {
             widgets::section_title(ui, tl!("Open tools"));
         }
         for id in &open {
-            row(app, ui, id, current == Some(id.as_str()), false);
+            if tool_matches(id, &search) {
+                row(app, ui, id, current == Some(id.as_str()), false);
+            }
         }
     });
     if compact {
@@ -196,4 +216,17 @@ fn row(app: &mut SimplyPDFApp, ui: &mut egui::Ui, id: &str, active: bool, pinned
             }
         });
     });
+}
+
+#[cfg(test)]
+mod tool_chest_tests {
+    use super::tool_matches;
+
+    #[test]
+    fn tool_chest_search_matches_identifiers_and_ignores_case() {
+        assert!(tool_matches("measurement", "MEASURE"));
+        assert!(tool_matches("measurement", "  measure  "));
+        assert!(tool_matches("measurement", ""));
+        assert!(!tool_matches("measurement", "nonexistent-tool-xyz"));
+    }
 }
