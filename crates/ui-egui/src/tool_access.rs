@@ -145,14 +145,13 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
         if ui.input(|input| input.key_pressed(egui::Key::Escape)) {
             search.clear();
             ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
-        } else if ui.input(|input| input.key_pressed(egui::Key::Enter)) {
-            if let Some(id) = pinned.iter().chain(open.iter()).find(|id| tool_matches(id, &search)) {
-                if let Some(group) = catalog::group(id) {
-                    app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
-                    app.takeoff_workspace.settings_floating = false;
-                    app.select_tool(group.id);
-                }
-            }
+        } else if ui.input(|input| input.key_pressed(egui::Key::Enter))
+            && let Some(id) = pinned.iter().chain(open.iter()).find(|id| tool_matches(id, &search))
+            && let Some(group) = catalog::group(id)
+        {
+            app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
+            app.takeoff_workspace.settings_floating = false;
+            app.select_tool(group.id);
         }
     }
     let matches = pinned.iter().chain(open.iter()).filter(|id| tool_matches(id, &search)).count();
