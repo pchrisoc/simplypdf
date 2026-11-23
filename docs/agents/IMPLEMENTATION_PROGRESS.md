@@ -337,3 +337,81 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #89 commit `c8471121dc6a229c52ab721d0299f477469e8871` adds `count_filtered`, an allocation-free matching-record count that uses the same filter predicate as paginated register results; `filtered_count_matches_pages_and_respects_empty_query` covers filtered, paginated and unfiltered counts.
 - The same commit applies the two precise `cargo fmt --check` changes reported by failed Ubuntu CI run 44898022052. SonarCloud passed on the preceding head; new-head CI remains unverified.
 - ENG-09.06 is not complete: persist metadata with PDF annotations, wire the desktop register, and verify save/reopen and end-to-end acceptance before checking README.
+
+## Desktop UI Tool Chest — 2026-11-22
+
+- Draft PR #91 introduces a searchable, compact Tool Chest navigation for the egui desktop workspace (`3036067008dd240d0c34e0b88142caeed9cd4ce8`, `2fbeadf7ed0769a1d3dca4c30385e166c7b48e1b`). The filter matches tool IDs and localized names, preserves pinning/dragging, and clears when collapsing the rail to avoid invisible active filters. Added focused matching regression test.
+- This is an incremental original design inspired by professional PDF review workflows; it does not reproduce Bluebeam assets. Pending CI and visual review; no README checkbox or merge claimed.
+
+### Tool Chest CI repair — 2026-11-22
+
+- PR #91 CI run 45096038788 failed at Clippy because `egui::Id::new` is deprecated under `-D warnings`. Commits `6c19a537d6f80933b44ec6147157f62696188c1b` and `4b7e08bc0bc60a05f4993ad92a5d07e56601e7ea` replace it with `ui.make_persistent_id`, preserving state identity across frames. Commit `699d69e540829f43769d8187da0b6002d1ada02f` adds an explicit clear-search control. CI for the latest head is pending; do not merge until green. PR #73 was confirmed merged at `94764cf09c69d985c2c9cb1f7a96d63631befeef`, but milestone-level checklist acceptance is not inferred from that merge.
+
+## Tool Chest UI follow-up — 2026-11-22 19:09 PST
+
+- PR #91 commit `35b8e998b4f31edc49ba3d8a0b14802846896d98` adds a live matching-tool count and actionable empty-search state; expands the search regression for whitespace-only input.
+- Latest inspected PR #91 CI run `45098391590` failed at `cargo deny` on RustSec advisory `RUSTSEC-2026-0592` for `url 2.5.8` in Cargo.lock, **after** Rust tests passed. This is a workspace dependency-security blocker, not a confirmed Tool Chest test failure. Must update the vulnerable lockfile dependency and re-run CI before merge. PR #90 has five passing workflows but remains draft; PR #73 is merged. No README checkboxes newly completed.
+
+## Tool Chest keyboard navigation — 2026-11-22 evening
+
+- PR #91 commit `47580d2a62addbe5e44a213cc265a1f67c16aa2e` adds Enter-to-select-first-match and Escape-to-clear to the Tool Chest search, with a negative-match regression assertion. This is substantive UI functionality; no checklist task is claimed complete.
+- Prior head `2e175b76e76e31d8cbc367ed852f242721c902fa` failed CI run 45104351294 (`gate / gate (ubuntu-24.04)`, job 137462116266) at `cargo deny`: RUSTSEC-2026-0592, locked `url` 2.5.8, stack overflow in `Url::origin()` on nested `blob:` URLs. SonarCloud passed. The lockfile security fix is not yet committed; do not bypass the advisory or merge this PR until the dependency is upgraded and the new head passes CI.
+- ENG-08.01 PR #73 is merged; ENG-08 workbook PR #90 has five green workflows but remains draft pending complete acceptance criteria. Continue across all unchecked README milestones after these blockers.
+
+## Tool Chest PR #91 — CI repair and keyboard focus safety (2026-11-22)
+
+- CI run 45110359220 failed in Clippy (`collapsible_if`) at `crates/ui-egui/src/tool_access.rs:148–150`, not at cargo-deny. Commit `ae28fbe7ab4c4802f4c6ed3606c81822c0c49caf` collapses the nested conditions.
+- Commit `8928d881c300565c5415648c23dff6a97534e7f1` fixes a keyboard interaction bug: Enter/Escape only trigger Tool Chest actions while its search input has focus, preventing global shortcut interception.
+- Await fresh CI on the new head; do not merge or mark README tasks complete until required checks pass and acceptance criteria are verified. Continue the full engineering backlog afterward.
+
+## Tool Chest follow-up — 2026-11-22 22:00 PST
+
+- PR #91: `b9ed0aa63c66810e275435bbdab13e9f9bbe411d` repairs CI rustfmt failure at `tool_access.rs:130` and makes empty Tool Chest searches actionable with a Browse full tool catalog button. `54f38d772933b243d8edfc19f34f61f10d6f03ca` extracts a matching-count helper and tests matching across pinned/open groups, zero matches, and blank search.
+- Previous head `33d4cfadbb3c2d8cadbdabf734f7876ebbd70938` failed CI run 45116377207 at rustfmt; SonarCloud passed. New head has not yet completed required checks. PR #73 merged; PR #90 still draft with five successful workflows, but broader managed workbook acceptance remains incomplete. No new checklist items marked done.
+
+## Tool Chest pinned-only filter — 2026-11-23
+
+- PR #91 commit `532e349dbe34e04a081f5c0f0a9a73b75d3d9c9d` adds a pinned-only filter to the Tool Chest, with consistent visible counts and Enter-key activation; collapsed navigation resets both hidden filters. Focused unit assertions cover pinned-only matching and hidden open tools.
+- CI run 45121845274: Rust test suite passed; gate failed at `cargo deny` on `RUSTSEC-2026-0592` (`url` 2.5.8 nested blob URL stack overflow). This dependency advisory is unresolved in the lockfile. No README item checked and no merge until full CI is green.
+
+## 2026-11-23 — Tool Chest full-catalog discovery (PR #91)
+
+- Feature commit `4c1be9cfc667a73cbecce6ceb603c10ca4d250b5`: searched tools not yet opened or pinned now appear in an actionable All tools section in the Tool Chest; the match count includes them and empty state appears only when no catalog match exists. Pinned-only mode deliberately hides unopened catalog matches.
+- Focused test commit `ecdc1c5a6cc3bacefa3e7a8260f593522e62e03d`: tests unopened tool discovery, exclusion of pinned/open duplicates, and unmatched queries.
+- Pending fresh CI and visual review; no checkbox or merge claimed. Full 214-item ENG backlog remains the target; ENG-08.01 PR #73 merged previously; ENG-08 PR #90 remains draft.
+
+### 2026-11-23 — PR #91 Tool Chest keyboard catalog selection
+
+- Inspected README, AGENTS.md, CLAUDE.md, main progress log and PRs #73/#90/#91. PR #73 merged; #90 draft with five successful workflows; #91 draft, last CI 45136065752 failed at `cargo fmt --all -- --check` in `tool_access.rs` catalog search formatting.
+- Commits `bc3a6613a48a66e79a8ec341631b0c2eb76c1ba7` and `a5b1a6640a108583320d69a23d1b4e545f6216e5` fix the reported format shape and implement Enter selection for unopened matching catalog tools, respecting pinned-only mode. Added a focused regression test for unopened, pinned-only and blank-query behavior.
+- Pending: new CI verification and merge review. No engineering checklist acceptance claimed; continue ENG-08 managed workbook lifecycle and remaining engineering checklist in dependency order.
+
+### 2026-11-23 — Tool Chest catalog pinning and CI repair
+
+- PR #91 commit `9f9e16f337ae8a6440337fdbd2dd214691d589f7` adds a one-click pin action to previously unopened catalog search results, reusing the existing pin state and selection path. Added focused duplicate-exclusion regression test for catalog discovery.
+- Repaired the exact `first_matching_tool` formatting reported by failing CI run `45143866484` (Ubuntu gate `fmt`); SonarCloud passed on the previous head. New head CI is pending; no acceptance checkbox or merge claimed.
+- Continue verifying the Tool Chest branch, then integrate only after required CI checks and visual acceptance. Engineering backlog remains broader than this UI milestone.
+
+### 2026-11-23 — Tool Chest CI repair and exact-match ranking
+
+- PR #91, commit `d35095cc85ad0f111c0fdc9559a123826d7d671e`: fixed `E0308` at `crates/ui-egui/src/tool_access.rs:185` by borrowing the owned selected tool identifier for `catalog::group(&id)`. CI evidence: failed run https://github.com/pchrisoc/simplypdf/actions/runs/45153944069, Ubuntu gate job 137622028082; SonarCloud succeeded.
+- Feature improvement: full-catalog search now prioritizes exact tool identifiers (case-insensitive and whitespace-trimmed) before partial matches; focused unit test `exact_catalog_match_is_ranked_before_partial_matches` added.
+- Validation pending: fresh GitHub Actions CI/Clippy/format/tests on the new commit. No README checklist change and no merge until required checks pass.
+
+### 2026-11-23 — Tool Chest multiword search and formatting gate
+
+- Inspected README, AGENTS.md, CLAUDE.md, open PRs #82/#84/#85/#90/#91/#92, and PR #73 (merged). Current #91 head before edits was `a6cb755`; CI run https://github.com/pchrisoc/simplypdf/actions/runs/45163175983 failed solely at rustfmt import ordering in `tool_access.rs`; SonarCloud succeeded at the same head.
+- PR #91 feature commits `9e000ece0a88ce8b4eafe9ff99fc4d7fdc823323` and `11b3a8fe90ca33e0b1ac640c747599cadb92de59` implement whitespace-delimited, case-insensitive multiword Tool Chest queries, matching every token against tool IDs or translated labels, preserving canonical catalog IDs. Added positive and negative multiword regression assertions in `tool_chest_search_matches_identifiers_and_ignores_case` and corrected rustfmt import ordering.
+- Verification: committed focused unit assertions, but no new completed CI/test result yet. Required: `cargo fmt --all -- --check`, focused UI tests, Clippy and complete CI on current head. Do not merge #91 or mark README tasks complete until those pass and UI acceptance is reviewed. Continue the ENG-08 and all other unchecked milestones after this PR is integrated.
+
+## Tool Chest exact-label search — 2026-11-23
+
+- PR #91 branch `feat/bluebeam-inspired-tool-chest-20261122`: commit `31d1efd16c8662e457ffb5ab9acb4e2f0fb207f9` prioritizes exact localized display-label matches alongside exact tool IDs in full-catalog search. Added `exact_catalog_label_is_ranked_before_partial_identifier_matches` regression test in `crates/ui-egui/src/tool_access.rs`.
+- Previous PR head `d050deb1ca46c281a2a028f546f32d0d850f59f1`: SonarCloud run `45171470265` succeeded; CI run `45171470398` failed at the Ubuntu Gate step. This is **not** a verified passing head. The GitHub-only connector cannot run local Cargo commands. Await fresh CI at the new commit; inspect gate logs and repair any failures before merge. Visual UI acceptance is also outstanding.
+- ENG-08.01 PR #73 is already merged. PRs #82, #84, #85, #90, #91 remain open, and #92 is a dependency PR. No README acceptance checkbox was changed in this iteration; the full engineering backlog remains open.
+
+## Tool Chest ranked discovery — 2026-11-23
+
+- PR #91 feature commit `2ab1b54ddede955fc5763e5735a8e2f3caf58c3c` changes full-catalog discovery ordering to prioritize exact tool ID/localized label, then prefix matches, then substring matches. This makes common partial searches surface the most likely tool first without changing the user's pinned/open tool order.
+- Focused regression `prefix_catalog_matches_rank_before_substring_matches` checks prefix priority over an earlier-listed substring match. Existing exact-ID and localized-label tests remain.
+- GitHub Actions lookup for the feature head returned no workflow runs at inspection time; formatting, compilation, tests, and required checks are **not verified**. Do not merge PR #91 or check a README engineering task until all acceptance gates pass. Continue broader ENG milestones after finishing existing PRs.

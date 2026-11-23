@@ -102,6 +102,64 @@ pub fn show(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
         });
 }
 
+/// Match tool names and identifiers so the tool chest can be searched without
+/// changing pinned tools or the user's open-tool history.
+fn tool_matches(id: &str, query: &str) -> bool {
+    let query = query.trim().to_lowercase();
+    if query.is_empty() {
+        return true;
+    }
+    let label = catalog::group(id).map(|group| tl!(group.label).to_lowercase()).unwrap_or_default();
+    let id = id.to_lowercase();
+    query.split_whitespace().all(|word| id.contains(word) || label.contains(word))
+}
+
+fn matching_tool_count(pinned: &[String], open: &[String], query: &str, pinned_only: bool) -> usize {
+    let open = if pinned_only { &[][..] } else { open };
+    pinned.iter().chain(open.iter()).filter(|id| tool_matches(id, query)).count()
+}
+
+fn catalog_search_ids(pinned: &[String], open: &[String], search: &str) -> Vec<&'static str> {
+    catalog::TOOL_GROUPS
+        .iter()
+        .filter(|group| !pinned.iter().chain(open.iter()).any(|id| id == group.id) && tool_matches(group.id, search))
+        .map(|group| group.id)
+        .collect::<Vec<_>>()
+        .tap_sort_exact_first(search)
+}
+
+/// Keep an exact tool identifier ahead of fuzzy matches in the full catalog.
+trait ExactToolSort {
+    fn tap_sort_exact_first(self, query: &str) -> Self;
+}
+
+impl ExactToolSort for Vec<&'static str> {
+    fn tap_sort_exact_first(mut self, query: &str) -> Self {
+        let query = query.trim();
+        self.sort_by_key(|id| {
+            let label = catalog::group(id).map(|group| tl!(group.label).to_lowercase()).unwrap_or_default();
+            let query = query.to_lowercase();
+            if id.eq_ignore_ascii_case(&query) || label == query {
+                0
+            } else if id.to_lowercase().starts_with(&query) || label.starts_with(&query) {
+                1
+            } else {
+                2
+            }
+        });
+        self
+    }
+}
+
+/// Resolve the first search result in the same order as the visible tool chest.
+fn first_matching_tool(pinned: &[String], open: &[String], search: &str, pinned_only: bool) -> Option<String> {
+    pinned.iter().chain(open.iter().filter(|_| !pinned_only)).find(|id| tool_matches(id, search)).cloned().or_else(|| {
+        (!pinned_only && !search.trim().is_empty())
+            .then(|| catalog_search_ids(pinned, open, search))
+            .and_then(|ids| ids.first().map(|id| (*id).to_owned()))
+    })
+}
+
 fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let current = match app.left {
         LeftPanel::Tool(id) => Some(id),
@@ -115,6 +173,58 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let pinned = app.pinned_tools.clone();
     let open: Vec<_> = app.open_tools.iter().filter(|id| !pinned.contains(id)).cloned().collect();
     let compact = app.tool_rail_collapsed;
+    let search_id = ui.make_persistent_id("tool-chest-search");
+    let mut search = ui.ctx().data_mut(|data| data.get_temp::<String>(search_id).unwrap_or_default());
+    let pinned_only_id = ui.make_persistent_id("tool-chest-pinned-only");
+    let mut pinned_only = ui.ctx().data_mut(|data| data.get_temp::<bool>(pinned_only_id).unwrap_or(false));
+    let mut search_focused = false;
+    if !compact {
+        ui.label(egui::RichText::new("TOOL CHEST").strong().size(11.0).color(theme::Tokens::get(ui.ctx()).text_muted));
+        ui.horizontal(|ui| {
+            let field =
+                ui.add(egui::TextEdit::singleline(&mut search).hint_text("Find tools...").desired_width((ui.available_width() - 28.0).max(40.0)));
+            search_focused = field.has_focus();
+            if ui.add_enabled(!search.is_empty(), egui::Button::new("×")).on_hover_text("Clear tool search").clicked() {
+                search.clear();
+            }
+        });
+        ui.checkbox(&mut pinned_only, "Pinned only").on_hover_text("Show only pinned tools");
+        ui.ctx().data_mut(|data| {
+            data.insert_temp(search_id, search.clone());
+            data.insert_temp(pinned_only_id, pinned_only);
+        });
+    } else {
+        // Clear hidden filters when the rail collapses so icons remain discoverable.
+        search.clear();
+        pinned_only = false;
+        ui.ctx().data_mut(|data| {
+            data.insert_temp(search_id, search.clone());
+            data.insert_temp(pinned_only_id, pinned_only);
+        });
+    }
+    // Keyboard-first tool switching: Enter selects the first visible match, Escape resets the filter.
+    if search_focused && !search.trim().is_empty() {
+        if ui.input(|input| input.key_pressed(egui::Key::Escape)) {
+            search.clear();
+            ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
+        } else if ui.input(|input| input.key_pressed(egui::Key::Enter))
+            && let Some(id) = first_matching_tool(&pinned, &open, &search, pinned_only)
+            && let Some(group) = catalog::group(&id)
+        {
+            app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
+            app.takeoff_workspace.settings_floating = false;
+            app.select_tool(group.id);
+        }
+    }
+    let matches = matching_tool_count(&pinned, &open, &search, pinned_only);
+    // Search the full catalog too: users should be able to discover tools that
+    // have never been opened, rather than searching only their recent tools.
+    let catalog_matches: Vec<&str> =
+        if compact || pinned_only || search.trim().is_empty() { Vec::new() } else { catalog_search_ids(&pinned, &open, &search) };
+    let total_matches = matches + catalog_matches.len();
+    if !compact && !search.trim().is_empty() {
+        ui.label(egui::RichText::new(format!("{total_matches} matching tools")).small().color(theme::Tokens::get(ui.ctx()).text_muted));
+    }
     egui::ScrollArea::vertical().id_salt("tool-access-list").max_height((ui.available_height() - 45.0).max(40.0)).show(ui, |ui| {
         if !compact {
             widgets::section_title(ui, tl!("Pinned tools"));
@@ -129,14 +239,44 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             ui.add_space(18.0);
         }
         for id in &pinned {
-            row(app, ui, id, current == Some(id.as_str()), true);
+            if tool_matches(id, &search) {
+                row(app, ui, id, current == Some(id.as_str()), true);
+            }
         }
         ui.separator();
-        if !compact {
+        if !compact && !pinned_only {
             widgets::section_title(ui, tl!("Open tools"));
         }
         for id in &open {
-            row(app, ui, id, current == Some(id.as_str()), false);
+            if !pinned_only && tool_matches(id, &search) {
+                row(app, ui, id, current == Some(id.as_str()), false);
+            }
+        }
+        if !catalog_matches.is_empty() {
+            ui.separator();
+            widgets::section_title(ui, tl!("All tools"));
+            for id in &catalog_matches {
+                if let Some(group) = catalog::group(id) {
+                    ui.horizontal(|ui| {
+                        if widgets::ghost_button(ui, group.icon, tl!(group.label)).clicked() {
+                            app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
+                            app.takeoff_workspace.settings_floating = false;
+                            app.select_tool(group.id);
+                        }
+                        if ui.small_button("+").on_hover_text("Pin to Tool Chest").clicked() {
+                            app.toggle_pin_tool(group.id);
+                        }
+                    });
+                }
+            }
+        }
+        if !compact && total_matches == 0 && !search.trim().is_empty() {
+            ui.label("No matching tools in this workspace.");
+            if ui.button("Browse full tool catalog").clicked() {
+                search.clear();
+                ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
+                app.expand_all_tools();
+            }
         }
     });
     if compact {
@@ -196,4 +336,80 @@ fn row(app: &mut SimplyPDFApp, ui: &mut egui::Ui, id: &str, active: bool, pinned
             }
         });
     });
+}
+
+#[cfg(test)]
+mod tool_chest_tests {
+    use super::{ExactToolSort, catalog_search_ids, first_matching_tool, matching_tool_count, tool_matches};
+
+    #[test]
+    fn catalog_search_does_not_repeat_pinned_or_open_tools() {
+        let id = super::catalog::TOOL_GROUPS[0].id.to_owned();
+        let pinned = vec![id.clone()];
+        let open = vec![id.clone()];
+        assert!(!catalog_search_ids(&pinned, &open, &id).contains(&id.as_str()));
+    }
+
+    #[test]
+    fn enter_search_selects_unopened_catalog_tools_and_respects_pinned_filter() {
+        let id = super::catalog::TOOL_GROUPS.first().expect("catalog has tools").id;
+        assert_eq!(first_matching_tool(&[], &[], id, false).as_deref(), Some(id));
+        assert_eq!(first_matching_tool(&[], &[], id, true), None);
+        assert_eq!(first_matching_tool(&[id.to_owned()], &[], id, true).as_deref(), Some(id));
+        assert_eq!(first_matching_tool(&[], &[], " ", false), None);
+    }
+
+    #[test]
+    fn unopened_catalog_search_excludes_open_and_pinned_tools() {
+        let first = super::catalog::TOOL_GROUPS.first().expect("catalog has tools").id;
+        let found = catalog_search_ids(&[], &[], first);
+        assert!(found.contains(&first));
+        assert!(!catalog_search_ids(&[first.to_owned()], &[], first).contains(&first));
+        assert!(!catalog_search_ids(&[], &[first.to_owned()], first).contains(&first));
+        assert!(catalog_search_ids(&[], &[], "nonexistent-tool-xyz").is_empty());
+    }
+
+    #[test]
+    fn exact_catalog_match_is_ranked_before_partial_matches() {
+        let results = vec!["measurement", "measure", "other"].tap_sort_exact_first(" MEASURE ");
+        assert_eq!(results, vec!["measure", "measurement", "other"]);
+    }
+
+    #[test]
+    fn prefix_catalog_matches_rank_before_substring_matches() {
+        let results = vec!["premeasurement", "measurement", "other"].tap_sort_exact_first(" MEAS ");
+        assert_eq!(results, vec!["measurement", "premeasurement", "other"]);
+    }
+
+    #[test]
+    fn exact_catalog_label_is_ranked_before_partial_identifier_matches() {
+        let group = super::catalog::TOOL_GROUPS.first().expect("catalog has tools");
+        let label = tl!(group.label).to_string();
+        let results = vec!["nonexistent-partial", group.id].tap_sort_exact_first(&label);
+        assert_eq!(results.first().copied(), Some(group.id));
+    }
+
+    #[test]
+    fn tool_chest_count_includes_pinned_and_open_tools() {
+        let pinned = vec!["measurement".to_owned()];
+        let open = vec!["markup".to_owned(), "organize".to_owned()];
+        assert_eq!(matching_tool_count(&pinned, &open, "m", false), 2);
+        assert_eq!(matching_tool_count(&pinned, &open, "unknown-tool-xyz", false), 0);
+        assert_eq!(matching_tool_count(&pinned, &open, " ", false), 3);
+        assert_eq!(matching_tool_count(&pinned, &open, " ", true), 1);
+        assert_eq!(matching_tool_count(&pinned, &open, "organize", true), 0);
+    }
+
+    #[test]
+    fn tool_chest_search_matches_identifiers_and_ignores_case() {
+        assert!(tool_matches("measurement", "MEASURE"));
+        assert!(tool_matches("measurement", "  measure  "));
+        assert!(tool_matches("measurement", ""));
+        assert!(tool_matches("measurement", "   "));
+        assert!(!tool_matches("measurement", "nonexistent-tool-xyz"));
+        assert!(!tool_matches("measurement", "measur xyz"));
+        assert!(tool_matches("measurement", "measure ment"));
+        assert!(tool_matches("measurement", "MENT MEASURE"));
+        assert!(!tool_matches("measurement", "measure missing"));
+    }
 }
