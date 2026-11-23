@@ -373,3 +373,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #91 commit `532e349dbe34e04a081f5c0f0a9a73b75d3d9c9d` adds a pinned-only filter to the Tool Chest, with consistent visible counts and Enter-key activation; collapsed navigation resets both hidden filters. Focused unit assertions cover pinned-only matching and hidden open tools.
 - CI run 45121845274: Rust test suite passed; gate failed at `cargo deny` on `RUSTSEC-2026-0592` (`url` 2.5.8 nested blob URL stack overflow). This dependency advisory is unresolved in the lockfile. No README item checked and no merge until full CI is green.
+
+## 2026-11-23 — Tool Chest full-catalog discovery (PR #91)
+
+- Feature commit `4c1be9cfc667a73cbecce6ceb603c10ca4d250b5`: searched tools not yet opened or pinned now appear in an actionable All tools section in the Tool Chest; the match count includes them and empty state appears only when no catalog match exists. Pinned-only mode deliberately hides unopened catalog matches.
+- Focused test commit `ecdc1c5a6cc3bacefa3e7a8260f593522e62e03d`: tests unopened tool discovery, exclusion of pinned/open duplicates, and unmatched queries.
+- Pending fresh CI and visual review; no checkbox or merge claimed. Full 214-item ENG backlog remains the target; ENG-08.01 PR #73 merged previously; ENG-08 PR #90 remains draft.
