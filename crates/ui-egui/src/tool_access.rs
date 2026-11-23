@@ -173,8 +173,16 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
         }
     }
     let matches = matching_tool_count(&pinned, &open, &search, pinned_only);
+    // Search the full catalog too: users should be able to discover tools that
+    // have never been opened, rather than searching only their recent tools.
+    let catalog_matches: Vec<_> = if compact || pinned_only || search.trim().is_empty() {
+        Vec::new()
+    } else {
+        catalog::TOOL_GROUPS.iter().filter(|group| !pinned.iter().chain(open.iter()).any(|id| id == group.id) && tool_matches(group.id, &search)).collect()
+    };
+    let total_matches = matches + catalog_matches.len();
     if !compact && !search.trim().is_empty() {
-        ui.label(egui::RichText::new(format!("{matches} matching tools")).small().color(theme::Tokens::get(ui.ctx()).text_muted));
+        ui.label(egui::RichText::new(format!("{total_matches} matching tools")).small().color(theme::Tokens::get(ui.ctx()).text_muted));
     }
     egui::ScrollArea::vertical().id_salt("tool-access-list").max_height((ui.available_height() - 45.0).max(40.0)).show(ui, |ui| {
         if !compact {
@@ -203,7 +211,18 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
                 row(app, ui, id, current == Some(id.as_str()), false);
             }
         }
-        if !compact && matches == 0 && !search.trim().is_empty() {
+        if !catalog_matches.is_empty() {
+            ui.separator();
+            widgets::section_title(ui, tl!("All tools"));
+            for group in &catalog_matches {
+                if widgets::ghost_button(ui, group.icon, tl!(group.label)).clicked() {
+                    app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
+                    app.takeoff_workspace.settings_floating = false;
+                    app.select_tool(group.id);
+                }
+            }
+        }
+        if !compact && total_matches == 0 && !search.trim().is_empty() {
             ui.label("No matching tools in this workspace.");
             if ui.button("Browse full tool catalog").clicked() {
                 search.clear();
