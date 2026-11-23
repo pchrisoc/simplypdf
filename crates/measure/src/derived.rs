@@ -178,10 +178,42 @@ pub fn rectangular_room_placed(width: f64, length: f64, height: f64, openings: &
     rectangular_room(width, length, height, &dimensions)
 }
 
+
+/// Derive volume and wall area directly from a calibrated polygon measurement.
+///
+/// The boundary is implicitly closed. The area and distance reading units may
+/// differ, so callers explicitly supply conversions to the desired output
+/// squared and linear units. Depth is already in the output linear unit.
+pub fn extrude_measured_polygon(points: &[crate::Point], scale: &crate::Scale, depth: f64, area_scale: f64, perimeter_scale: f64) -> Result<ExtrudedQuantity> {
+    crate::validate_geometry(crate::Kind::Area, points)?;
+    let points = crate::open_polygon(points);
+    let area = crate::reading(crate::Kind::Area, points, scale)?.area;
+    let mut perimeter = 0.0;
+    for (a, b) in points.iter().zip(points.iter().cycle().skip(1)).take(points.len()) {
+        perimeter += ((b[0] - a[0]) * scale.x).hypot((b[1] - a[1]) * scale.y) * scale.distance_factor;
+    }
+    extrude_converted(area, perimeter, depth, area_scale, perimeter_scale, 1.0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
+
+
+    #[test]
+    fn measured_polygon_extrudes_closed_boundary_with_explicit_units() {
+        let scale = crate::Scale::new(1.0, "ft", 2).expect("scale");
+        let square = [[0.0, 0.0], [10.0, 0.0], [10.0, 10.0], [0.0, 10.0]];
+        let result = extrude_measured_polygon(&square, &scale, 3.0, 1.0, 1.0).expect("room");
+        assert_eq!(result.volume, 300.0);
+        assert_eq!(result.wall_area, 120.0);
+        let metric = extrude_measured_polygon(&square, &scale, 3.048, 0.3048 * 0.3048, 0.3048).expect("metric");
+        assert!((metric.volume - 300.0 * 0.3048_f64.powi(3)).abs() < 1e-10);
+        assert!(extrude_measured_polygon(&square, &scale, -1.0, 1.0, 1.0).is_err());
+        assert!(extrude_measured_polygon(&square, &scale, 3.0, 0.0, 1.0).is_err());
+        assert!(extrude_measured_polygon(&square[..2], &scale, 3.0, 1.0, 1.0).is_err());
+    }
 
     #[test]
     fn positioned_openings_validate_containment_and_overlap() {
