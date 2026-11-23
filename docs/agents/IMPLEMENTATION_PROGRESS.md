@@ -349,3 +349,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #93 commit `f9ef696` adds `extrude_with_openings` for net volume (gross footprint minus through-opening areas) and lateral wall area (outer plus interior opening perimeters), with cumulative-area, nonfinite and invalid-perimeter validation.
 - Focused tests cover a 10×10 footprint with a 2×2 opening at depth 3, the empty-opening equivalence, and invalid/cumulative excess openings. Tests are committed, not yet verified by CI.
 - Geometry containment and non-overlap remain caller responsibilities. ENG-06.05 is still unchecked pending persisted depth/height, desktop input, takeoff/export integration and end-to-end acceptance; ENG-06.04 still requires interactive area-cutout geometry.
+
+## 2026-11-23 — ENG-06.05 auditable wall-area breakdown
+
+- PR #93 commit `e38a15f` adds `ExtrusionBreakdown` and `extrude_breakdown`, separating exterior lateral wall area from interior opening-return wall area while retaining the validated net footprint/volume calculation.
+- Focused `breakdown_separates_opening_returns_from_external_walls` regression test covers 10×10 footprint, 2×2 opening, depth 3, no openings, and invalid oversized opening. CI validation is pending; do not claim test execution or mark ENG-06.05 complete.
+- Remaining acceptance: desktop height/depth input, saved measurement fields, unit-aware export, headless automation tool, PDF save/reopen tests and CI checks. Full 214-item engineering backlog remains in scope.
