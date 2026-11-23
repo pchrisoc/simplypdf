@@ -37,6 +37,33 @@ pub fn extrude(footprint_area: f64, perimeter: f64, depth: f64) -> Result<Extrud
     Ok(ExtrudedQuantity { footprint_area, depth, volume, wall_area })
 }
 
+/// Convert a calibrated footprint and a separately entered height into one linear unit.
+///
+/// `area_scale` converts one source squared unit to target squared units;
+/// `perimeter_scale` and `depth_scale` convert one source linear unit to
+/// target linear units. For example, square feet to square metres uses
+/// `0.3048 * 0.3048`, while feet to metres uses `0.3048`.
+/// Scale factors must be positive and finite to prevent silently mixing units.
+pub fn extrude_converted(
+    area: f64,
+    perimeter: f64,
+    depth: f64,
+    area_scale: f64,
+    perimeter_scale: f64,
+    depth_scale: f64,
+) -> Result<ExtrudedQuantity> {
+    for (name, scale) in [
+        ("area scale", area_scale),
+        ("perimeter scale", perimeter_scale),
+        ("depth scale", depth_scale),
+    ] {
+        if !scale.is_finite() || scale <= 0.0 {
+            return Err(MeasureError::Invalid(format!("{name} must be finite and positive")));
+        }
+    }
+    extrude(area * area_scale, perimeter * perimeter_scale, depth * depth_scale)
+}
+
 /// Quantity breakdown separating external walls and opening returns.
 ///
 /// Both wall areas exclude horizontal top and bottom faces. Opening geometry
@@ -59,7 +86,16 @@ pub fn extrude_breakdown(
     let net = extrude_with_openings(gross_area, outer_perimeter, openings, depth)?;
     let opening_area = gross_area - net.footprint_area;
     let outer_wall_area = outer_perimeter * depth;
-    let opening_wall_area = net.wall_area - outer_wall_area;
+    // Sum opening returns directly to avoid cancellation when outer walls dominate.
+    let opening_wall_area = openings.iter().try_fold(0.0, |sum, &(_, perimeter)| {
+        let area = perimeter * depth;
+        let total = sum + area;
+        if total.is_finite() {
+            Ok(total)
+        } else {
+            Err(MeasureError::Invalid("opening wall area exceeds supported numeric range".into()))
+        }
+    })?;
     if !opening_area.is_finite() || !outer_wall_area.is_finite() || !opening_wall_area.is_finite() {
         return Err(MeasureError::Invalid("extrusion breakdown exceeds supported numeric range".into()));
     }
@@ -100,6 +136,25 @@ pub fn extrude_with_openings(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn converted_extrusion_matches_metric_equivalent() {
+        let converted = extrude_converted(100.0, 40.0, 10.0, 0.3048 * 0.3048, 0.3048, 0.3048)
+            .expect("feet to metres");
+        let metric = extrude(9.290304, 12.192, 3.048).expect("metric");
+        assert!((converted.volume - metric.volume).abs() < 1e-10);
+        assert!((converted.wall_area - metric.wall_area).abs() < 1e-10);
+    }
+
+    #[test]
+    fn converted_extrusion_rejects_invalid_scales_and_overflow() {
+        for scale in [0.0, -1.0, f64::NAN, f64::INFINITY] {
+            assert!(extrude_converted(1.0, 1.0, 1.0, scale, 1.0, 1.0).is_err());
+            assert!(extrude_converted(1.0, 1.0, 1.0, 1.0, scale, 1.0).is_err());
+            assert!(extrude_converted(1.0, 1.0, 1.0, 1.0, 1.0, scale).is_err());
+        }
+        assert!(extrude_converted(f64::MAX, 1.0, 1.0, 2.0, 1.0, 1.0).is_err());
+    }
 
     #[test]
     fn rectangular_room_uses_explicit_volume_and_lateral_wall_formulas() {
