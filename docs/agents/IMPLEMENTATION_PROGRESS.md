@@ -391,3 +391,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #91 commit `9f9e16f337ae8a6440337fdbd2dd214691d589f7` adds a one-click pin action to previously unopened catalog search results, reusing the existing pin state and selection path. Added focused duplicate-exclusion regression test for catalog discovery.
 - Repaired the exact `first_matching_tool` formatting reported by failing CI run `45143866484` (Ubuntu gate `fmt`); SonarCloud passed on the previous head. New head CI is pending; no acceptance checkbox or merge claimed.
 - Continue verifying the Tool Chest branch, then integrate only after required CI checks and visual acceptance. Engineering backlog remains broader than this UI milestone.
+
+### 2026-11-23 — Tool Chest CI repair and exact-match ranking
+
+- PR #91, commit `d35095cc85ad0f111c0fdc9559a123826d7d671e`: fixed `E0308` at `crates/ui-egui/src/tool_access.rs:185` by borrowing the owned selected tool identifier for `catalog::group(&id)`. CI evidence: failed run https://github.com/pchrisoc/simplypdf/actions/runs/45153944069, Ubuntu gate job 137622028082; SonarCloud succeeded.
+- Feature improvement: full-catalog search now prioritizes exact tool identifiers (case-insensitive and whitespace-trimmed) before partial matches; focused unit test `exact_catalog_match_is_ranked_before_partial_matches` added.
+- Validation pending: fresh GitHub Actions CI/Clippy/format/tests on the new commit. No README checklist change and no merge until required checks pass.
