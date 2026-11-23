@@ -130,7 +130,8 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     if !compact {
         ui.label(egui::RichText::new("TOOL CHEST").strong().size(11.0).color(theme::Tokens::get(ui.ctx()).text_muted));
         ui.horizontal(|ui| {
-            let field = ui.add(egui::TextEdit::singleline(&mut search).hint_text("Find tools...").desired_width((ui.available_width() - 28.0).max(40.0)));
+            let field =
+                ui.add(egui::TextEdit::singleline(&mut search).hint_text("Find tools...").desired_width((ui.available_width() - 28.0).max(40.0)));
             search_focused = field.has_focus();
             if ui.add_enabled(!search.is_empty(), egui::Button::new("×")).on_hover_text("Clear tool search").clicked() {
                 search.clear();
@@ -188,7 +189,12 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             }
         }
         if !compact && matches == 0 && !search.trim().is_empty() {
-            ui.label("No matching tools. Clear the search or browse all tools.");
+            ui.label("No matching tools in this workspace.");
+            if ui.button("Browse full tool catalog").clicked() {
+                search.clear();
+                ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
+                app.expand_all_tools();
+            }
         }
     });
     if compact {
