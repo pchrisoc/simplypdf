@@ -351,3 +351,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #91 commit `35b8e998b4f31edc49ba3d8a0b14802846896d98` adds a live matching-tool count and actionable empty-search state; expands the search regression for whitespace-only input.
 - Latest inspected PR #91 CI run `45098391590` failed at `cargo deny` on RustSec advisory `RUSTSEC-2026-0592` for `url 2.5.8` in Cargo.lock, **after** Rust tests passed. This is a workspace dependency-security blocker, not a confirmed Tool Chest test failure. Must update the vulnerable lockfile dependency and re-run CI before merge. PR #90 has five passing workflows but remains draft; PR #73 is merged. No README checkboxes newly completed.
+
+## Tool Chest keyboard navigation — 2026-11-22 evening
+
+- PR #91 commit `47580d2a62addbe5e44a213cc265a1f67c16aa2e` adds Enter-to-select-first-match and Escape-to-clear to the Tool Chest search, with a negative-match regression assertion. This is substantive UI functionality; no checklist task is claimed complete.
+- Prior head `2e175b76e76e31d8cbc367ed852f242721c902fa` failed CI run 45104351294 (`gate / gate (ubuntu-24.04)`, job 137462116266) at `cargo deny`: RUSTSEC-2026-0592, locked `url` 2.5.8, stack overflow in `Url::origin()` on nested `blob:` URLs. SonarCloud passed. The lockfile security fix is not yet committed; do not bypass the advisory or merge this PR until the dependency is upgraded and the new head passes CI.
+- ENG-08.01 PR #73 is merged; ENG-08 workbook PR #90 has five green workflows but remains draft pending complete acceptance criteria. Continue across all unchecked README milestones after these blockers.
