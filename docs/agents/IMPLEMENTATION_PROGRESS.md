@@ -368,3 +368,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #91: `b9ed0aa63c66810e275435bbdab13e9f9bbe411d` repairs CI rustfmt failure at `tool_access.rs:130` and makes empty Tool Chest searches actionable with a Browse full tool catalog button. `54f38d772933b243d8edfc19f34f61f10d6f03ca` extracts a matching-count helper and tests matching across pinned/open groups, zero matches, and blank search.
 - Previous head `33d4cfadbb3c2d8cadbdabf734f7876ebbd70938` failed CI run 45116377207 at rustfmt; SonarCloud passed. New head has not yet completed required checks. PR #73 merged; PR #90 still draft with five successful workflows, but broader managed workbook acceptance remains incomplete. No new checklist items marked done.
+
+## Tool Chest pinned-only filter — 2026-11-23
+
+- PR #91 commit `532e349dbe34e04a081f5c0f0a9a73b75d3d9c9d` adds a pinned-only filter to the Tool Chest, with consistent visible counts and Enter-key activation; collapsed navigation resets both hidden filters. Focused unit assertions cover pinned-only matching and hidden open tools.
+- CI run 45121845274: Rust test suite passed; gate failed at `cargo deny` on `RUSTSEC-2026-0592` (`url` 2.5.8 nested blob URL stack overflow). This dependency advisory is unresolved in the lockfile. No README item checked and no merge until full CI is green.
