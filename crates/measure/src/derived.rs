@@ -37,6 +37,35 @@ pub fn extrude(footprint_area: f64, perimeter: f64, depth: f64) -> Result<Extrud
     Ok(ExtrudedQuantity { footprint_area, depth, volume, wall_area })
 }
 
+/// Quantity breakdown separating external walls and opening returns.
+///
+/// Both wall areas exclude horizontal top and bottom faces. Opening geometry
+/// must already be verified as contained and non-overlapping by the caller.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ExtrusionBreakdown {
+    pub net: ExtrudedQuantity,
+    pub opening_area: f64,
+    pub outer_wall_area: f64,
+    pub opening_wall_area: f64,
+}
+
+/// Calculate auditable net volume and separate exterior/interior wall areas.
+pub fn extrude_breakdown(
+    gross_area: f64,
+    outer_perimeter: f64,
+    openings: &[(f64, f64)],
+    depth: f64,
+) -> Result<ExtrusionBreakdown> {
+    let net = extrude_with_openings(gross_area, outer_perimeter, openings, depth)?;
+    let opening_area = gross_area - net.footprint_area;
+    let outer_wall_area = outer_perimeter * depth;
+    let opening_wall_area = net.wall_area - outer_wall_area;
+    if !opening_area.is_finite() || !outer_wall_area.is_finite() || !opening_wall_area.is_finite() {
+        return Err(MeasureError::Invalid("extrusion breakdown exceeds supported numeric range".into()));
+    }
+    Ok(ExtrusionBreakdown { net, opening_area, outer_wall_area, opening_wall_area })
+}
+
 /// Extrude a footprint with non-overlapping, fully contained through-openings.
 ///
 /// Opening areas are subtracted from the gross footprint. Opening perimeters
@@ -96,6 +125,20 @@ mod tests {
         assert_eq!(result.volume, 288.0);
         assert_eq!(result.wall_area, 144.0);
         assert_eq!(extrude_with_openings(100.0, 40.0, &[], 3.0), extrude(100.0, 40.0, 3.0));
+    }
+
+    #[test]
+    fn breakdown_separates_opening_returns_from_external_walls() {
+        let result = extrude_breakdown(100.0, 40.0, &[(4.0, 8.0)], 3.0).expect("valid room");
+        assert_eq!(result.opening_area, 4.0);
+        assert_eq!(result.outer_wall_area, 120.0);
+        assert_eq!(result.opening_wall_area, 24.0);
+        assert_eq!(result.net.volume, 288.0);
+        assert_eq!(result.net.wall_area, result.outer_wall_area + result.opening_wall_area);
+        let empty = extrude_breakdown(100.0, 40.0, &[], 3.0).expect("no openings");
+        assert_eq!(empty.opening_area, 0.0);
+        assert_eq!(empty.opening_wall_area, 0.0);
+        assert!(extrude_breakdown(10.0, 12.0, &[(11.0, 4.0)], 2.0).is_err());
     }
 
     #[test]
