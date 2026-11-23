@@ -235,6 +235,26 @@ impl Automation {
         Err(failed("Excel Power Query export requires the desktop CLI or app"))
     }
 
+    /// Explicitly publish a complete takeoff to a managed workbook at a stable path.
+    /// This replaces an existing regular XLSX on Unix; it is never an implicit save hook.
+    #[cfg(unix)]
+    pub(crate) fn takeoff_publish_managed_xlsx(&self, a: &Args) -> Result<Value> {
+        let out = a.str("out")?;
+        if !Path::new(out).extension().and_then(|ext| ext.to_str()).is_some_and(|ext| ext.eq_ignore_ascii_case("xlsx")) {
+            return Err(ToolError::InvalidArgs("out must end in .xlsx".into()));
+        }
+        let target = self.resolve(out, true)?;
+        let all = self.doc(a)?.measurements_for_export().map_err(failed)?;
+        let status = measure::snapshot_status(&all, a.get("published_fingerprint").and_then(Value::as_str)).map_err(failed)?;
+        measure::xlsx::replace_managed_checked(&target, &all).map_err(failed)?;
+        Ok(json!({"path":target,"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"count":all.measurements.len(),"fingerprint":status.fingerprint,"needs_refresh":status.needs_refresh,"publication_state":status.publication_state}))
+    }
+
+    #[cfg(not(unix))]
+    pub(crate) fn takeoff_publish_managed_xlsx(&self, _a: &Args) -> Result<Value> {
+        Err(failed("managed XLSX replacement is not yet supported on this platform"))
+    }
+
     #[cfg(target_arch = "wasm32")]
     pub(crate) fn takeoff_export_xlsx(&self, _a: &Args) -> Result<Value> {
         Err(failed("XLSX export requires the desktop CLI or app; use measure_export for CSV in the browser"))
