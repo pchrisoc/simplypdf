@@ -133,9 +133,67 @@ pub fn extrude_with_openings(
     extrude(net_area, exposed_perimeter, depth)
 }
 
+/// Derive quantities for a rectangular room with rectangular through-openings.
+/// Dimensions are calibrated linear units. Opening containment and non-overlap
+/// must be checked by the drawing geometry layer before calling this helper.
+pub fn rectangular_room(
+    width: f64,
+    length: f64,
+    height: f64,
+    openings: &[(f64, f64)],
+) -> Result<ExtrusionBreakdown> {
+    for (name, value) in [("width", width), ("length", length), ("height", height)] {
+        if !value.is_finite() || value < 0.0 {
+            return Err(MeasureError::Invalid(format!("{name} must be finite and nonnegative")));
+        }
+    }
+    let area = width * length;
+    let perimeter = 2.0 * width + 2.0 * length;
+    if !area.is_finite() || !perimeter.is_finite() {
+        return Err(MeasureError::Invalid("room dimensions exceed supported numeric range".into()));
+    }
+    let mut opening_quantities = Vec::with_capacity(openings.len());
+    for &(opening_width, opening_length) in openings {
+        if !opening_width.is_finite()
+            || !opening_length.is_finite()
+            || opening_width < 0.0
+            || opening_length < 0.0
+        {
+            return Err(MeasureError::Invalid("opening dimensions must be finite and nonnegative".into()));
+        }
+        let opening_area = opening_width * opening_length;
+        let opening_perimeter = 2.0 * opening_width + 2.0 * opening_length;
+        if !opening_area.is_finite() || !opening_perimeter.is_finite() {
+            return Err(MeasureError::Invalid("opening dimensions exceed supported numeric range".into()));
+        }
+        opening_quantities.push((opening_area, opening_perimeter));
+    }
+    extrude_breakdown(area, perimeter, &opening_quantities, height)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn rectangular_room_dimensions_include_opening_returns() {
+        let room = rectangular_room(10.0, 10.0, 3.0, &[(2.0, 2.0)]).expect("valid room");
+        assert_eq!(room.net.volume, 288.0);
+        assert_eq!(room.outer_wall_area, 120.0);
+        assert_eq!(room.opening_wall_area, 24.0);
+        assert_eq!(room.net.wall_area, 144.0);
+    }
+
+    #[test]
+    fn rectangular_room_rejects_invalid_dimensions_and_excess_openings() {
+        assert!(rectangular_room(f64::NAN, 10.0, 3.0, &[]).is_err());
+        assert!(rectangular_room(10.0, -1.0, 3.0, &[]).is_err());
+        assert!(rectangular_room(10.0, 10.0, f64::INFINITY, &[]).is_err());
+        assert!(rectangular_room(10.0, 10.0, 3.0, &[(f64::NAN, 2.0)]).is_err());
+        assert!(rectangular_room(10.0, 10.0, 3.0, &[(11.0, 10.0)]).is_err());
+        assert!(rectangular_room(f64::MAX, 2.0, 3.0, &[]).is_err());
+        assert!(rectangular_room(10.0, 10.0, 3.0, &[(f64::MAX, 2.0)]).is_err());
+    }
 
     #[test]
     fn converted_extrusion_matches_metric_equivalent() {
