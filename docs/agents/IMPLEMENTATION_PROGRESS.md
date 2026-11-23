@@ -454,3 +454,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #90 commits `8f8cbacf8d4b7888e0f6284bdd519f1751f424e7`, `ebf5027d0d0f0338738e27b37c5df07c641a2dff`, `5bada579ff0784952ce0afab655c298a49b0ebdd`, and `7076b51f004dbc7f7ad4e33f565860328643fa25` expose `takeoff_publish_managed_xlsx` in the automation dispatch and tool registry, validate the complete takeoff, and publish a replacement XLSX explicitly on Unix. The integration regression covers initial publication, same-path replacement, stable fingerprint and invalid output extension.
 - Earlier PR head `7e8a7250bdedab0e1d49a18381caa11bc60d049f` passed CI, SonarCloud, Nix, FreeBSD and Windows ARM64. The new commits require fresh CI; no merge or checklist completion claimed. Outstanding: Windows replacement, publisher lifecycle controls, event-driven refresh, transient lock retry, and real Excel refresh smoke testing.
+
+## ENG-08.05 explicit managed workbook refresh — 2026-11-22
+
+- PR #90 commits `e82f323`, `2a707b0`, `144575c`, `5c4c761` expose `takeoff_refresh_xlsx` through the automation dispatcher and tool registry, with a focused Unix integration test for initial publish, same-path replacement, stable fingerprint, and invalid-extension rejection. The tool uses validated snapshots and existing atomic replacement support.
+- Still incomplete: Windows implementation, lifecycle start/status/stop, automatic update hooks, transient-lock retries, UI exposure, and Excel refresh smoke test. New commits require CI before merge; no checkbox is marked.
