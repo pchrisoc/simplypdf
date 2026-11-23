@@ -337,3 +337,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #89 commit `c8471121dc6a229c52ab721d0299f477469e8871` adds `count_filtered`, an allocation-free matching-record count that uses the same filter predicate as paginated register results; `filtered_count_matches_pages_and_respects_empty_query` covers filtered, paginated and unfiltered counts.
 - The same commit applies the two precise `cargo fmt --check` changes reported by failed Ubuntu CI run 44898022052. SonarCloud passed on the preceding head; new-head CI remains unverified.
 - ENG-09.06 is not complete: persist metadata with PDF annotations, wire the desktop register, and verify save/reopen and end-to-end acceptance before checking README.
+
+## Desktop UI Tool Chest — 2026-11-22
+
+- Draft PR #91 introduces a searchable, compact Tool Chest navigation for the egui desktop workspace (`3036067008dd240d0c34e0b88142caeed9cd4ce8`, `2fbeadf7ed0769a1d3dca4c30385e166c7b48e1b`). The filter matches tool IDs and localized names, preserves pinning/dragging, and clears when collapsing the rail to avoid invisible active filters. Added focused matching regression test.
+- This is an incremental original design inspired by professional PDF review workflows; it does not reproduce Bluebeam assets. Pending CI and visual review; no README checkbox or merge claimed.
