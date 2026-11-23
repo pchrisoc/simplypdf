@@ -247,7 +247,9 @@ impl Automation {
         let all = self.doc(a)?.measurements_for_export().map_err(failed)?;
         let status = measure::snapshot_status(&all, a.get("published_fingerprint").and_then(Value::as_str)).map_err(failed)?;
         measure::xlsx::replace_managed_checked(&target, &all).map_err(failed)?;
-        Ok(json!({"path":target,"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"count":all.measurements.len(),"fingerprint":status.fingerprint,"needs_refresh":status.needs_refresh,"publication_state":status.publication_state}))
+        Ok(
+            json!({"path":target,"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"count":all.measurements.len(),"fingerprint":status.fingerprint,"needs_refresh":status.needs_refresh,"publication_state":status.publication_state}),
+        )
     }
 
     #[cfg(not(unix))]
@@ -267,7 +269,9 @@ impl Automation {
         let all = self.doc(a)?.measurements_for_export().map_err(failed)?;
         let status = measure::snapshot_status(&all, a.get("published_fingerprint").and_then(Value::as_str)).map_err(failed)?;
         measure::xlsx::replace_managed_checked(&target, &all).map_err(failed)?;
-        Ok(json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":status.fingerprint,"needs_refresh":status.needs_refresh,"publication_state":status.publication_state}))
+        Ok(
+            json!({"schema_version":measure::TAKEOFF_SCHEMA_VERSION,"path":target,"count":all.measurements.len(),"unsupported":all.unsupported.len(),"truncated":all.truncated,"fingerprint":status.fingerprint,"needs_refresh":status.needs_refresh,"publication_state":status.publication_state}),
+        )
     }
 
     #[cfg(any(not(unix), target_arch = "wasm32"))]
