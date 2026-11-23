@@ -121,7 +121,21 @@ fn catalog_search_ids(pinned: &[String], open: &[String], search: &str) -> Vec<&
         .iter()
         .filter(|group| !pinned.iter().chain(open.iter()).any(|id| id == group.id) && tool_matches(group.id, search))
         .map(|group| group.id)
-        .collect()
+        .collect::<Vec<_>>()
+        .tap_sort_exact_first(search)
+}
+
+/// Keep an exact tool identifier ahead of fuzzy matches in the full catalog.
+trait ExactToolSort {
+    fn tap_sort_exact_first(self, query: &str) -> Self;
+}
+
+impl ExactToolSort for Vec<&'static str> {
+    fn tap_sort_exact_first(mut self, query: &str) -> Self {
+        let query = query.trim();
+        self.sort_by_key(|id| !id.eq_ignore_ascii_case(query));
+        self
+    }
 }
 
 /// Resolve the first search result in the same order as the visible tool chest.
@@ -182,7 +196,7 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
         } else if ui.input(|input| input.key_pressed(egui::Key::Enter))
             && let Some(id) = first_matching_tool(&pinned, &open, &search, pinned_only)
-            && let Some(group) = catalog::group(id)
+            && let Some(group) = catalog::group(&id)
         {
             app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
             app.takeoff_workspace.settings_floating = false;
@@ -313,7 +327,7 @@ fn row(app: &mut SimplyPDFApp, ui: &mut egui::Ui, id: &str, active: bool, pinned
 
 #[cfg(test)]
 mod tool_chest_tests {
-    use super::{catalog_search_ids, first_matching_tool, matching_tool_count, tool_matches};
+    use super::{catalog_search_ids, first_matching_tool, matching_tool_count, tool_matches, ExactToolSort};
 
     #[test]
     fn catalog_search_does_not_repeat_pinned_or_open_tools() {
@@ -340,6 +354,12 @@ mod tool_chest_tests {
         assert!(!catalog_search_ids(&[first.to_owned()], &[], first).contains(&first));
         assert!(!catalog_search_ids(&[], &[first.to_owned()], first).contains(&first));
         assert!(catalog_search_ids(&[], &[], "nonexistent-tool-xyz").is_empty());
+    }
+
+    #[test]
+    fn exact_catalog_match_is_ranked_before_partial_matches() {
+        let results = vec!["measurement", "measure", "other"].tap_sort_exact_first(" MEASURE ");
+        assert_eq!(results, vec!["measure", "measurement", "other"]);
     }
 
     #[test]
