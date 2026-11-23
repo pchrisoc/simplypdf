@@ -124,7 +124,7 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let pinned = app.pinned_tools.clone();
     let open: Vec<_> = app.open_tools.iter().filter(|id| !pinned.contains(id)).cloned().collect();
     let compact = app.tool_rail_collapsed;
-    let search_id = egui::Id::new("tool-chest-search");
+    let search_id = egui::Id::from(egui::IdSalt::new("tool-chest-search"));
     let mut search = ui.ctx().data_mut(|data| data.get_temp::<String>(search_id).unwrap_or_default());
     if !compact {
         ui.label(egui::RichText::new("TOOL CHEST").strong().size(11.0).color(theme::Tokens::get(ui.ctx()).text_muted));
