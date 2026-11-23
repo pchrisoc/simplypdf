@@ -44,19 +44,8 @@ pub fn extrude(footprint_area: f64, perimeter: f64, depth: f64) -> Result<Extrud
 /// target linear units. For example, square feet to square metres uses
 /// `0.3048 * 0.3048`, while feet to metres uses `0.3048`.
 /// Scale factors must be positive and finite to prevent silently mixing units.
-pub fn extrude_converted(
-    area: f64,
-    perimeter: f64,
-    depth: f64,
-    area_scale: f64,
-    perimeter_scale: f64,
-    depth_scale: f64,
-) -> Result<ExtrudedQuantity> {
-    for (name, scale) in [
-        ("area scale", area_scale),
-        ("perimeter scale", perimeter_scale),
-        ("depth scale", depth_scale),
-    ] {
+pub fn extrude_converted(area: f64, perimeter: f64, depth: f64, area_scale: f64, perimeter_scale: f64, depth_scale: f64) -> Result<ExtrudedQuantity> {
+    for (name, scale) in [("area scale", area_scale), ("perimeter scale", perimeter_scale), ("depth scale", depth_scale)] {
         if !scale.is_finite() || scale <= 0.0 {
             return Err(MeasureError::Invalid(format!("{name} must be finite and positive")));
         }
@@ -77,12 +66,7 @@ pub struct ExtrusionBreakdown {
 }
 
 /// Calculate auditable net volume and separate exterior/interior wall areas.
-pub fn extrude_breakdown(
-    gross_area: f64,
-    outer_perimeter: f64,
-    openings: &[(f64, f64)],
-    depth: f64,
-) -> Result<ExtrusionBreakdown> {
+pub fn extrude_breakdown(gross_area: f64, outer_perimeter: f64, openings: &[(f64, f64)], depth: f64) -> Result<ExtrusionBreakdown> {
     let net = extrude_with_openings(gross_area, outer_perimeter, openings, depth)?;
     let opening_area = gross_area - net.footprint_area;
     let outer_wall_area = outer_perimeter * depth;
@@ -90,11 +74,7 @@ pub fn extrude_breakdown(
     let opening_wall_area = openings.iter().try_fold(0.0, |sum, &(_, perimeter)| {
         let area = perimeter * depth;
         let total = sum + area;
-        if total.is_finite() {
-            Ok(total)
-        } else {
-            Err(MeasureError::Invalid("opening wall area exceeds supported numeric range".into()))
-        }
+        if total.is_finite() { Ok(total) } else { Err(MeasureError::Invalid("opening wall area exceeds supported numeric range".into())) }
     })?;
     if !opening_area.is_finite() || !outer_wall_area.is_finite() || !opening_wall_area.is_finite() {
         return Err(MeasureError::Invalid("extrusion breakdown exceeds supported numeric range".into()));
@@ -107,12 +87,7 @@ pub fn extrude_breakdown(
 /// Opening areas are subtracted from the gross footprint. Opening perimeters
 /// contribute exposed interior walls. The caller must verify geometric
 /// containment and non-overlap before passing measured openings.
-pub fn extrude_with_openings(
-    gross_area: f64,
-    outer_perimeter: f64,
-    openings: &[(f64, f64)],
-    depth: f64,
-) -> Result<ExtrudedQuantity> {
+pub fn extrude_with_openings(gross_area: f64, outer_perimeter: f64, openings: &[(f64, f64)], depth: f64) -> Result<ExtrudedQuantity> {
     // Validate the outer geometry and depth even for an empty opening list.
     extrude(gross_area, outer_perimeter, depth)?;
     let mut net_area = gross_area;
@@ -136,12 +111,7 @@ pub fn extrude_with_openings(
 /// Derive quantities for a rectangular room with rectangular through-openings.
 /// Dimensions are calibrated linear units. Opening containment and non-overlap
 /// must be checked by the drawing geometry layer before calling this helper.
-pub fn rectangular_room(
-    width: f64,
-    length: f64,
-    height: f64,
-    openings: &[(f64, f64)],
-) -> Result<ExtrusionBreakdown> {
+pub fn rectangular_room(width: f64, length: f64, height: f64, openings: &[(f64, f64)]) -> Result<ExtrusionBreakdown> {
     for (name, value) in [("width", width), ("length", length), ("height", height)] {
         if !value.is_finite() || value < 0.0 {
             return Err(MeasureError::Invalid(format!("{name} must be finite and nonnegative")));
@@ -154,11 +124,7 @@ pub fn rectangular_room(
     }
     let mut opening_quantities = Vec::with_capacity(openings.len());
     for &(opening_width, opening_length) in openings {
-        if !opening_width.is_finite()
-            || !opening_length.is_finite()
-            || opening_width < 0.0
-            || opening_length < 0.0
-        {
+        if !opening_width.is_finite() || !opening_length.is_finite() || opening_width < 0.0 || opening_length < 0.0 {
             return Err(MeasureError::Invalid("opening dimensions must be finite and nonnegative".into()));
         }
         let opening_area = opening_width * opening_length;
@@ -186,12 +152,7 @@ pub struct RectOpening {
 /// Coordinates and dimensions are in calibrated linear units relative to the
 /// footprint's lower-left corner. Touching boundaries are allowed; overlapping
 /// interiors are not. This prevents subtracting invalid or duplicate cutouts.
-pub fn rectangular_room_placed(
-    width: f64,
-    length: f64,
-    height: f64,
-    openings: &[RectOpening],
-) -> Result<ExtrusionBreakdown> {
+pub fn rectangular_room_placed(width: f64, length: f64, height: f64, openings: &[RectOpening]) -> Result<ExtrusionBreakdown> {
     let mut dimensions = Vec::with_capacity(openings.len());
     for opening in openings {
         for value in [opening.x, opening.y, opening.width, opening.length] {
@@ -202,19 +163,14 @@ pub fn rectangular_room_placed(
         if opening.width == 0.0 || opening.length == 0.0 {
             return Err(MeasureError::Invalid("through-openings must have positive width and length".into()));
         }
-        if opening.x > width || opening.y > length
-            || opening.width > width - opening.x
-            || opening.length > length - opening.y
-        {
+        if !width.is_finite() || !length.is_finite() || width < 0.0 || length < 0.0 || opening.x > width || opening.y > length || opening.width > width - opening.x || opening.length > length - opening.y {
             return Err(MeasureError::Invalid("opening lies outside the room footprint".into()));
         }
         dimensions.push((opening.width, opening.length));
     }
     for (i, a) in openings.iter().enumerate() {
         for b in &openings[i + 1..] {
-            if a.x < b.x + b.width && b.x < a.x + a.width
-                && a.y < b.y + b.length && b.y < a.y + a.length
-            {
+            if a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.length && b.y < a.y + a.length {
                 return Err(MeasureError::Invalid("through-openings overlap".into()));
             }
         }
@@ -240,6 +196,8 @@ mod tests {
         assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { x: 9.0, ..a }]).is_err());
         assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { x: f64::NAN, ..a }]).is_err());
         assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { x: f64::MAX, ..a }]).is_err());
+        assert!(rectangular_room_placed(f64::NAN, 10.0, 3.0, &[a]).is_err());
+        assert!(rectangular_room_placed(-10.0, 10.0, 3.0, &[a]).is_err());
     }
 
     #[test]
@@ -264,8 +222,7 @@ mod tests {
 
     #[test]
     fn converted_extrusion_matches_metric_equivalent() {
-        let converted = extrude_converted(100.0, 40.0, 10.0, 0.3048 * 0.3048, 0.3048, 0.3048)
-            .expect("feet to metres");
+        let converted = extrude_converted(100.0, 40.0, 10.0, 0.3048 * 0.3048, 0.3048, 0.3048).expect("feet to metres");
         let metric = extrude(9.290304, 12.192, 3.048).expect("metric");
         assert!((converted.volume - metric.volume).abs() < 1e-10);
         assert!((converted.wall_area - metric.wall_area).abs() < 1e-10);
