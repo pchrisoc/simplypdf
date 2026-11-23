@@ -822,6 +822,7 @@ pub fn tools() -> Vec<ToolDef> {
             .with(schema(json!({"doc":doc(),"out":path_arg()}), &["doc","out"])),
         t("takeoff_publish_managed_xlsx", "Publish managed takeoff workbook", "Explicitly replace a managed XLSX with a complete validated takeoff snapshot on Unix. Existing workbook is retained on validation failure; unsupported on other platforms.")
             .with(schema(json!({"doc":doc(),"out":path_arg(),"published_fingerprint":{"type":"string"}}), &["doc","out"])),
+        t("takeoff_refresh_xlsx", "Refresh managed takeoff workbook", "Explicitly publish or atomically replace a validated TakeoffData XLSX workbook on Unix desktop. Existing workbooks are replaced; this is not a background watcher.").with(schema(json!({"doc":doc(),"out":path_arg(),"published_fingerprint":{"type":"string"}}), &["doc","out"])),
         t("takeoff_excel_query", "Create Excel Power Query link", "Generate a ready-to-paste .pq script for an external TakeoffData XLSX workbook. Use Excel Data > Get Data > Blank Query > Advanced Editor, then Refresh All. Paths honor automation read/write roots; refuses to overwrite an existing script.")
             .with(schema(json!({"workbook":path_arg(),"out":path_arg()}), &["workbook","out"])),
         t("comment_list", "List comments", "Every comment (annotation other than links, form widgets and pop-ups) with its page, index, id, type, author, text, date, rectangle, colour, review status, checkmark and replies (each with its own status and checkmark).")
