@@ -128,7 +128,11 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let mut search = ui.ctx().data_mut(|data| data.get_temp::<String>(search_id).unwrap_or_default());
     if !compact {
         ui.label(egui::RichText::new("TOOL CHEST").strong().size(11.0).color(theme::Tokens::get(ui.ctx()).text_muted));
-        ui.add(egui::TextEdit::singleline(&mut search).hint_text("Find tools…").desired_width(f32::INFINITY));
+        ui.add(egui::TextEdit::singleline(&mut search).hint_text("Find tools...").desired_width(f32::INFINITY));
+        ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
+    } else if !search.is_empty() {
+        // Clear a hidden filter when the rail collapses, so icons remain discoverable.
+        search.clear();
         ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
     }
     egui::ScrollArea::vertical().id_salt("tool-access-list").max_height((ui.available_height() - 45.0).max(40.0)).show(ui, |ui| {
