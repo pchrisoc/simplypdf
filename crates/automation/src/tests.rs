@@ -627,3 +627,66 @@ fn measurement_list_does_not_require_export_ready_identifiers() {
     assert_eq!(result["truncated"], false);
     assert!(result.get("fingerprint").is_none());
 }
+
+#[cfg(not(target_arch = "wasm32"))]
+#[test]
+fn excel_query_tool_exports_a_refreshable_script_without_overwriting() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("published.xlsx");
+    let query = dir.path().join("estimate.pq");
+    let mut a = Automation::new();
+    let args = json!({"workbook":source.to_string_lossy(),"out":query.to_string_lossy()});
+    let result = json(&mut a, "takeoff_excel_query", args.clone());
+    assert_eq!(result["named_range"], "TakeoffData");
+    assert_eq!(result["schema_version"], 1);
+    let script = std::fs::read_to_string(&query).unwrap();
+    assert!(script.contains("Excel.Workbook(File.Contents("));
+    assert!(script.contains("TakeoffData"));
+    assert!(script.contains("published.xlsx"));
+    assert!(a.call("takeoff_excel_query", &args).is_err(), "must not overwrite an existing query");
+    assert_eq!(std::fs::read_to_string(&query).unwrap(), script);
+    assert!(a.call("takeoff_excel_query", &json!({"workbook":"bad.csv","out":dir.path().join("bad.pq").to_string_lossy()})).is_err());
+    assert!(!dir.path().join("bad.pq").exists());
+}
+
+#[cfg(unix)]
+#[test]
+fn managed_takeoff_tool_replaces_workbook_and_rejects_invalid_extension() {
+    let dir = staging_dir("managed-takeoff-tool");
+    std::fs::write(dir.join("source.pdf"), numbered_pages(1)).unwrap();
+    let mut a = Automation::new().with_root(&dir).unwrap();
+    let doc = json(&mut a, "doc_open", json!({"path":"source.pdf"}))["doc"].as_u64().unwrap();
+    let args = json!({"doc":doc,"out":"managed.xlsx"});
+    let first = json(&mut a, "takeoff_publish_managed_xlsx", args.clone());
+    assert_eq!(first["schema_version"], 1);
+    let path = dir.join("managed.xlsx");
+    assert!(std::fs::read(&path).unwrap().starts_with(b"PK"));
+    let second = json(&mut a, "takeoff_publish_managed_xlsx", args);
+    assert_eq!(second["fingerprint"], first["fingerprint"]);
+    assert!(a.call("takeoff_publish_managed_xlsx", &json!({"doc":doc,"out":"wrong.csv"})).is_err());
+    assert!(!dir.join("wrong.csv").exists());
+    json(&mut a, "doc_close", json!({"doc":doc}));
+    std::fs::remove_dir_all(dir).unwrap();
+}
+
+#[cfg(unix)]
+#[test]
+fn managed_excel_refresh_publishes_and_replaces_same_path() {
+    let dir = tempfile::tempdir().unwrap();
+    let source = dir.path().join("source.pdf");
+    std::fs::write(&source, numbered_pages(1)).unwrap();
+    let mut a = Automation::new().with_root(dir.path()).unwrap();
+    let doc = json(&mut a, "doc_open", json!({"path":"source.pdf"}))["doc"].as_u64().unwrap();
+    let args = json!({"doc":doc,"out":"managed.xlsx"});
+    let first = json(&mut a, "takeoff_refresh_xlsx", args.clone());
+    assert_eq!(first["schema_version"], 1);
+    assert_eq!(first["truncated"], false);
+    let workbook = dir.path().join("managed.xlsx");
+    let before = std::fs::read(&workbook).unwrap();
+    assert!(before.starts_with(b"PK"));
+    let second = json(&mut a, "takeoff_refresh_xlsx", args);
+    assert_eq!(second["fingerprint"], first["fingerprint"]);
+    assert!(std::fs::read(&workbook).unwrap().starts_with(b"PK"));
+    assert!(a.call("takeoff_refresh_xlsx", &json!({"doc":doc,"out":"bad.csv"})).is_err());
+    assert!(std::fs::read(&workbook).unwrap().starts_with(b"PK"));
+}

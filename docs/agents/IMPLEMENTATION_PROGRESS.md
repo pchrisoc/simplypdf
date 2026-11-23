@@ -337,3 +337,131 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #89 commit `c8471121dc6a229c52ab721d0299f477469e8871` adds `count_filtered`, an allocation-free matching-record count that uses the same filter predicate as paginated register results; `filtered_count_matches_pages_and_respects_empty_query` covers filtered, paginated and unfiltered counts.
 - The same commit applies the two precise `cargo fmt --check` changes reported by failed Ubuntu CI run 44898022052. SonarCloud passed on the preceding head; new-head CI remains unverified.
 - ENG-09.06 is not complete: persist metadata with PDF annotations, wire the desktop register, and verify save/reopen and end-to-end acceptance before checking README.
+
+## ENG-08.09 Excel Power Query link — 2026-11-21 PST
+
+- Branch `feat/eng-0809-excel-powerquery-20261122`, commits `1097057a03330cf07c6c0b4d88ef60e225337cc8` and `be792eee5d6e3ea694e8c3c3c0d55c3b067ce3e8`: `excel_power_query_source` generates a typed Power Query M import of the existing `TakeoffData` defined range with path validation and quote escaping. Focused unit tests cover path validation, named-range selection, and escaped strings.
+- `docs/EXCEL_TAKEOFF_LINK.md` documents loading a separate Excel estimate and refreshing a named-range query, plus the crucial limitation that immutable snapshots cannot yet be overwritten at the same source path.
+- ENG-08.09 remains unchecked pending user-facing desktop/CLI entry point, actual Excel smoke test, same-path managed publication (ENG-08.05/08.06), and passing CI. Do not report a fully live Excel link before these prerequisites are implemented.
+
+## ENG-08.09 Power Query schema guard — 2026-11-22
+
+- PR #90 previous head `fe2220a30f2c63ae8ddb0f2d1f307f23062436cf` passed CI run `45001190114` and SonarCloud run `45001189937`.
+- New commits `9f4f646642517e1a04ab5d5f735da2b321542fee` and `a9ec4f6c9b1789435bc6c71251d01a7e44f976aa` implement a Power Query schema guard: exact 14-column header matching and per-row schema version validation prevent silent quantity misinterpretation after source changes. The existing query regression test now asserts both guard steps. The second commit corrects M string quoting for expected columns.
+- New-head CI is not yet verified. PR remains draft; no README checkbox changed. Outstanding: desktop/CLI integration, same-path managed publication, actual Excel smoke test and final CI.
+
+## ENG-08.09 Excel source identity validation — 2026-11-22
+
+- CI run `45005770475` failed solely at `cargo fmt --all -- --check` (rustfmt wanted a single-line `TAKEOFF_COLUMNS` mapping). SonarCloud run `45005770567` passed.
+- PR #90 commit `f298b339d8c807e4993a58ef32c72703a42e974b` applies that exact formatting and adds Power Query refresh-time rejection of blank/null and duplicate `Annotation ID` values, preventing ambiguous estimate reconciliation. Focused generator assertions verify the duplicate-ID guard and typed query uses validated rows.
+- New-head CI is not yet verified; PR remains draft. Full ENG-08.09 still needs Excel smoke test, user-facing entry point, and managed same-path publication before README completion.
+
+## ENG-08.09 Excel import data integrity — 2026-11-22
+
+- Commit `cf88184583e74c89fe0632d95c9b4da5f3b137db` adds Power Query validation of trimmed annotation IDs, numeric quantity values, and nonblank units before typed Excel table loading. Focused Rust generator regression assertions cover new validation expressions.
+- Prior head `a68963a74303d66acb23ccf345cc5928065826ab`: SonarCloud run `45011030795` succeeded; CI run `45011030830` failed **after** the Rust test suite at cargo-deny, due to RUSTSEC-2026-0592 (`url` 2.5.8, fixed in 2.5.9). This is a dependency-security gate, not an observed failing Excel test. Update Cargo.lock to a patched compatible url release via a properly resolved cargo update; do not suppress the advisory.
+- ENG-08.09 remains unchecked; the new head needs fresh CI, an actual Excel smoke test, desktop/CLI exposure, and managed same-path publication. No merge until required checks pass.
+
+## ENG-08.09 script artifact export — 2026-11-22
+
+- PR #90 commit `42edc82824835e6857e34a5cae11c844476a5529` adds `write_excel_power_query_new` for atomic no-clobber UTF-8 `.pq` exports, reusing the validated M generator. Focused tests cover successful output, refusal to overwrite an existing query, and rejection of invalid source paths before creating the destination.
+- Previous head `3dfe2703b0980457fb98fba23177132cc5f97d0d`: SonarCloud run `45015640089` passed, CI run `45015640008` failed. The prior reported blocker was `cargo deny` advisory RUSTSEC-2026-0592 affecting `url` 2.5.8; inspect current job logs before attributing this run's failure to that cause.
+- Still incomplete: source workbook managed publishing, desktop/CLI entry point, actual Excel refresh smoke test, and passing CI. Do not merge or check off ENG-08.09 on the basis of library tests alone.
+
+## ENG-08.09 Excel positional validation — 2026-11-22
+
+- PR #90 commits `41210b281f1a0ca21f1ac067d2468cf1bdb65263` and `7a8140ca9af0946cc74b3f109cd21ddcd6616a2c` add typed Power Query validation for 1-based positive integer page/index positions, with a focused regression test and safe type-guarded comparisons.
+- Prior head `d77937f4c3dbc8c416c7b3d7f731cf6df8067bd8`: SonarCloud run 45020545170 succeeded; CI run 45020545169 failed at cargo-deny RUSTSEC-2026-0592 (`url` 2.5.8). Rust tests passed in the gate before deny.
+- No README checkbox or merge yet. Blockers: update Cargo.lock with patched url >=2.5.9, verify latest CI, expose end-user workflow and validate real Excel refresh, and implement managed same-path publication.
+
+## ENG-08.09 Power Query compile repair and type validation — 2026-11-22
+
+- PR #90 Ubuntu CI run `45026168310` failed in `clippy` because the generated Power Query M list `{"Page", "Index"}` was not escaped in Rust `format!` (at `crates/measure/src/xlsx.rs:44`); SonarCloud run `45026168369` succeeded.
+- Commit `cc5f82ca709aef18790892cfab4e857d700ae634` escapes the list braces as `{{...}}` in the Rust format string and adds validation that the measurement `Type` is a nonblank string. A focused regression test asserts the generated M syntax and type guard.
+- New-head CI remains to be verified. ENG-08.09 is not complete: desktop/CLI entry point, managed same-path publishing, and Excel refresh smoke tests are outstanding. README remains unchecked.
+
+## ENG-08.09 Power Query destination validation — 2026-11-22
+
+- PR #90 commit `5ef57304cadd4ca888012e3c4df1205618182e6b` rejects relative and non-.pq script destinations before staging and adds `power_query_file_requires_absolute_pq_destination` covering relative paths, incorrect extension, no unexpected output, and uppercase .PQ.
+- Previous head `f196de2`: SonarCloud run 45031327979 passed; CI run 45031328003 failed only at `cargo deny` on vulnerable `url` 2.5.8 (RUSTSEC-2026-0592), after formatting and Rust tests passed. New head checks pending.
+- Remaining: update resolved Cargo.lock to patched url version; verify new CI and Excel import; expose user-facing query export and managed same-path publishing. ENG-08.09 remains unchecked; full engineering backlog remains the goal.
+
+## ENG-08.09 Power Query M path escaping — 2026-11-22
+
+- Commit `1afa45a120e60f3feceb5476e7a33e2c3e35144e` escapes literal `#` characters in workbook paths before quoting them for Power Query M. This prevents a path containing `#(lf)` from being interpreted as an M newline escape. Focused `excel_query_escapes_m_escape_sequences_in_workbook_paths` regression test checks the emitted literal path.
+- This is a library safety improvement, not completion of ENG-08.09. Pending: latest CI, patched `url` lockfile, user-facing workflow, managed same-path publishing, and Excel smoke testing. Do not merge or mark README complete until acceptance criteria and required checks pass.
+
+## ENG-08.09 finite quantity guard — 2026-11-22
+
+- Commit `5b0b2a7bf57fce58fb1fc039970a7cb38947c5a7` on PR #90 adds a Power Query M guard rejecting NaN and positive/negative infinity in the `Value` column, in addition to rejecting non-numeric values. The guard executes before `Table.TransformColumnTypes` and produces the existing actionable invalid-quantity error.
+- Focused regression: `excel_query_rejects_non_finite_quantities` in `crates/measure/src/xlsx.rs` asserts generated M includes both `Number.IsNaN` and the infinity check. This test has been committed but has **not yet been confirmed passing by CI**.
+- Prior PR head `e13d431` passed SonarCloud run `45041997052` and failed CI run `45041997254`; the new commit requires fresh CI. No README checkbox is justified by this partial change.
+- Outstanding: dependency audit failure for `url` 2.5.8, user-facing export integration, managed same-path workbook publishing, and real Excel refresh acceptance testing. ENG-08.09 remains unchecked.
+
+## ENG-08.09 schema and position guards — 2026-11-22
+
+- PR #90 commit `be5d600133bf949a684b77b4e5db04567d453241` changes generated Excel Power Query M to reject null/non-numeric schema versions explicitly, and NaN/infinite page and index values before rounding or converting. Added focused `excel_query_rejects_missing_schema_versions_and_non_finite_positions` regression assertions in `crates/measure/src/xlsx.rs`.
+- Prior head `953d4b0`: SonarCloud run 45047853702 succeeded; Ubuntu CI run 45047853782 failed. New head CI not yet verified. The locked `url` version remains 2.5.8; resolve the lockfile through Cargo rather than inventing a registry checksum.
+- No README checkbox is complete from these guards alone. Outstanding: CI/security audit, desktop/CLI workflow, managed same-path publishing, and Excel refresh acceptance testing. Continue remaining ENG milestones after this coherent milestone.
+
+## ENG-08.09 Power Query numeric schema validation — 2026-11-22
+
+- Commit `8f3fb311dd19a2df71fefdd1b66e05dc1c91ef79` on PR #90 rejects NaN and infinite schema-version cells in the generated Excel Power Query before accepting the schema. Also repairs stale position/version regression assertions to match the generated M expression and adds a focused regression test for non-finite schema versions.
+- Verification: regression tests were added but not executed locally (GitHub connector only); the new PR-head CI result was not yet available at the time of this entry. Do not mark ENG-08.09 complete or merge until the head passes required checks.
+- Remaining: resolve the `url` 2.5.8 cargo-deny advisory by a resolver-generated lockfile update, expose the Excel query workflow through the desktop and headless automation tools, validate Excel Refresh All against a real managed published workbook, and satisfy remaining ENG-08.09 acceptance requirements.
+
+## ENG-08.09 headless Excel query entry point — 2026-11-22
+
+- PR #90 commits `f168746`, `e575ab8`, `3b146a6`, and `68e3b87` add a public `takeoff_excel_query` automation/CLI/MCP tool with `workbook` and `out` arguments, native-only execution, XLSX/PQ extension checks, automation-root path resolution, and no-clobber script publication. The tool produces a Power Query M file targeting the existing `TakeoffData` defined name in an external workbook.
+- Added focused automation regression `excel_query_tool_exports_a_refreshable_script_without_overwriting` for generated script contents, tool registration/dispatch, overwrite refusal, and invalid source extension. GitHub CI has not yet validated these commits.
+- Prior head `8b93e15`: SonarCloud `45059206390` succeeded; CI `45059206301` failed. Inspect job logs to distinguish dependency audit failures from compilation failures.
+- This is substantive headless integration, **not** ENG-08.09 completion. Still required: full CI and dependency audit, managed same-path workbook publishing, desktop user controls, and real Excel Refresh All acceptance test. README remains unchecked. Continue the entire engineering backlog after acceptance.
+
+- Confirmed previous CI job `137321129996` (run `45059206301`) passed earlier gate stages and failed at `cargo deny`: RUSTSEC-2026-0592, stack overflow in `Url::origin()` for nested `blob:` URLs. The dependency is still locked at vulnerable `url` 2.5.8. Resolver-generated lockfile update to >=2.5.9 is needed; no guessed checksum or advisory suppression was committed.
+
+## ENG-08.09 Power Query scale metadata validation — 2026-11-22
+
+- PR #90 commits `1225596`, `474639a`, `50c304f`: reviewed existing query exporter, retained its original atomic no-overwrite implementation, and added a generated-M guard that rejects missing/blank/nontext `Scale` values before type conversion. A focused Rust regression `power_query_rejects_missing_scale_metadata_before_type_conversion` checks the emitted guard and processing order. Earlier redundant exporter code was removed in follow-up commits; only one exporter definition remains.
+- Verification: GitHub connector cannot execute Rust tests directly; no CI runs were yet returned for latest head `50c304f`. **Not a verified pass.** Existing source-level regression expectations for Power Query type conversion remain intact.
+- Blockers: CI `cargo deny` continues to require a resolver-generated update from `url` 2.5.8 to a patched version; real Excel refresh, desktop integration, and managed workbook publishing remain unverified or unimplemented. No README checkbox checked and no PR merged. Continue across all ENG milestones after this one meets acceptance.
+
+## ENG-08.09 Power Query validation chain repair — 2026-11-22 PST
+
+- PR #90 commit `370360b5a75967ab2a140ad6b15aaa2309c5d867` fixes the successful branch of `TypeChecked` to return `ScaleChecked` rather than bypassing that stage through `QuantityChecked`. Focused test `excel_query_keeps_validated_scale_stage_in_type_pipeline` checks the generated script's stage linkage. Also removed an extra blank line before the test module reported by Ubuntu CI run 45070585061 (`cargo fmt --all -- --check`).
+- At commit time, new-head workflow results were not yet available; no test pass, merge, or checkbox completion claimed. Remaining requirements include passing CI, Excel smoke test, desktop UX, and managed workbook refresh.
+
+## ENG-08.09 security gate repair — 2026-11-22 PST
+
+- Ubuntu CI run `45072520326` passed formatting and reached `cargo deny`, which rejected `url` 2.5.8 under RUSTSEC-2026-0592. PR #90 commit `16db026b6d570c6e96aedde39e75d4a929a63052` updates `Cargo.lock` to patched `url` 2.5.9 and its required `form_urlencoded` 1.2.3. Both checksums were verified directly against the corresponding version entries in the official `rust-lang/crates.io-index` GitHub repository; existing locked `idna` 1.1.0 and `percent-encoding` 2.3.2 satisfy the patched version requirements. This is a real dependency resolution, not a cargo-deny exception or advisory suppression.
+- New-head CI and Excel integration acceptance remain to be verified. No merge or README checkbox is claimed until all required checks and user-facing acceptance tests pass.
+
+## ENG-08.09 validation-stage propagation repair — 2026-11-22
+
+- PR #90 commits `1098edea6d451ddaea05f5341bb7edee3803e86a` and `c837879859ac8f6c1cd42fabe34f98f2b4525e81` repair the Power Query `QuantityChecked` successful branch to return `PositionsChecked`, so page/index validation cannot be bypassed by subsequent steps. Added `excel_query_keeps_validated_positions_in_quantity_pipeline` regression; corrected its Rust literal quoting in the follow-up commit.
+- Preceding PR head `dd4b020c749d68f3a4b8ca3a1182d29f914c4d9f` passed CI, SonarCloud, Nix, FreeBSD and Windows ARM64. These new changes require fresh CI verification; no merge or README checkbox is claimed. Remaining ENG-08.09 acceptance: managed same-path workbook publishing, desktop workflow and real Excel refresh smoke test.
+
+## ENG-08.05 managed workbook replacement foundation — 2026-11-22
+
+- PR #90 commit `90f70dccf2cbd405fa676ee085a09f2a5b1e21ba` adds Unix `replace_managed_checked`: validate the complete measurement listing and fingerprint, stage a fresh XLSX on the same filesystem, then rename over an existing workbook. The API is intentionally not wired to automatic background publishing. Tests cover initial publication, replacement, refusal of truncated scans without damaging the old workbook, and rejection of symlink destinations.
+- Pending CI on this new head. This is not ENG-08.05 acceptance: Windows atomic replacement strategy, explicit start/status/refresh/stop controls, lock handling, refresh scheduling, stale scan reporting, and end-to-end Excel smoke testing remain. No README checkmark or merge claimed.
+
+## Managed workbook destination safety — 2026-11-22
+
+- PR #90 commit `56901d85d166706dd702140bedee72e7888e525e` hardens `replace_managed_checked` by rejecting directories, symlinks and other non-regular destinations, and propagating metadata errors rather than treating them as nonexistent. Test `managed_snapshot_refuses_directory_destination` verifies a directory is preserved. Prior incomplete-listing and symlink tests remain.
+- PR #73 was verified already merged on 2026-11-20; ENG-08.01 remains unchecked because its full acceptance is not established. PR #90 remains draft and pending new-head CI. Windows support, explicit publisher lifecycle, refresh and real Excel integration remain blockers; no checkbox claimed.
+
+## ENG-08.05 explicit managed workbook automation tool — 2026-11-22
+
+- PR #90 commits `8f8cbacf8d4b7888e0f6284bdd519f1751f424e7`, `ebf5027d0d0f0338738e27b37c5df07c641a2dff`, `5bada579ff0784952ce0afab655c298a49b0ebdd`, and `7076b51f004dbc7f7ad4e33f565860328643fa25` expose `takeoff_publish_managed_xlsx` in the automation dispatch and tool registry, validate the complete takeoff, and publish a replacement XLSX explicitly on Unix. The integration regression covers initial publication, same-path replacement, stable fingerprint and invalid output extension.
+- Earlier PR head `7e8a7250bdedab0e1d49a18381caa11bc60d049f` passed CI, SonarCloud, Nix, FreeBSD and Windows ARM64. The new commits require fresh CI; no merge or checklist completion claimed. Outstanding: Windows replacement, publisher lifecycle controls, event-driven refresh, transient lock retry, and real Excel refresh smoke testing.
+
+## ENG-08.05 explicit managed workbook refresh — 2026-11-22
+
+- PR #90 commits `e82f323`, `2a707b0`, `144575c`, `5c4c761` expose `takeoff_refresh_xlsx` through the automation dispatcher and tool registry, with a focused Unix integration test for initial publish, same-path replacement, stable fingerprint, and invalid-extension rejection. The tool uses validated snapshots and existing atomic replacement support.
+- Still incomplete: Windows implementation, lifecycle start/status/stop, automatic update hooks, transient-lock retries, UI exposure, and Excel refresh smoke test. New commits require CI before merge; no checkbox is marked.
+
+## CI gate repair and managed destination validation — 2026-11-22
+
+- CI run `45087226256` failed at `cargo fmt --all -- --check` on two long response expressions in `crates/automation/src/measure.rs`; other workflows (FreeBSD, Nix, SonarCloud, Windows ARM64) passed. Commit `a219b14b5ec4a58a95d2fa77245e8268b4610c12` applies the exact rustfmt layout from the job log.
+- Commit `abbf7961c657fbc559659aada3af73682f6e8519` adds explicit missing-parent rejection for managed XLSX publication and a regression ensuring no destination directories/files are created on failure.
+- Fresh CI is required. Do not merge or mark ENG-08.05/08.09 complete until the acceptance gaps (Windows managed replacement, lifecycle controls, automatic refresh, real Excel smoke test) are closed.

@@ -14,10 +14,104 @@ fn data_row(offset: usize) -> Result<u32, String> {
     u32::try_from(offset + 1).map_err(|e| e.to_string())
 }
 
+/// Build an Excel Power Query (M) source for a published SimplyPDF takeoff workbook.
+/// Excel users paste this into Data > Get Data > Blank Query > Advanced Editor.
+/// Refresh All then reloads the named TakeoffData range without editing the estimate.
+pub fn excel_power_query_source(workbook_path: &Path) -> Result<String, String> {
+    if !workbook_path.is_absolute() {
+        return Err("Excel Power Query source must be an absolute workbook path".into());
+    }
+    let path = workbook_path.to_str().ok_or("Excel Power Query source path is not UTF-8")?;
+    if !path.to_ascii_lowercase().ends_with(".xlsx") {
+        return Err("Excel Power Query source must be an .xlsx workbook".into());
+    }
+    // M text literals escape quotes by doubling them. Reject control characters.
+    if path.chars().any(|c| c.is_control()) {
+        return Err("Excel Power Query source path contains control characters".into());
+    }
+    // Power Query M interprets #(...) escape sequences inside text literals.
+    // Escape # first so filenames such as #(lf).xlsx remain literal paths.
+    let escaped = path.replace('#', "#(#)").replace('"', "\"\"");
+    let columns = TAKEOFF_COLUMNS.iter().map(|name| format!(r#""{}""#, name.replace('"', "\"\""))).collect::<Vec<_>>().join(", ");
+    Ok(format!(
+        r#"let
+    Source = Excel.Workbook(File.Contents("{escaped}"), null, true),
+    Takeoff = Source{{[Item="TakeoffData", Kind="DefinedName"]}}[Data],
+    Headers = Table.PromoteHeaders(Takeoff, [PromoteAllScalars=true]),
+    ExpectedColumns = {{{columns}}},
+    SchemaChecked = if Table.ColumnNames(Headers) <> ExpectedColumns then error "SimplyPDF takeoff schema columns have changed" else Headers,
+    VersionChecked = if List.AnyTrue(List.Transform(Table.Column(SchemaChecked, "Schema version"), each if _ is number then Number.IsNaN(_) or Number.Abs(_) = #infinity or _ <> {TAKEOFF_SCHEMA_VERSION} else true)) then error "Unsupported SimplyPDF takeoff schema version" else SchemaChecked,
+    Ids = List.Transform(Table.Column(VersionChecked, "Annotation ID"), each if _ is text then Text.Trim(_) else null),
+    IdentityChecked = if List.Contains(Ids, null) or List.Contains(Ids, "") or List.Count(Ids) <> List.Count(List.Distinct(Ids)) then error "SimplyPDF takeoff has missing or duplicate annotation IDs" else VersionChecked,
+    Positions = Table.SelectColumns(IdentityChecked, {{"Page", "Index"}}),
+    PositionsChecked = if List.AnyTrue(List.Transform(Table.ToRows(Positions), each List.AnyTrue(List.Transform(_, (n) => if n is number then Number.IsNaN(n) or Number.Abs(n) = #infinity or n < 1 or n <> Number.RoundDown(n) else true)))) then error "SimplyPDF takeoff has invalid page or index positions" else IdentityChecked,
+    Quantities = Table.Column(PositionsChecked, "Value"),
+    Units = Table.Column(IdentityChecked, "Unit"),
+    QuantityChecked = if List.AnyTrue(List.Transform(Quantities, each if _ is number then Number.IsNaN(_) or Number.Abs(_) = #infinity else true)) or List.AnyTrue(List.Transform(Units, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has invalid quantities or missing units" else PositionsChecked,
+    Scales = Table.Column(QuantityChecked, "Scale"),
+    ScaleChecked = if List.AnyTrue(List.Transform(Scales, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has missing scale metadata" else QuantityChecked,
+    Types = Table.Column(ScaleChecked, "Type"),
+    TypeChecked = if List.AnyTrue(List.Transform(Types, each not (_ is text) or Text.Trim(_) = "")) then error "SimplyPDF takeoff has missing measurement types" else ScaleChecked,
+    Typed = Table.TransformColumnTypes(TypeChecked, {{
+        {{"Page", Int64.Type}}, {{"Index", Int64.Type}}, {{"Type", type text}},
+        {{"Value", type number}}, {{"Unit", type text}}, {{"Label", type text}},
+        {{"Author", type text}}, {{"Scale", type text}},
+        {{"Annotation ID", type text}}, {{"HVAC profile", type text}},
+        {{"Material", type text}}, {{"Nominal size", type text}},
+        {{"System", type text}}, {{"Schema version", Int64.Type}}
+    }})
+in
+    Typed
+"#
+    ))
+}
+
+/// Export a ready-to-paste Power Query script without overwriting an existing file.
+/// The source workbook need not exist yet, allowing estimate setup before publication.
+pub fn write_excel_power_query_new(query_path: &Path, workbook_path: &Path) -> Result<(), String> {
+    let script = excel_power_query_source(workbook_path)?;
+    if !query_path.is_absolute() || !query_path.to_string_lossy().to_ascii_lowercase().ends_with(".pq") {
+        return Err("Excel Power Query output must be an absolute .pq path".into());
+    }
+    if query_path == workbook_path {
+        return Err("Excel Power Query output cannot replace its source workbook".into());
+    }
+    let parent = query_path.parent().filter(|p| !p.as_os_str().is_empty()).unwrap_or(Path::new("."));
+    let mut staged = tempfile::NamedTempFile::new_in(parent).map_err(|e| e.to_string())?;
+    use std::io::Write;
+    staged.write_all(script.as_bytes()).map_err(|e| e.to_string())?;
+    staged.as_file().sync_all().map_err(|e| e.to_string())?;
+    staged.persist_noclobber(query_path).map_err(|e| format!("{}: {}", query_path.display(), e.error))?;
+    Ok(())
+}
+
 /// Publish a validated, versioned measurement snapshot without incomplete row identity.
 pub fn write_new_checked(path: &Path, listing: &Listing) -> Result<(), String> {
     let fingerprint = crate::snapshot_fingerprint(listing).map_err(|e| e.to_string())?;
     write_snapshot(path, &listing.measurements, Some(&fingerprint))
+}
+
+/// Atomically replace a managed workbook with a validated complete snapshot.
+/// Unix-only foundation: the desktop must explicitly opt in before using this operation.
+#[cfg(unix)]
+pub fn replace_managed_checked(path: &Path, listing: &Listing) -> Result<(), String> {
+    let fingerprint = crate::snapshot_fingerprint(listing).map_err(|e| e.to_string())?;
+    match std::fs::symlink_metadata(path) {
+        Ok(meta) if !meta.file_type().is_file() => {
+            return Err("managed workbook destination must be a regular file".into());
+        }
+        Err(err) if err.kind() != std::io::ErrorKind::NotFound => return Err(err.to_string()),
+        _ => {}
+    }
+    let parent = path.parent().ok_or("managed workbook needs a parent directory")?;
+    if !parent.is_dir() {
+        return Err("managed workbook parent directory does not exist".into());
+    }
+    let dir = tempfile::tempdir_in(parent).map_err(|e| e.to_string())?;
+    let staged = dir.path().join("takeoff.xlsx");
+    write_snapshot(&staged, &listing.measurements, Some(&fingerprint))?;
+    std::fs::rename(&staged, path).map_err(|e| e.to_string())?;
+    Ok(())
 }
 
 /// Write a workbook beside its destination and publish it only if the path is free.
@@ -69,6 +163,138 @@ mod tests {
     use super::*;
 
     #[test]
+    fn excel_query_uses_named_range_and_escapes_path_quotes() {
+        let path = if cfg!(windows) { Path::new(r#"C:\takeoff\job "A".xlsx"#) } else { Path::new("/tmp/job \"A\".xlsx") };
+        let m = excel_power_query_source(path).expect("absolute workbook path");
+        assert!(m.contains("Item=\"TakeoffData\", Kind=\"DefinedName\""));
+        assert!(m.contains("job \"\"A\"\".xlsx"));
+        assert!(m.contains("Table.PromoteHeaders"));
+        assert!(m.contains("Annotation ID"));
+        assert!(m.contains("SchemaChecked"));
+        assert!(m.contains("VersionChecked"));
+        assert!(m.contains("List.Count(List.Distinct(Ids))"));
+        assert!(m.contains("missing or duplicate annotation IDs"));
+        assert!(m.contains("Text.Trim(_)"));
+        assert!(m.contains("invalid quantities or missing units"));
+        assert!(m.contains("Table.TransformColumnTypes(TypeChecked"));
+
+        assert!(m.contains("Unsupported SimplyPDF takeoff schema version"));
+    }
+
+    #[test]
+    fn excel_query_escapes_m_escape_sequences_in_workbook_paths() {
+        let path = if cfg!(windows) { Path::new(r"C:\\takeoff\\job #(lf).xlsx") } else { Path::new("/tmp/job #(lf).xlsx") };
+        let m = excel_power_query_source(path).expect("absolute workbook path");
+        assert!(m.contains("job #(#)(lf).xlsx"));
+        assert!(!m.contains("job #(lf).xlsx"));
+    }
+
+    #[test]
+    fn excel_query_validates_measurement_types_and_format_braces() {
+        let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid query");
+        assert!(m.contains("Positions = Table.SelectColumns(IdentityChecked, {\"Page\", \"Index\"})"));
+        assert!(m.contains("TypeChecked = if List.AnyTrue"));
+        assert!(m.contains("missing measurement types"));
+        assert!(m.contains("Table.TransformColumnTypes(TypeChecked"));
+    }
+
+    #[test]
+    fn excel_query_rejects_invalid_page_and_index_positions() {
+        let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid path");
+        assert!(m.contains("Positions = Table.SelectColumns(IdentityChecked"));
+        assert!(m.contains("Number.IsNaN(n) or Number.Abs(n) = #infinity or n < 1 or n <> Number.RoundDown(n) else true"));
+        assert!(m.contains("Quantities = Table.Column(PositionsChecked"));
+        assert!(m.contains("invalid page or index positions"));
+    }
+
+    #[test]
+    fn excel_query_rejects_missing_schema_versions_and_non_finite_positions() {
+        let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid query");
+        assert!(m.contains("each if _ is number then Number.IsNaN(_) or Number.Abs(_) = #infinity or _ <> 1 else true"));
+        assert!(m.contains("Number.IsNaN(n) or Number.Abs(n) = #infinity"));
+        assert!(m.contains("n < 1 or n <> Number.RoundDown(n)"));
+    }
+
+    #[test]
+    fn excel_query_rejects_non_finite_schema_versions() {
+        let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid query");
+        assert!(m.contains("Number.IsNaN(_) or Number.Abs(_) = #infinity or _ <> 1"));
+        assert!(m.contains("Unsupported SimplyPDF takeoff schema version"));
+    }
+
+    #[test]
+    fn excel_query_rejects_non_finite_quantities() {
+        let m = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("valid query");
+        assert!(m.contains("Number.IsNaN(_) or Number.Abs(_) = #infinity"));
+        assert!(m.contains("if _ is number then"));
+        assert!(m.contains("invalid quantities or missing units"));
+    }
+
+    #[test]
+    fn excel_query_rejects_relative_or_non_xlsx_paths() {
+        assert!(excel_power_query_source(Path::new("relative.xlsx")).is_err());
+        assert!(excel_power_query_source(Path::new("/tmp/source.csv")).is_err());
+        assert!(excel_power_query_source(Path::new("/tmp/bad\nname.xlsx")).is_err());
+    }
+
+    #[test]
+    fn power_query_file_is_written_once_and_preserves_existing_content() {
+        let dir = tempfile::tempdir().expect("temporary query directory");
+        let query = dir.path().join("takeoff.pq");
+        let workbook = dir.path().join("takeoff.xlsx");
+        write_excel_power_query_new(&query, &workbook).expect("create query");
+        let original = std::fs::read_to_string(&query).expect("read query");
+        assert!(original.contains("TakeoffData"));
+        assert!(original.contains("Table.TransformColumnTypes"));
+        assert!(write_excel_power_query_new(&query, &workbook).is_err());
+        assert_eq!(std::fs::read_to_string(&query).expect("read original query"), original);
+    }
+
+    #[test]
+    fn power_query_file_rejects_bad_source_without_creating_destination() {
+        let dir = tempfile::tempdir().expect("temporary query directory");
+        let query = dir.path().join("takeoff.pq");
+        assert!(write_excel_power_query_new(&query, Path::new("relative.xlsx")).is_err());
+        assert!(!query.exists());
+        assert!(write_excel_power_query_new(&query, &dir.path().join("source.csv")).is_err());
+        assert!(!query.exists());
+    }
+
+    #[test]
+    fn power_query_file_requires_absolute_pq_destination() {
+        let dir = tempfile::tempdir().expect("temporary query directory");
+        let workbook = dir.path().join("source.xlsx");
+        assert!(write_excel_power_query_new(Path::new("relative.pq"), &workbook).is_err());
+        assert!(write_excel_power_query_new(&dir.path().join("wrong.xlsx"), &workbook).is_err());
+        assert!(!dir.path().join("wrong.xlsx").exists());
+        assert!(write_excel_power_query_new(&dir.path().join("valid.PQ"), &workbook).is_ok());
+    }
+
+    #[test]
+    fn power_query_rejects_missing_scale_metadata_before_type_conversion() {
+        let script = excel_power_query_source(&std::env::current_dir().unwrap().join("takeoff.xlsx")).unwrap();
+        assert!(script.contains("Table.Column(QuantityChecked, \"Scale\")"));
+        assert!(script.contains("SimplyPDF takeoff has missing scale metadata"));
+        assert!(script.contains("Types = Table.Column(ScaleChecked, \"Type\")"));
+    }
+
+    #[test]
+    fn excel_query_keeps_validated_positions_in_quantity_pipeline() {
+        let script = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("query script");
+        assert!(script.contains("Quantities = Table.Column(PositionsChecked, \"Value\")"));
+        assert!(script.contains("else PositionsChecked,"));
+        assert!(!script.contains("invalid quantities or missing units\" else IdentityChecked"));
+    }
+
+    #[test]
+    fn excel_query_keeps_validated_scale_stage_in_type_pipeline() {
+        let script = excel_power_query_source(Path::new("/tmp/takeoff.xlsx")).expect("query script");
+        assert!(script.contains("else ScaleChecked,"));
+        assert!(script.contains("Typed = Table.TransformColumnTypes(TypeChecked"));
+        assert!(!script.contains("missing measurement types\" else QuantityChecked"));
+    }
+
+    #[test]
     fn excel_row_bounds_allow_last_measurement_and_reject_overflow() {
         assert_eq!(data_row(0).unwrap(), 1);
         assert_eq!(data_row(MAX_DATA_ROWS - 1).unwrap(), 1_048_575);
@@ -118,6 +344,54 @@ mod tests {
         assert!(checked_bytes.starts_with(b"PK"));
         assert!(legacy_bytes.starts_with(b"PK"));
         assert_ne!(checked_bytes, legacy_bytes, "checked workbook must carry its publication fingerprint");
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_snapshot_replaces_existing_workbook_and_rejects_incomplete_scan() {
+        let dir = tempfile::tempdir().expect("temporary export directory");
+        let path = dir.path().join("managed.xlsx");
+        let first = Listing::default();
+        replace_managed_checked(&path, &first).expect("first managed publication");
+        let original = std::fs::read(&path).expect("first workbook");
+        let incomplete = Listing { truncated: true, ..Listing::default() };
+        assert!(replace_managed_checked(&path, &incomplete).is_err());
+        assert_eq!(std::fs::read(&path).unwrap(), original);
+        replace_managed_checked(&path, &first).expect("replace existing workbook");
+        assert!(std::fs::read(&path).unwrap().starts_with(b"PK"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_snapshot_refuses_directory_destination() {
+        let dir = tempfile::tempdir().expect("temporary export directory");
+        let destination = dir.path().join("managed.xlsx");
+        std::fs::create_dir(&destination).unwrap();
+        assert!(replace_managed_checked(&destination, &Listing::default()).is_err());
+        assert!(destination.is_dir());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_snapshot_refuses_missing_parent_without_creating_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let parent = dir.path().join("missing");
+        let path = parent.join("managed.xlsx");
+        assert!(replace_managed_checked(&path, &Listing::default()).is_err());
+        assert!(!parent.exists());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_snapshot_refuses_symlink_destination() {
+        use std::os::unix::fs::symlink;
+        let dir = tempfile::tempdir().expect("temporary export directory");
+        let protected = dir.path().join("protected.xlsx");
+        std::fs::write(&protected, b"protected").unwrap();
+        let link = dir.path().join("managed.xlsx");
+        symlink(&protected, &link).unwrap();
+        assert!(replace_managed_checked(&link, &Listing::default()).is_err());
+        assert_eq!(std::fs::read(&protected).unwrap(), b"protected");
     }
 
     #[cfg(unix)]
