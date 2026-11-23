@@ -409,3 +409,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #91 branch `feat/bluebeam-inspired-tool-chest-20261122`: commit `31d1efd16c8662e457ffb5ab9acb4e2f0fb207f9` prioritizes exact localized display-label matches alongside exact tool IDs in full-catalog search. Added `exact_catalog_label_is_ranked_before_partial_identifier_matches` regression test in `crates/ui-egui/src/tool_access.rs`.
 - Previous PR head `d050deb1ca46c281a2a028f546f32d0d850f59f1`: SonarCloud run `45171470265` succeeded; CI run `45171470398` failed at the Ubuntu Gate step. This is **not** a verified passing head. The GitHub-only connector cannot run local Cargo commands. Await fresh CI at the new commit; inspect gate logs and repair any failures before merge. Visual UI acceptance is also outstanding.
 - ENG-08.01 PR #73 is already merged. PRs #82, #84, #85, #90, #91 remain open, and #92 is a dependency PR. No README acceptance checkbox was changed in this iteration; the full engineering backlog remains open.
+
+## Tool Chest ranked discovery — 2026-11-23
+
+- PR #91 feature commit `2ab1b54ddede955fc5763e5735a8e2f3caf58c3c` changes full-catalog discovery ordering to prioritize exact tool ID/localized label, then prefix matches, then substring matches. This makes common partial searches surface the most likely tool first without changing the user's pinned/open tool order.
+- Focused regression `prefix_catalog_matches_rank_before_substring_matches` checks prefix priority over an earlier-listed substring match. Existing exact-ID and localized-label tests remain.
+- GitHub Actions lookup for the feature head returned no workflow runs at inspection time; formatting, compilation, tests, and required checks are **not verified**. Do not merge PR #91 or check a README engineering task until all acceptance gates pass. Continue broader ENG milestones after finishing existing PRs.
