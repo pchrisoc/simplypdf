@@ -171,9 +171,71 @@ pub fn rectangular_room(
     extrude_breakdown(area, perimeter, &opening_quantities, height)
 }
 
+
+/// A positioned axis-aligned through-opening in a rectangular footprint.
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct RectOpening {
+    pub x: f64,
+    pub y: f64,
+    pub width: f64,
+    pub length: f64,
+}
+
+/// Derive a rectangular room only after checking opening containment and overlap.
+///
+/// Coordinates and dimensions are in calibrated linear units relative to the
+/// footprint's lower-left corner. Touching boundaries are allowed; overlapping
+/// interiors are not. This prevents subtracting invalid or duplicate cutouts.
+pub fn rectangular_room_placed(
+    width: f64,
+    length: f64,
+    height: f64,
+    openings: &[RectOpening],
+) -> Result<ExtrusionBreakdown> {
+    let mut dimensions = Vec::with_capacity(openings.len());
+    for opening in openings {
+        for value in [opening.x, opening.y, opening.width, opening.length] {
+            if !value.is_finite() || value < 0.0 {
+                return Err(MeasureError::Invalid("opening coordinates and dimensions must be finite and nonnegative".into()));
+            }
+        }
+        if opening.x > width || opening.y > length
+            || opening.width > width - opening.x
+            || opening.length > length - opening.y
+        {
+            return Err(MeasureError::Invalid("opening lies outside the room footprint".into()));
+        }
+        dimensions.push((opening.width, opening.length));
+    }
+    for (i, a) in openings.iter().enumerate() {
+        for b in &openings[i + 1..] {
+            if a.x < b.x + b.width && b.x < a.x + a.width
+                && a.y < b.y + b.length && b.y < a.y + a.length
+            {
+                return Err(MeasureError::Invalid("through-openings overlap".into()));
+            }
+        }
+    }
+    rectangular_room(width, length, height, &dimensions)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+
+    #[test]
+    fn positioned_openings_validate_containment_and_overlap() {
+        let a = RectOpening { x: 1.0, y: 1.0, width: 2.0, length: 2.0 };
+        let b = RectOpening { x: 3.0, y: 1.0, width: 2.0, length: 2.0 };
+        let room = rectangular_room_placed(10.0, 10.0, 3.0, &[a, b]).expect("touching openings");
+        assert_eq!(room.net.volume, 276.0);
+        assert_eq!(room.opening_wall_area, 48.0);
+        assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[a, a]).is_err());
+        assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { x: 9.0, ..a }]).is_err());
+        assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { x: f64::NAN, ..a }]).is_err());
+        assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { x: f64::MAX, ..a }]).is_err());
+    }
 
     #[test]
     fn rectangular_room_dimensions_include_opening_returns() {
