@@ -126,14 +126,11 @@ fn catalog_search_ids(pinned: &[String], open: &[String], search: &str) -> Vec<&
 
 /// Resolve the first search result in the same order as the visible tool chest.
 fn first_matching_tool(pinned: &[String], open: &[String], search: &str, pinned_only: bool) -> Option<String> {
-    pinned
-        .iter()
-        .chain(open.iter().filter(|_| !pinned_only))
-        .find(|id| tool_matches(id, search))
-        .cloned()
-        .or_else(|| (!pinned_only && !search.trim().is_empty())
-                .then(|| catalog_search_ids(pinned, open, search))
-                .and_then(|ids| ids.first().map(|id| (*id).to_owned())))
+    pinned.iter().chain(open.iter().filter(|_| !pinned_only)).find(|id| tool_matches(id, search)).cloned().or_else(|| {
+        (!pinned_only && !search.trim().is_empty())
+            .then(|| catalog_search_ids(pinned, open, search))
+            .and_then(|ids| ids.first().map(|id| (*id).to_owned()))
+    })
 }
 
 fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
@@ -232,12 +229,17 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             ui.separator();
             widgets::section_title(ui, tl!("All tools"));
             for id in &catalog_matches {
-                if let Some(group) = catalog::group(id)
-                    && widgets::ghost_button(ui, group.icon, tl!(group.label)).clicked()
-                {
-                    app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
-                    app.takeoff_workspace.settings_floating = false;
-                    app.select_tool(group.id);
+                if let Some(group) = catalog::group(id) {
+                    ui.horizontal(|ui| {
+                        if widgets::ghost_button(ui, group.icon, tl!(group.label)).clicked() {
+                            app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
+                            app.takeoff_workspace.settings_floating = false;
+                            app.select_tool(group.id);
+                        }
+                        if ui.small_button("+").on_hover_text("Pin to Tool Chest").clicked() {
+                            app.toggle_pin_tool(group.id);
+                        }
+                    });
                 }
             }
         }
@@ -312,6 +314,14 @@ fn row(app: &mut SimplyPDFApp, ui: &mut egui::Ui, id: &str, active: bool, pinned
 #[cfg(test)]
 mod tool_chest_tests {
     use super::{catalog_search_ids, first_matching_tool, matching_tool_count, tool_matches};
+
+    #[test]
+    fn catalog_search_does_not_repeat_pinned_or_open_tools() {
+        let id = super::catalog::TOOL_GROUPS[0].id.to_owned();
+        let pinned = vec![id.clone()];
+        let open = vec![id.clone()];
+        assert!(!catalog_search_ids(&pinned, &open, &id).contains(&id.as_str()));
+    }
 
     #[test]
     fn enter_search_selects_unopened_catalog_tools_and_respects_pinned_filter() {
