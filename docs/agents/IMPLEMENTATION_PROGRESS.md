@@ -459,3 +459,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #90 commits `e82f323`, `2a707b0`, `144575c`, `5c4c761` expose `takeoff_refresh_xlsx` through the automation dispatcher and tool registry, with a focused Unix integration test for initial publish, same-path replacement, stable fingerprint, and invalid-extension rejection. The tool uses validated snapshots and existing atomic replacement support.
 - Still incomplete: Windows implementation, lifecycle start/status/stop, automatic update hooks, transient-lock retries, UI exposure, and Excel refresh smoke test. New commits require CI before merge; no checkbox is marked.
+
+## CI gate repair and managed destination validation — 2026-11-22
+
+- CI run `45087226256` failed at `cargo fmt --all -- --check` on two long response expressions in `crates/automation/src/measure.rs`; other workflows (FreeBSD, Nix, SonarCloud, Windows ARM64) passed. Commit `a219b14b5ec4a58a95d2fa77245e8268b4610c12` applies the exact rustfmt layout from the job log.
+- Commit `abbf7961c657fbc559659aada3af73682f6e8519` adds explicit missing-parent rejection for managed XLSX publication and a regression ensuring no destination directories/files are created on failure.
+- Fresh CI is required. Do not merge or mark ENG-08.05/08.09 complete until the acceptance gaps (Windows managed replacement, lifecycle controls, automatic refresh, real Excel smoke test) are closed.
