@@ -379,3 +379,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Feature commit `4c1be9cfc667a73cbecce6ceb603c10ca4d250b5`: searched tools not yet opened or pinned now appear in an actionable All tools section in the Tool Chest; the match count includes them and empty state appears only when no catalog match exists. Pinned-only mode deliberately hides unopened catalog matches.
 - Focused test commit `ecdc1c5a6cc3bacefa3e7a8260f593522e62e03d`: tests unopened tool discovery, exclusion of pinned/open duplicates, and unmatched queries.
 - Pending fresh CI and visual review; no checkbox or merge claimed. Full 214-item ENG backlog remains the target; ENG-08.01 PR #73 merged previously; ENG-08 PR #90 remains draft.
+
+### 2026-11-23 — PR #91 Tool Chest keyboard catalog selection
+
+- Inspected README, AGENTS.md, CLAUDE.md, main progress log and PRs #73/#90/#91. PR #73 merged; #90 draft with five successful workflows; #91 draft, last CI 45136065752 failed at `cargo fmt --all -- --check` in `tool_access.rs` catalog search formatting.
+- Commits `bc3a6613a48a66e79a8ec341631b0c2eb76c1ba7` and `a5b1a6640a108583320d69a23d1b4e545f6216e5` fix the reported format shape and implement Enter selection for unopened matching catalog tools, respecting pinned-only mode. Added a focused regression test for unopened, pinned-only and blank-query behavior.
+- Pending: new CI verification and merge review. No engineering checklist acceptance claimed; continue ENG-08 managed workbook lifecycle and remaining engineering checklist in dependency order.
