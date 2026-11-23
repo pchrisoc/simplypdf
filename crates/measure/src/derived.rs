@@ -37,6 +37,37 @@ pub fn extrude(footprint_area: f64, perimeter: f64, depth: f64) -> Result<Extrud
     Ok(ExtrudedQuantity { footprint_area, depth, volume, wall_area })
 }
 
+/// Extrude a footprint with non-overlapping, fully contained through-openings.
+///
+/// Opening areas are subtracted from the gross footprint. Opening perimeters
+/// contribute exposed interior walls. The caller must verify geometric
+/// containment and non-overlap before passing measured openings.
+pub fn extrude_with_openings(
+    gross_area: f64,
+    outer_perimeter: f64,
+    openings: &[(f64, f64)],
+    depth: f64,
+) -> Result<ExtrudedQuantity> {
+    // Validate the outer geometry and depth even for an empty opening list.
+    extrude(gross_area, outer_perimeter, depth)?;
+    let mut net_area = gross_area;
+    let mut exposed_perimeter = outer_perimeter;
+    for &(area, perimeter) in openings {
+        if !area.is_finite() || !perimeter.is_finite() || area < 0.0 || perimeter < 0.0 {
+            return Err(MeasureError::Invalid("opening area and perimeter must be finite and nonnegative".into()));
+        }
+        if area > net_area {
+            return Err(MeasureError::Invalid("openings exceed the available footprint area".into()));
+        }
+        net_area -= area;
+        exposed_perimeter += perimeter;
+        if !exposed_perimeter.is_finite() {
+            return Err(MeasureError::Invalid("opening perimeters exceed supported numeric range".into()));
+        }
+    }
+    extrude(net_area, exposed_perimeter, depth)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -55,6 +86,24 @@ mod tests {
         let result = extrude(20.0, 18.0, 0.0).expect("zero depth");
         assert_eq!(result.volume, 0.0);
         assert_eq!(result.wall_area, 0.0);
+    }
+
+    #[test]
+    fn openings_reduce_volume_and_add_interior_wall_area() {
+        // 10x10 footprint, 2x2 opening, 3-unit depth.
+        let result = extrude_with_openings(100.0, 40.0, &[(4.0, 8.0)], 3.0).expect("valid opening");
+        assert_eq!(result.footprint_area, 96.0);
+        assert_eq!(result.volume, 288.0);
+        assert_eq!(result.wall_area, 144.0);
+        assert_eq!(extrude_with_openings(100.0, 40.0, &[], 3.0), extrude(100.0, 40.0, 3.0));
+    }
+
+    #[test]
+    fn openings_reject_invalid_and_cumulative_excess() {
+        assert!(extrude_with_openings(10.0, 12.0, &[(6.0, 4.0), (5.0, 4.0)], 2.0).is_err());
+        assert!(extrude_with_openings(10.0, 12.0, &[(f64::NAN, 4.0)], 2.0).is_err());
+        assert!(extrude_with_openings(10.0, 12.0, &[(1.0, f64::INFINITY)], 2.0).is_err());
+        assert!(extrude_with_openings(10.0, 12.0, &[(1.0, -1.0)], 2.0).is_err());
     }
 
     #[test]
