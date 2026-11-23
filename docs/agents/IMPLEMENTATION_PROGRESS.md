@@ -355,3 +355,11 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #93 commit `e38a15f` adds `ExtrusionBreakdown` and `extrude_breakdown`, separating exterior lateral wall area from interior opening-return wall area while retaining the validated net footprint/volume calculation.
 - Focused `breakdown_separates_opening_returns_from_external_walls` regression test covers 10×10 footprint, 2×2 opening, depth 3, no openings, and invalid oversized opening. CI validation is pending; do not claim test execution or mark ENG-06.05 complete.
 - Remaining acceptance: desktop height/depth input, saved measurement fields, unit-aware export, headless automation tool, PDF save/reopen tests and CI checks. Full 214-item engineering backlog remains in scope.
+
+
+## 2026-11-23 — ENG-06.05 unit-aware derived quantities
+
+- PR #93 commit `d546853` adds `extrude_converted` with explicit squared-area, linear-perimeter and linear-depth conversion factors, including finite/positive scale validation and overflow rejection. This prevents a feet-versus-metres height entry from silently being treated as the area measurement's unit.
+- Added focused regression tests for feet-to-metres equivalence and invalid/overflowing conversion scales. Tests are committed, **not yet verified passing** by GitHub CI.
+- `extrude_breakdown` now sums opening-return wall areas directly rather than subtracting large total areas, avoiding cancellation in extreme geometry.
+- ENG-06.05 remains unchecked: desktop input, persisted measurement depth, unit-aware CSV/XLSX and automation integration, PDF save/reopen, and CI verification are outstanding. The other ENG milestones remain in scope.
