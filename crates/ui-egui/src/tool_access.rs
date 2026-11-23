@@ -124,6 +124,16 @@ fn catalog_search_ids(pinned: &[String], open: &[String], search: &str) -> Vec<&
         .collect()
 }
 
+/// Resolve the first search result in the same order as the visible tool chest.
+fn first_matching_tool(pinned: &[String], open: &[String], search: &str, pinned_only: bool) -> Option<String> {
+    pinned
+        .iter()
+        .chain(open.iter().filter(|_| !pinned_only))
+        .find(|id| tool_matches(id, search))
+        .cloned()
+        .or_else(|| (!pinned_only && !search.trim().is_empty()).then(|| catalog_search_ids(pinned, open, search)).flatten().first().map(|id| (*id).to_owned()))
+}
+
 fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let current = match app.left {
         LeftPanel::Tool(id) => Some(id),
@@ -172,7 +182,7 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             search.clear();
             ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
         } else if ui.input(|input| input.key_pressed(egui::Key::Enter))
-            && let Some(id) = pinned.iter().chain(open.iter().filter(|_| !pinned_only)).find(|id| tool_matches(id, &search))
+            && let Some(id) = first_matching_tool(&pinned, &open, &search, pinned_only)
             && let Some(group) = catalog::group(id)
         {
             app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
@@ -183,11 +193,8 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let matches = matching_tool_count(&pinned, &open, &search, pinned_only);
     // Search the full catalog too: users should be able to discover tools that
     // have never been opened, rather than searching only their recent tools.
-    let catalog_matches: Vec<&str> = if compact || pinned_only || search.trim().is_empty() {
-        Vec::new()
-    } else {
-        catalog_search_ids(&pinned, &open, &search)
-    };
+    let catalog_matches: Vec<&str> =
+        if compact || pinned_only || search.trim().is_empty() { Vec::new() } else { catalog_search_ids(&pinned, &open, &search) };
     let total_matches = matches + catalog_matches.len();
     if !compact && !search.trim().is_empty() {
         ui.label(egui::RichText::new(format!("{total_matches} matching tools")).small().color(theme::Tokens::get(ui.ctx()).text_muted));
@@ -302,7 +309,16 @@ fn row(app: &mut SimplyPDFApp, ui: &mut egui::Ui, id: &str, active: bool, pinned
 
 #[cfg(test)]
 mod tool_chest_tests {
-    use super::{catalog_search_ids, matching_tool_count, tool_matches};
+    use super::{catalog_search_ids, first_matching_tool, matching_tool_count, tool_matches};
+
+    #[test]
+    fn enter_search_selects_unopened_catalog_tools_and_respects_pinned_filter() {
+        let id = super::catalog::TOOL_GROUPS.first().expect("catalog has tools").id;
+        assert_eq!(first_matching_tool(&[], &[], id, false).as_deref(), Some(id));
+        assert_eq!(first_matching_tool(&[], &[], id, true), None);
+        assert_eq!(first_matching_tool(&[id.to_owned()], &[], id, true).as_deref(), Some(id));
+        assert_eq!(first_matching_tool(&[], &[], " ", false), None);
+    }
 
     #[test]
     fn unopened_catalog_search_excludes_open_and_pinned_tools() {
