@@ -140,6 +140,10 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
         search.clear();
         ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
     }
+    let matches = pinned.iter().chain(open.iter()).filter(|id| tool_matches(id, &search)).count();
+    if !compact && !search.trim().is_empty() {
+        ui.label(egui::RichText::new(format!("{matches} matching tools")).small().color(theme::Tokens::get(ui.ctx()).text_muted));
+    }
     egui::ScrollArea::vertical().id_salt("tool-access-list").max_height((ui.available_height() - 45.0).max(40.0)).show(ui, |ui| {
         if !compact {
             widgets::section_title(ui, tl!("Pinned tools"));
@@ -166,6 +170,9 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             if tool_matches(id, &search) {
                 row(app, ui, id, current == Some(id.as_str()), false);
             }
+        }
+        if !compact && matches == 0 && !search.trim().is_empty() {
+            ui.label("No matching tools. Clear the search or browse all tools.");
         }
     });
     if compact {
@@ -236,6 +243,7 @@ mod tool_chest_tests {
         assert!(tool_matches("measurement", "MEASURE"));
         assert!(tool_matches("measurement", "  measure  "));
         assert!(tool_matches("measurement", ""));
+        assert!(tool_matches("measurement", "   "));
         assert!(!tool_matches("measurement", "nonexistent-tool-xyz"));
     }
 }
