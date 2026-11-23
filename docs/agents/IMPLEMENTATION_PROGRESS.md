@@ -382,3 +382,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #93 branch `feat/eng-0605-derived-quantities-20261123`: commit `b5c77c3f1c1bbabaae2c195b52d63a6d9825b7ed` rejects zero-width and zero-length positioned through-openings; two focused regression assertions cover the degenerate cases. Such openings are not valid through-openings and must not contribute fictitious wall returns.
 - Previous head `bc72939d36d9a52c097a296c07f90f80c5333db1`: SonarCloud run `45256334625` succeeded, but CI run `45256334841` failed. Do not merge or mark ENG-06.05 complete. New commit CI results not yet available when inspected; run focused measurement tests through CI and investigate the failing CI gate.
 - Outstanding: desktop height/depth inputs, PDF save/reopen persistence, CLI/MCP exposure, XLSX integration, and end-to-end acceptance. This commit is a validation fix, not completion of the engineering milestone.
+
+## 2026-11-23 — ENG-06.05 CI gate repair and room-bound validation
+
+- Commit `bab464d846e4749b3cea386ee02c72cb97c7630a` on PR #93 corrects the `cargo fmt --all -- --check` differences shown in failed CI run `45266197536` and validates nonfinite/negative rectangular room bounds before checking positioned openings.
+- Focused regression assertions cover NaN and negative room width with positioned openings; existing placement, overlap, and extrusion tests remain.
+- CI: previous head `d38e322` failed at `fmt`; SonarCloud succeeded (`45266198212`). New commit CI must complete before merge. No local test execution claimed.
+- Still outstanding: desktop depth input, persistence and save/reopen, CLI/MCP and XLSX integration, end-to-end acceptance; do not mark ENG-06.05 complete.
