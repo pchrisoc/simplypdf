@@ -385,3 +385,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Inspected README, AGENTS.md, CLAUDE.md, main progress log and PRs #73/#90/#91. PR #73 merged; #90 draft with five successful workflows; #91 draft, last CI 45136065752 failed at `cargo fmt --all -- --check` in `tool_access.rs` catalog search formatting.
 - Commits `bc3a6613a48a66e79a8ec341631b0c2eb76c1ba7` and `a5b1a6640a108583320d69a23d1b4e545f6216e5` fix the reported format shape and implement Enter selection for unopened matching catalog tools, respecting pinned-only mode. Added a focused regression test for unopened, pinned-only and blank-query behavior.
 - Pending: new CI verification and merge review. No engineering checklist acceptance claimed; continue ENG-08 managed workbook lifecycle and remaining engineering checklist in dependency order.
+
+### 2026-11-23 — Tool Chest catalog pinning and CI repair
+
+- PR #91 commit `9f9e16f337ae8a6440337fdbd2dd214691d589f7` adds a one-click pin action to previously unopened catalog search results, reusing the existing pin state and selection path. Added focused duplicate-exclusion regression test for catalog discovery.
+- Repaired the exact `first_matching_tool` formatting reported by failing CI run `45143866484` (Ubuntu gate `fmt`); SonarCloud passed on the previous head. New head CI is pending; no acceptance checkbox or merge claimed.
+- Continue verifying the Tool Chest branch, then integrate only after required CI checks and visual acceptance. Engineering backlog remains broader than this UI milestone.
