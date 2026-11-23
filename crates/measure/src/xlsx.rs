@@ -104,6 +104,9 @@ pub fn replace_managed_checked(path: &Path, listing: &Listing) -> Result<(), Str
         _ => {}
     }
     let parent = path.parent().ok_or("managed workbook needs a parent directory")?;
+    if !parent.is_dir() {
+        return Err("managed workbook parent directory does not exist".into());
+    }
     let dir = tempfile::tempdir_in(parent).map_err(|e| e.to_string())?;
     let staged = dir.path().join("takeoff.xlsx");
     write_snapshot(&staged, &listing.measurements, Some(&fingerprint))?;
@@ -366,6 +369,16 @@ mod tests {
         std::fs::create_dir(&destination).unwrap();
         assert!(replace_managed_checked(&destination, &Listing::default()).is_err());
         assert!(destination.is_dir());
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn managed_snapshot_refuses_missing_parent_without_creating_files() {
+        let dir = tempfile::tempdir().unwrap();
+        let parent = dir.path().join("missing");
+        let path = parent.join("managed.xlsx");
+        assert!(replace_managed_checked(&path, &Listing::default()).is_err());
+        assert!(!parent.exists());
     }
 
     #[cfg(unix)]
