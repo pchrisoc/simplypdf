@@ -363,3 +363,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - CI run 45110359220 failed in Clippy (`collapsible_if`) at `crates/ui-egui/src/tool_access.rs:148–150`, not at cargo-deny. Commit `ae28fbe7ab4c4802f4c6ed3606c81822c0c49caf` collapses the nested conditions.
 - Commit `8928d881c300565c5415648c23dff6a97534e7f1` fixes a keyboard interaction bug: Enter/Escape only trigger Tool Chest actions while its search input has focus, preventing global shortcut interception.
 - Await fresh CI on the new head; do not merge or mark README tasks complete until required checks pass and acceptance criteria are verified. Continue the full engineering backlog afterward.
+
+## Tool Chest follow-up — 2026-11-22 22:00 PST
+
+- PR #91: `b9ed0aa63c66810e275435bbdab13e9f9bbe411d` repairs CI rustfmt failure at `tool_access.rs:130` and makes empty Tool Chest searches actionable with a Browse full tool catalog button. `54f38d772933b243d8edfc19f34f61f10d6f03ca` extracts a matching-count helper and tests matching across pinned/open groups, zero matches, and blank search.
+- Previous head `33d4cfadbb3c2d8cadbdabf734f7876ebbd70938` failed CI run 45116377207 at rustfmt; SonarCloud passed. New head has not yet completed required checks. PR #73 merged; PR #90 still draft with five successful workflows, but broader managed workbook acceptance remains incomplete. No new checklist items marked done.
