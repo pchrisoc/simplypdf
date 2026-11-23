@@ -376,3 +376,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #93 source commit `c5e30312d424b555c6eb88158c03d4f3298d444f` adds `RectOpening` and `rectangular_room_placed` to reject nonfinite/negative coordinates, out-of-bounds rectangular through-openings, and overlapping interiors before deriving volume and wall-area quantities. Touching boundaries remain valid.
 - Focused regression `positioned_openings_validate_containment_and_overlap` covers two touching openings, duplicate overlap, boundary overflow, NaN and extreme coordinates. This test is committed, **not yet confirmed passing by CI**.
 - Still required before ENG-06.05 acceptance: desktop depth inputs, persisted markups and save/reopen, CLI/MCP exposure, XLSX unit-aware exports, geometric integration with actual PDF cutouts, full CI and end-to-end verification. README checkbox remains unchecked.
+
+## GitHub-only ENG-06.05 validation — 2026-11-23 PST
+
+- PR #93 branch `feat/eng-0605-derived-quantities-20261123`: commit `b5c77c3f1c1bbabaae2c195b52d63a6d9825b7ed` rejects zero-width and zero-length positioned through-openings; two focused regression assertions cover the degenerate cases. Such openings are not valid through-openings and must not contribute fictitious wall returns.
+- Previous head `bc72939d36d9a52c097a296c07f90f80c5333db1`: SonarCloud run `45256334625` succeeded, but CI run `45256334841` failed. Do not merge or mark ENG-06.05 complete. New commit CI results not yet available when inspected; run focused measurement tests through CI and investigate the failing CI gate.
+- Outstanding: desktop height/depth inputs, PDF save/reopen persistence, CLI/MCP exposure, XLSX integration, and end-to-end acceptance. This commit is a validation fix, not completion of the engineering milestone.
