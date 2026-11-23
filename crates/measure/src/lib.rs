@@ -4,6 +4,7 @@
 #![deny(clippy::unwrap_used, clippy::expect_used, clippy::panic, clippy::unimplemented, clippy::todo, clippy::unreachable)]
 
 pub mod classifications;
+pub mod derived;
 pub mod hvac;
 pub mod presets;
 pub mod review_metadata;

@@ -337,3 +337,61 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #89 commit `c8471121dc6a229c52ab721d0299f477469e8871` adds `count_filtered`, an allocation-free matching-record count that uses the same filter predicate as paginated register results; `filtered_count_matches_pages_and_respects_empty_query` covers filtered, paginated and unfiltered counts.
 - The same commit applies the two precise `cargo fmt --check` changes reported by failed Ubuntu CI run 44898022052. SonarCloud passed on the preceding head; new-head CI remains unverified.
 - ENG-09.06 is not complete: persist metadata with PDF annotations, wire the desktop register, and verify save/reopen and end-to-end acceptance before checking README.
+
+## 2026-11-23 — ENG-06.05 derived quantity calculations
+
+- Branch `feat/eng-0605-derived-quantities-20261123`: `b452d47` adds a validated `extrude` calculation for footprint volume (`area × depth`) and lateral wall area (`perimeter × depth`) in consistent calibrated units; `74cfec7` exposes it from the measure crate.
+- Focused Rust unit tests cover a rectangular room, zero depth, negative/nonfinite inputs, and multiplication overflow. Tests are committed but have not yet been run by CI.
+- This is a reusable engine foundation, **not** full ENG-06.05 acceptance: connect depth/height inputs to measurement UI, saved markups, export and automation, verify unit conversion and PDF reopen, and pass all required checks. README checkbox remains unchecked. Continue ENG-08 open PRs and the remaining engineering backlog.
+
+## 2026-11-23 — ENG-06.05 through-opening extrusion follow-up
+
+- PR #93 commit `f9ef696` adds `extrude_with_openings` for net volume (gross footprint minus through-opening areas) and lateral wall area (outer plus interior opening perimeters), with cumulative-area, nonfinite and invalid-perimeter validation.
+- Focused tests cover a 10×10 footprint with a 2×2 opening at depth 3, the empty-opening equivalence, and invalid/cumulative excess openings. Tests are committed, not yet verified by CI.
+- Geometry containment and non-overlap remain caller responsibilities. ENG-06.05 is still unchecked pending persisted depth/height, desktop input, takeoff/export integration and end-to-end acceptance; ENG-06.04 still requires interactive area-cutout geometry.
+
+## 2026-11-23 — ENG-06.05 auditable wall-area breakdown
+
+- PR #93 commit `e38a15f` adds `ExtrusionBreakdown` and `extrude_breakdown`, separating exterior lateral wall area from interior opening-return wall area while retaining the validated net footprint/volume calculation.
+- Focused `breakdown_separates_opening_returns_from_external_walls` regression test covers 10×10 footprint, 2×2 opening, depth 3, no openings, and invalid oversized opening. CI validation is pending; do not claim test execution or mark ENG-06.05 complete.
+- Remaining acceptance: desktop height/depth input, saved measurement fields, unit-aware export, headless automation tool, PDF save/reopen tests and CI checks. Full 214-item engineering backlog remains in scope.
+
+
+## 2026-11-23 — ENG-06.05 unit-aware derived quantities
+
+- PR #93 commit `d546853` adds `extrude_converted` with explicit squared-area, linear-perimeter and linear-depth conversion factors, including finite/positive scale validation and overflow rejection. This prevents a feet-versus-metres height entry from silently being treated as the area measurement's unit.
+- Added focused regression tests for feet-to-metres equivalence and invalid/overflowing conversion scales. Tests are committed, **not yet verified passing** by GitHub CI.
+- `extrude_breakdown` now sums opening-return wall areas directly rather than subtracting large total areas, avoiding cancellation in extreme geometry.
+- ENG-06.05 remains unchecked: desktop input, persisted measurement depth, unit-aware CSV/XLSX and automation integration, PDF save/reopen, and CI verification are outstanding. The other ENG milestones remain in scope.
+
+## 2026-11-23 — ENG-06.05 rectangular room dimension adapter
+
+- PR #93 commit `ab9e09801b639c123f2c0083eb385c69af22b90d` adds `rectangular_room(width, length, height, openings)` to derive net volume, exterior wall area and interior opening returns directly from calibrated rectangular dimensions, including finite/nonnegative/overflow validation.
+- Two focused regression tests cover a 10×10×3 room with a 2×2 through-opening (288 volume, 120 outer wall area, 24 opening-return wall area) and invalid/excessive dimensions. These tests are committed, not yet independently verified by CI.
+- This is a geometry-to-quantity adapter only: drawing containment/overlap checks, UI height inputs, persisted markup metadata, exports, MCP integration, save/reopen, and passing CI remain outstanding. ENG-06.05 stays unchecked; all other unchecked engineering milestones remain in scope.
+
+
+## 2026-11-23 — ENG-06.05 positioned cutout geometry
+
+- PR #93 source commit `c5e30312d424b555c6eb88158c03d4f3298d444f` adds `RectOpening` and `rectangular_room_placed` to reject nonfinite/negative coordinates, out-of-bounds rectangular through-openings, and overlapping interiors before deriving volume and wall-area quantities. Touching boundaries remain valid.
+- Focused regression `positioned_openings_validate_containment_and_overlap` covers two touching openings, duplicate overlap, boundary overflow, NaN and extreme coordinates. This test is committed, **not yet confirmed passing by CI**.
+- Still required before ENG-06.05 acceptance: desktop depth inputs, persisted markups and save/reopen, CLI/MCP exposure, XLSX unit-aware exports, geometric integration with actual PDF cutouts, full CI and end-to-end verification. README checkbox remains unchecked.
+
+## GitHub-only ENG-06.05 validation — 2026-11-23 PST
+
+- PR #93 branch `feat/eng-0605-derived-quantities-20261123`: commit `b5c77c3f1c1bbabaae2c195b52d63a6d9825b7ed` rejects zero-width and zero-length positioned through-openings; two focused regression assertions cover the degenerate cases. Such openings are not valid through-openings and must not contribute fictitious wall returns.
+- Previous head `bc72939d36d9a52c097a296c07f90f80c5333db1`: SonarCloud run `45256334625` succeeded, but CI run `45256334841` failed. Do not merge or mark ENG-06.05 complete. New commit CI results not yet available when inspected; run focused measurement tests through CI and investigate the failing CI gate.
+- Outstanding: desktop height/depth inputs, PDF save/reopen persistence, CLI/MCP exposure, XLSX integration, and end-to-end acceptance. This commit is a validation fix, not completion of the engineering milestone.
+
+## 2026-11-23 — ENG-06.05 CI gate repair and room-bound validation
+
+- Commit `bab464d846e4749b3cea386ee02c72cb97c7630a` on PR #93 corrects the `cargo fmt --all -- --check` differences shown in failed CI run `45266197536` and validates nonfinite/negative rectangular room bounds before checking positioned openings.
+- Focused regression assertions cover NaN and negative room width with positioned openings; existing placement, overlap, and extrusion tests remain.
+- CI: previous head `d38e322` failed at `fmt`; SonarCloud succeeded (`45266198212`). New commit CI must complete before merge. No local test execution claimed.
+- Still outstanding: desktop depth input, persistence and save/reopen, CLI/MCP and XLSX integration, end-to-end acceptance; do not mark ENG-06.05 complete.
+
+## ENG-06.05 calibrated polygon integration — 2026-11-23
+
+- Feature commit `0ba89095aa64d68b0ae6928d0d26ea836a7fde3f` adds `extrude_measured_polygon` in `crates/measure/src/derived.rs`, deriving closed-perimeter wall area and calibrated area directly from existing polygon geometry, with explicit independent area/perimeter conversions and validated depth. This connects derived quantities to the existing measurement engine rather than only accepting detached numeric dimensions.
+- Test correction commit `21551eb5dde5a8b28e8f4c6726ad94efd66823d4` fixes the three-foot-to-metre depth fixture. Focused regression covers 10x10 polygon at depth 3, unit conversion, invalid depth, invalid scale and insufficient vertices.
+- GitHub-only implementation; no local Cargo execution. No PR-head workflow runs returned at first check for `0ba8909`. Recheck latest head, diagnose failures and obtain completed passing CI before merging. Desktop depth UI, persisted PDF fields, CLI/MCP, XLSX exports and end-to-end acceptance remain open. ENG-06.05 stays unchecked.
