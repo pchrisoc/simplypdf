@@ -648,3 +648,23 @@ fn excel_query_tool_exports_a_refreshable_script_without_overwriting() {
     assert!(a.call("takeoff_excel_query", &json!({"workbook":"bad.csv","out":dir.path().join("bad.pq").to_string_lossy()})).is_err());
     assert!(!dir.path().join("bad.pq").exists());
 }
+
+#[cfg(unix)]
+#[test]
+fn managed_takeoff_tool_replaces_workbook_and_rejects_invalid_extension() {
+    let dir = staging_dir("managed-takeoff-tool");
+    std::fs::write(dir.join("source.pdf"), numbered_pages(1)).unwrap();
+    let mut a = Automation::new().with_root(&dir).unwrap();
+    let doc = json(&mut a, "doc_open", json!({"path":"source.pdf"}))["doc"].as_u64().unwrap();
+    let args = json!({"doc":doc,"out":"managed.xlsx"});
+    let first = json(&mut a, "takeoff_publish_managed_xlsx", args.clone());
+    assert_eq!(first["schema_version"], 1);
+    let path = dir.join("managed.xlsx");
+    assert!(std::fs::read(&path).unwrap().starts_with(b"PK"));
+    let second = json(&mut a, "takeoff_publish_managed_xlsx", args);
+    assert_eq!(second["fingerprint"], first["fingerprint"]);
+    assert!(a.call("takeoff_publish_managed_xlsx", &json!({"doc":doc,"out":"wrong.csv"})).is_err());
+    assert!(!dir.join("wrong.csv").exists());
+    json(&mut a, "doc_close", json!({"doc":doc}));
+    std::fs::remove_dir_all(dir).unwrap();
+}
