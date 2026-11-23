@@ -111,6 +111,10 @@ fn tool_matches(id: &str, query: &str) -> bool {
         || catalog::group(id).is_some_and(|group| tl!(group.label).to_lowercase().contains(&query.to_lowercase()))
 }
 
+fn matching_tool_count(pinned: &[String], open: &[String], query: &str) -> usize {
+    pinned.iter().chain(open.iter()).filter(|id| tool_matches(id, query)).count()
+}
+
 fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let current = match app.left {
         LeftPanel::Tool(id) => Some(id),
@@ -157,7 +161,7 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             app.select_tool(group.id);
         }
     }
-    let matches = pinned.iter().chain(open.iter()).filter(|id| tool_matches(id, &search)).count();
+    let matches = matching_tool_count(&pinned, &open, &search);
     if !compact && !search.trim().is_empty() {
         ui.label(egui::RichText::new(format!("{matches} matching tools")).small().color(theme::Tokens::get(ui.ctx()).text_muted));
     }
@@ -258,7 +262,16 @@ fn row(app: &mut SimplyPDFApp, ui: &mut egui::Ui, id: &str, active: bool, pinned
 
 #[cfg(test)]
 mod tool_chest_tests {
-    use super::tool_matches;
+    use super::{matching_tool_count, tool_matches};
+
+    #[test]
+    fn tool_chest_count_includes_pinned_and_open_tools() {
+        let pinned = vec!["measurement".to_owned()];
+        let open = vec!["markup".to_owned(), "organize".to_owned()];
+        assert_eq!(matching_tool_count(&pinned, &open, "m"), 2);
+        assert_eq!(matching_tool_count(&pinned, &open, "unknown-tool-xyz"), 0);
+        assert_eq!(matching_tool_count(&pinned, &open, " "), 3);
+    }
 
     #[test]
     fn tool_chest_search_matches_identifiers_and_ignores_case() {
