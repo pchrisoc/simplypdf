@@ -126,10 +126,12 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let compact = app.tool_rail_collapsed;
     let search_id = ui.make_persistent_id("tool-chest-search");
     let mut search = ui.ctx().data_mut(|data| data.get_temp::<String>(search_id).unwrap_or_default());
+    let mut search_focused = false;
     if !compact {
         ui.label(egui::RichText::new("TOOL CHEST").strong().size(11.0).color(theme::Tokens::get(ui.ctx()).text_muted));
         ui.horizontal(|ui| {
-            ui.add(egui::TextEdit::singleline(&mut search).hint_text("Find tools...").desired_width((ui.available_width() - 28.0).max(40.0)));
+            let field = ui.add(egui::TextEdit::singleline(&mut search).hint_text("Find tools...").desired_width((ui.available_width() - 28.0).max(40.0)));
+            search_focused = field.has_focus();
             if ui.add_enabled(!search.is_empty(), egui::Button::new("×")).on_hover_text("Clear tool search").clicked() {
                 search.clear();
             }
@@ -141,7 +143,7 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
         ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
     }
     // Keyboard-first tool switching: Enter selects the first visible match, Escape resets the filter.
-    if !compact && !search.trim().is_empty() {
+    if search_focused && !search.trim().is_empty() {
         if ui.input(|input| input.key_pressed(egui::Key::Escape)) {
             search.clear();
             ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
