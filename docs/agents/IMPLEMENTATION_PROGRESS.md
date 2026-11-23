@@ -449,3 +449,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #90 commit `56901d85d166706dd702140bedee72e7888e525e` hardens `replace_managed_checked` by rejecting directories, symlinks and other non-regular destinations, and propagating metadata errors rather than treating them as nonexistent. Test `managed_snapshot_refuses_directory_destination` verifies a directory is preserved. Prior incomplete-listing and symlink tests remain.
 - PR #73 was verified already merged on 2026-11-20; ENG-08.01 remains unchecked because its full acceptance is not established. PR #90 remains draft and pending new-head CI. Windows support, explicit publisher lifecycle, refresh and real Excel integration remain blockers; no checkbox claimed.
+
+## ENG-08.05 explicit managed workbook automation tool — 2026-11-22
+
+- PR #90 commits `8f8cbacf8d4b7888e0f6284bdd519f1751f424e7`, `ebf5027d0d0f0338738e27b37c5df07c641a2dff`, `5bada579ff0784952ce0afab655c298a49b0ebdd`, and `7076b51f004dbc7f7ad4e33f565860328643fa25` expose `takeoff_publish_managed_xlsx` in the automation dispatch and tool registry, validate the complete takeoff, and publish a replacement XLSX explicitly on Unix. The integration regression covers initial publication, same-path replacement, stable fingerprint and invalid output extension.
+- Earlier PR head `7e8a7250bdedab0e1d49a18381caa11bc60d049f` passed CI, SonarCloud, Nix, FreeBSD and Windows ARM64. The new commits require fresh CI; no merge or checklist completion claimed. Outstanding: Windows replacement, publisher lifecycle controls, event-driven refresh, transient lock retry, and real Excel refresh smoke testing.
