@@ -775,6 +775,7 @@ impl Automation {
             "measure_export" => self.measurement_export(&a)?,
             "takeoff_export_xlsx" => self.takeoff_export_xlsx(&a)?,
             "takeoff_excel_query" => self.takeoff_excel_query(&a)?,
+            "takeoff_refresh_xlsx" => self.takeoff_refresh_xlsx(&a)?,
             "takeoff_publish_managed_xlsx" => self.takeoff_publish_managed_xlsx(&a)?,
             "comment_list" => self.comment_list(&a)?,
             "comment_add" => self.comment_add(&a)?,
