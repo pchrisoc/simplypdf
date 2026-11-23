@@ -346,3 +346,8 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 ### Tool Chest CI repair — 2026-11-22
 
 - PR #91 CI run 45096038788 failed at Clippy because `egui::Id::new` is deprecated under `-D warnings`. Commits `6c19a537d6f80933b44ec6147157f62696188c1b` and `4b7e08bc0bc60a05f4993ad92a5d07e56601e7ea` replace it with `ui.make_persistent_id`, preserving state identity across frames. Commit `699d69e540829f43769d8187da0b6002d1ada02f` adds an explicit clear-search control. CI for the latest head is pending; do not merge until green. PR #73 was confirmed merged at `94764cf09c69d985c2c9cb1f7a96d63631befeef`, but milestone-level checklist acceptance is not inferred from that merge.
+
+## Tool Chest UI follow-up — 2026-11-22 19:09 PST
+
+- PR #91 commit `35b8e998b4f31edc49ba3d8a0b14802846896d98` adds a live matching-tool count and actionable empty-search state; expands the search regression for whitespace-only input.
+- Latest inspected PR #91 CI run `45098391590` failed at `cargo deny` on RustSec advisory `RUSTSEC-2026-0592` for `url 2.5.8` in Cargo.lock, **after** Rust tests passed. This is a workspace dependency-security blocker, not a confirmed Tool Chest test failure. Must update the vulnerable lockfile dependency and re-run CI before merge. PR #90 has five passing workflows but remains draft; PR #73 is merged. No README checkboxes newly completed.
