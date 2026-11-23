@@ -140,6 +140,21 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
         search.clear();
         ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
     }
+    // Keyboard-first tool switching: Enter selects the first visible match, Escape resets the filter.
+    if !compact && !search.trim().is_empty() {
+        if ui.input(|input| input.key_pressed(egui::Key::Escape)) {
+            search.clear();
+            ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
+        } else if ui.input(|input| input.key_pressed(egui::Key::Enter)) {
+            if let Some(id) = pinned.iter().chain(open.iter()).find(|id| tool_matches(id, &search)) {
+                if let Some(group) = catalog::group(id) {
+                    app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
+                    app.takeoff_workspace.settings_floating = false;
+                    app.select_tool(group.id);
+                }
+            }
+        }
+    }
     let matches = pinned.iter().chain(open.iter()).filter(|id| tool_matches(id, &search)).count();
     if !compact && !search.trim().is_empty() {
         ui.label(egui::RichText::new(format!("{matches} matching tools")).small().color(theme::Tokens::get(ui.ctx()).text_muted));
@@ -245,5 +260,6 @@ mod tool_chest_tests {
         assert!(tool_matches("measurement", ""));
         assert!(tool_matches("measurement", "   "));
         assert!(!tool_matches("measurement", "nonexistent-tool-xyz"));
+        assert!(!tool_matches("measurement", "measur xyz"));
     }
 }
