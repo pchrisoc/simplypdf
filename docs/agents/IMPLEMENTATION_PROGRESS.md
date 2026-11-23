@@ -389,3 +389,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Focused regression assertions cover NaN and negative room width with positioned openings; existing placement, overlap, and extrusion tests remain.
 - CI: previous head `d38e322` failed at `fmt`; SonarCloud succeeded (`45266198212`). New commit CI must complete before merge. No local test execution claimed.
 - Still outstanding: desktop depth input, persistence and save/reopen, CLI/MCP and XLSX integration, end-to-end acceptance; do not mark ENG-06.05 complete.
+
+## ENG-06.05 calibrated polygon integration — 2026-11-23
+
+- Feature commit `0ba89095aa64d68b0ae6928d0d26ea836a7fde3f` adds `extrude_measured_polygon` in `crates/measure/src/derived.rs`, deriving closed-perimeter wall area and calibrated area directly from existing polygon geometry, with explicit independent area/perimeter conversions and validated depth. This connects derived quantities to the existing measurement engine rather than only accepting detached numeric dimensions.
+- Test correction commit `21551eb5dde5a8b28e8f4c6726ad94efd66823d4` fixes the three-foot-to-metre depth fixture. Focused regression covers 10x10 polygon at depth 3, unit conversion, invalid depth, invalid scale and insufficient vertices.
+- GitHub-only implementation; no local Cargo execution. No PR-head workflow runs returned at first check for `0ba8909`. Recheck latest head, diagnose failures and obtain completed passing CI before merging. Desktop depth UI, persisted PDF fields, CLI/MCP, XLSX exports and end-to-end acceptance remain open. ENG-06.05 stays unchecked.
