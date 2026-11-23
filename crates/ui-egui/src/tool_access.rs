@@ -136,7 +136,11 @@ trait ExactToolSort {
 impl ExactToolSort for Vec<&'static str> {
     fn tap_sort_exact_first(mut self, query: &str) -> Self {
         let query = query.trim();
-        self.sort_by_key(|id| !id.eq_ignore_ascii_case(query));
+        self.sort_by_key(|id| {
+            let exact_id = id.eq_ignore_ascii_case(query);
+            let exact_label = catalog::group(id).is_some_and(|group| tl!(group.label).eq_ignore_ascii_case(query));
+            !(exact_id || exact_label)
+        });
         self
     }
 }
@@ -363,6 +367,14 @@ mod tool_chest_tests {
     fn exact_catalog_match_is_ranked_before_partial_matches() {
         let results = vec!["measurement", "measure", "other"].tap_sort_exact_first(" MEASURE ");
         assert_eq!(results, vec!["measure", "measurement", "other"]);
+    }
+
+    #[test]
+    fn exact_catalog_label_is_ranked_before_partial_identifier_matches() {
+        let group = super::catalog::TOOL_GROUPS.first().expect("catalog has tools");
+        let label = tl!(group.label).to_string();
+        let results = vec!["nonexistent-partial", group.id].tap_sort_exact_first(&label);
+        assert_eq!(results.first().copied(), Some(group.id));
     }
 
     #[test]
