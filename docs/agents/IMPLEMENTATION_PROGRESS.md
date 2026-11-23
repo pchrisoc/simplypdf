@@ -357,3 +357,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #91 commit `47580d2a62addbe5e44a213cc265a1f67c16aa2e` adds Enter-to-select-first-match and Escape-to-clear to the Tool Chest search, with a negative-match regression assertion. This is substantive UI functionality; no checklist task is claimed complete.
 - Prior head `2e175b76e76e31d8cbc367ed852f242721c902fa` failed CI run 45104351294 (`gate / gate (ubuntu-24.04)`, job 137462116266) at `cargo deny`: RUSTSEC-2026-0592, locked `url` 2.5.8, stack overflow in `Url::origin()` on nested `blob:` URLs. SonarCloud passed. The lockfile security fix is not yet committed; do not bypass the advisory or merge this PR until the dependency is upgraded and the new head passes CI.
 - ENG-08.01 PR #73 is merged; ENG-08 workbook PR #90 has five green workflows but remains draft pending complete acceptance criteria. Continue across all unchecked README milestones after these blockers.
+
+## Tool Chest PR #91 — CI repair and keyboard focus safety (2026-11-22)
+
+- CI run 45110359220 failed in Clippy (`collapsible_if`) at `crates/ui-egui/src/tool_access.rs:148–150`, not at cargo-deny. Commit `ae28fbe7ab4c4802f4c6ed3606c81822c0c49caf` collapses the nested conditions.
+- Commit `8928d881c300565c5415648c23dff6a97534e7f1` fixes a keyboard interaction bug: Enter/Escape only trigger Tool Chest actions while its search input has focus, preventing global shortcut interception.
+- Await fresh CI on the new head; do not merge or mark README tasks complete until required checks pass and acceptance criteria are verified. Continue the full engineering backlog afterward.
