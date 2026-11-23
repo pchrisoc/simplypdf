@@ -342,3 +342,7 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - Draft PR #91 introduces a searchable, compact Tool Chest navigation for the egui desktop workspace (`3036067008dd240d0c34e0b88142caeed9cd4ce8`, `2fbeadf7ed0769a1d3dca4c30385e166c7b48e1b`). The filter matches tool IDs and localized names, preserves pinning/dragging, and clears when collapsing the rail to avoid invisible active filters. Added focused matching regression test.
 - This is an incremental original design inspired by professional PDF review workflows; it does not reproduce Bluebeam assets. Pending CI and visual review; no README checkbox or merge claimed.
+
+### Tool Chest CI repair — 2026-11-22
+
+- PR #91 CI run 45096038788 failed at Clippy because `egui::Id::new` is deprecated under `-D warnings`. Commits `6c19a537d6f80933b44ec6147157f62696188c1b` and `4b7e08bc0bc60a05f4993ad92a5d07e56601e7ea` replace it with `ui.make_persistent_id`, preserving state identity across frames. Commit `699d69e540829f43769d8187da0b6002d1ada02f` adds an explicit clear-search control. CI for the latest head is pending; do not merge until green. PR #73 was confirmed merged at `94764cf09c69d985c2c9cb1f7a96d63631befeef`, but milestone-level checklist acceptance is not inferred from that merge.
