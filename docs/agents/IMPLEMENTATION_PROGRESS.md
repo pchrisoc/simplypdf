@@ -363,3 +363,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - Added focused regression tests for feet-to-metres equivalence and invalid/overflowing conversion scales. Tests are committed, **not yet verified passing** by GitHub CI.
 - `extrude_breakdown` now sums opening-return wall areas directly rather than subtracting large total areas, avoiding cancellation in extreme geometry.
 - ENG-06.05 remains unchecked: desktop input, persisted measurement depth, unit-aware CSV/XLSX and automation integration, PDF save/reopen, and CI verification are outstanding. The other ENG milestones remain in scope.
+
+## 2026-11-23 — ENG-06.05 rectangular room dimension adapter
+
+- PR #93 commit `ab9e09801b639c123f2c0083eb385c69af22b90d` adds `rectangular_room(width, length, height, openings)` to derive net volume, exterior wall area and interior opening returns directly from calibrated rectangular dimensions, including finite/nonnegative/overflow validation.
+- Two focused regression tests cover a 10×10×3 room with a 2×2 through-opening (288 volume, 120 outer wall area, 24 opening-return wall area) and invalid/excessive dimensions. These tests are committed, not yet independently verified by CI.
+- This is a geometry-to-quantity adapter only: drawing containment/overlap checks, UI height inputs, persisted markup metadata, exports, MCP integration, save/reopen, and passing CI remain outstanding. ENG-06.05 stays unchecked; all other unchecked engineering milestones remain in scope.
