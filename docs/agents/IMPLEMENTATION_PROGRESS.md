@@ -369,3 +369,10 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #93 commit `ab9e09801b639c123f2c0083eb385c69af22b90d` adds `rectangular_room(width, length, height, openings)` to derive net volume, exterior wall area and interior opening returns directly from calibrated rectangular dimensions, including finite/nonnegative/overflow validation.
 - Two focused regression tests cover a 10×10×3 room with a 2×2 through-opening (288 volume, 120 outer wall area, 24 opening-return wall area) and invalid/excessive dimensions. These tests are committed, not yet independently verified by CI.
 - This is a geometry-to-quantity adapter only: drawing containment/overlap checks, UI height inputs, persisted markup metadata, exports, MCP integration, save/reopen, and passing CI remain outstanding. ENG-06.05 stays unchecked; all other unchecked engineering milestones remain in scope.
+
+
+## 2026-11-23 — ENG-06.05 positioned cutout geometry
+
+- PR #93 source commit `c5e30312d424b555c6eb88158c03d4f3298d444f` adds `RectOpening` and `rectangular_room_placed` to reject nonfinite/negative coordinates, out-of-bounds rectangular through-openings, and overlapping interiors before deriving volume and wall-area quantities. Touching boundaries remain valid.
+- Focused regression `positioned_openings_validate_containment_and_overlap` covers two touching openings, duplicate overlap, boundary overflow, NaN and extreme coordinates. This test is committed, **not yet confirmed passing by CI**.
+- Still required before ENG-06.05 acceptance: desktop depth inputs, persisted markups and save/reopen, CLI/MCP exposure, XLSX unit-aware exports, geometric integration with actual PDF cutouts, full CI and end-to-end verification. README checkbox remains unchecked.
