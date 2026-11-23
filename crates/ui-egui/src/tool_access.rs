@@ -111,7 +111,8 @@ fn tool_matches(id: &str, query: &str) -> bool {
         || catalog::group(id).is_some_and(|group| tl!(group.label).to_lowercase().contains(&query.to_lowercase()))
 }
 
-fn matching_tool_count(pinned: &[String], open: &[String], query: &str) -> usize {
+fn matching_tool_count(pinned: &[String], open: &[String], query: &str, pinned_only: bool) -> usize {
+    let open = if pinned_only { &[][..] } else { open };
     pinned.iter().chain(open.iter()).filter(|id| tool_matches(id, query)).count()
 }
 
@@ -130,6 +131,8 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
     let compact = app.tool_rail_collapsed;
     let search_id = ui.make_persistent_id("tool-chest-search");
     let mut search = ui.ctx().data_mut(|data| data.get_temp::<String>(search_id).unwrap_or_default());
+    let pinned_only_id = ui.make_persistent_id("tool-chest-pinned-only");
+    let mut pinned_only = ui.ctx().data_mut(|data| data.get_temp::<bool>(pinned_only_id).unwrap_or(false));
     let mut search_focused = false;
     if !compact {
         ui.label(egui::RichText::new("TOOL CHEST").strong().size(11.0).color(theme::Tokens::get(ui.ctx()).text_muted));
@@ -141,11 +144,19 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
                 search.clear();
             }
         });
-        ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
-    } else if !search.is_empty() {
-        // Clear a hidden filter when the rail collapses, so icons remain discoverable.
+        ui.checkbox(&mut pinned_only, "Pinned only").on_hover_text("Show only pinned tools");
+        ui.ctx().data_mut(|data| {
+            data.insert_temp(search_id, search.clone());
+            data.insert_temp(pinned_only_id, pinned_only);
+        });
+    } else {
+        // Clear hidden filters when the rail collapses so icons remain discoverable.
         search.clear();
-        ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
+        pinned_only = false;
+        ui.ctx().data_mut(|data| {
+            data.insert_temp(search_id, search.clone());
+            data.insert_temp(pinned_only_id, pinned_only);
+        });
     }
     // Keyboard-first tool switching: Enter selects the first visible match, Escape resets the filter.
     if search_focused && !search.trim().is_empty() {
@@ -153,7 +164,7 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             search.clear();
             ui.ctx().data_mut(|data| data.insert_temp(search_id, search.clone()));
         } else if ui.input(|input| input.key_pressed(egui::Key::Enter))
-            && let Some(id) = pinned.iter().chain(open.iter()).find(|id| tool_matches(id, &search))
+            && let Some(id) = pinned.iter().chain(open.iter().filter(|_| !pinned_only)).find(|id| tool_matches(id, &search))
             && let Some(group) = catalog::group(id)
         {
             app.side_panels.tools_side = crate::side_panels::ToolsSide::Left;
@@ -161,7 +172,7 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             app.select_tool(group.id);
         }
     }
-    let matches = matching_tool_count(&pinned, &open, &search);
+    let matches = matching_tool_count(&pinned, &open, &search, pinned_only);
     if !compact && !search.trim().is_empty() {
         ui.label(egui::RichText::new(format!("{matches} matching tools")).small().color(theme::Tokens::get(ui.ctx()).text_muted));
     }
@@ -184,11 +195,11 @@ fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
             }
         }
         ui.separator();
-        if !compact {
+        if !compact && !pinned_only {
             widgets::section_title(ui, tl!("Open tools"));
         }
         for id in &open {
-            if tool_matches(id, &search) {
+            if !pinned_only && tool_matches(id, &search) {
                 row(app, ui, id, current == Some(id.as_str()), false);
             }
         }
@@ -268,9 +279,11 @@ mod tool_chest_tests {
     fn tool_chest_count_includes_pinned_and_open_tools() {
         let pinned = vec!["measurement".to_owned()];
         let open = vec!["markup".to_owned(), "organize".to_owned()];
-        assert_eq!(matching_tool_count(&pinned, &open, "m"), 2);
-        assert_eq!(matching_tool_count(&pinned, &open, "unknown-tool-xyz"), 0);
-        assert_eq!(matching_tool_count(&pinned, &open, " "), 3);
+        assert_eq!(matching_tool_count(&pinned, &open, "m", false), 2);
+        assert_eq!(matching_tool_count(&pinned, &open, "unknown-tool-xyz", false), 0);
+        assert_eq!(matching_tool_count(&pinned, &open, " ", false), 3);
+        assert_eq!(matching_tool_count(&pinned, &open, " ", true), 1);
+        assert_eq!(matching_tool_count(&pinned, &open, "organize", true), 0);
     }
 
     #[test]
