@@ -137,9 +137,15 @@ impl ExactToolSort for Vec<&'static str> {
     fn tap_sort_exact_first(mut self, query: &str) -> Self {
         let query = query.trim();
         self.sort_by_key(|id| {
-            let exact_id = id.eq_ignore_ascii_case(query);
-            let exact_label = catalog::group(id).is_some_and(|group| tl!(group.label).eq_ignore_ascii_case(query));
-            !(exact_id || exact_label)
+            let label = catalog::group(id).map(|group| tl!(group.label).to_lowercase()).unwrap_or_default();
+            let query = query.to_lowercase();
+            if id.eq_ignore_ascii_case(&query) || label == query {
+                0
+            } else if id.to_lowercase().starts_with(&query) || label.starts_with(&query) {
+                1
+            } else {
+                2
+            }
         });
         self
     }
@@ -367,6 +373,12 @@ mod tool_chest_tests {
     fn exact_catalog_match_is_ranked_before_partial_matches() {
         let results = vec!["measurement", "measure", "other"].tap_sort_exact_first(" MEASURE ");
         assert_eq!(results, vec!["measure", "measurement", "other"]);
+    }
+
+    #[test]
+    fn prefix_catalog_matches_rank_before_substring_matches() {
+        let results = vec!["premeasurement", "measurement", "other"].tap_sort_exact_first(" MEAS ");
+        assert_eq!(results, vec!["measurement", "premeasurement", "other"]);
     }
 
     #[test]
