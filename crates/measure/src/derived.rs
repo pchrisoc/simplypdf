@@ -199,6 +199,9 @@ pub fn rectangular_room_placed(
                 return Err(MeasureError::Invalid("opening coordinates and dimensions must be finite and nonnegative".into()));
             }
         }
+        if opening.width == 0.0 || opening.length == 0.0 {
+            return Err(MeasureError::Invalid("through-openings must have positive width and length".into()));
+        }
         if opening.x > width || opening.y > length
             || opening.width > width - opening.x
             || opening.length > length - opening.y
@@ -232,6 +235,8 @@ mod tests {
         assert_eq!(room.net.volume, 276.0);
         assert_eq!(room.opening_wall_area, 48.0);
         assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[a, a]).is_err());
+        assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { width: 0.0, ..a }]).is_err());
+        assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { length: 0.0, ..a }]).is_err());
         assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { x: 9.0, ..a }]).is_err());
         assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { x: f64::NAN, ..a }]).is_err());
         assert!(rectangular_room_placed(10.0, 10.0, 3.0, &[RectOpening { x: f64::MAX, ..a }]).is_err());
