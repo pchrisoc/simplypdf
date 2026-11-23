@@ -337,3 +337,9 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 - PR #89 commit `c8471121dc6a229c52ab721d0299f477469e8871` adds `count_filtered`, an allocation-free matching-record count that uses the same filter predicate as paginated register results; `filtered_count_matches_pages_and_respects_empty_query` covers filtered, paginated and unfiltered counts.
 - The same commit applies the two precise `cargo fmt --check` changes reported by failed Ubuntu CI run 44898022052. SonarCloud passed on the preceding head; new-head CI remains unverified.
 - ENG-09.06 is not complete: persist metadata with PDF annotations, wire the desktop register, and verify save/reopen and end-to-end acceptance before checking README.
+
+## 2026-11-23 — ENG-06.05 derived quantity calculations
+
+- Branch `feat/eng-0605-derived-quantities-20261123`: `b452d47` adds a validated `extrude` calculation for footprint volume (`area × depth`) and lateral wall area (`perimeter × depth`) in consistent calibrated units; `74cfec7` exposes it from the measure crate.
+- Focused Rust unit tests cover a rectangular room, zero depth, negative/nonfinite inputs, and multiplication overflow. Tests are committed but have not yet been run by CI.
+- This is a reusable engine foundation, **not** full ENG-06.05 acceptance: connect depth/height inputs to measurement UI, saved markups, export and automation, verify unit conversion and PDF reopen, and pass all required checks. README checkbox remains unchecked. Continue ENG-08 open PRs and the remaining engineering backlog.
