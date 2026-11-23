@@ -131,7 +131,9 @@ fn first_matching_tool(pinned: &[String], open: &[String], search: &str, pinned_
         .chain(open.iter().filter(|_| !pinned_only))
         .find(|id| tool_matches(id, search))
         .cloned()
-        .or_else(|| (!pinned_only && !search.trim().is_empty()).then(|| catalog_search_ids(pinned, open, search)).flatten().first().map(|id| (*id).to_owned()))
+        .or_else(|| (!pinned_only && !search.trim().is_empty())
+                .then(|| catalog_search_ids(pinned, open, search))
+                .and_then(|ids| ids.first().map(|id| (*id).to_owned())))
 }
 
 fn sidebar(app: &mut SimplyPDFApp, ui: &mut egui::Ui) {
