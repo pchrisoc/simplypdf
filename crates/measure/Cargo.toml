@@ -17,7 +17,7 @@ serde = { workspace = true }
 thiserror = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-rust_xlsxwriter = "0.102"
+rust_xlsxwriter = "0.104"
 tempfile = "3.27"
 
 [dev-dependencies]
