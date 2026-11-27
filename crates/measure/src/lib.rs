@@ -684,6 +684,11 @@ pub fn list(doc: &Document) -> Listing {
     }
     out
 }
+// Control characters cannot safely serve as durable spreadsheet row keys.
+fn valid_row_id(id: &str) -> bool {
+    !id.trim().is_empty() && !id.chars().any(char::is_control)
+}
+
 /// Assign persistent, unique PDF /NM names to measurements imported without them or
 /// with duplicate names. Preserve the first occurrence of an existing name.
 /// Never rewrite unrelated annotations; unsupported measurements remain untouched.
@@ -717,7 +722,7 @@ pub fn normalize_ids(doc: &mut Document) -> Result<usize> {
     let mut next = 1usize;
     let mut changes = Vec::new();
     for m in listing.measurements {
-        if !m.id.trim().is_empty() && !other_ids.contains(&m.id) && seen.insert(m.id.clone()) {
+        if valid_row_id(&m.id) && !other_ids.contains(&m.id) && seen.insert(m.id.clone()) {
             continue;
         }
         let id = loop {
@@ -875,8 +880,8 @@ pub fn csv_checked(listing: &Listing) -> Result<String> {
         if !measurement.reading.value.is_finite() || measurement.reading.value < 0.0 {
             return Err(invalid("measurement values must be finite and nonnegative before export"));
         }
-        if measurement.id.trim().is_empty() || !ids.insert(measurement.id.as_str()) {
-            return Err(invalid("measurement IDs must be nonempty and unique before export"));
+        if !valid_row_id(&measurement.id) || !ids.insert(measurement.id.as_str()) {
+            return Err(invalid("measurement IDs must be nonempty, control-free and unique before export"));
         }
     }
     Ok(csv(&listing.measurements))
