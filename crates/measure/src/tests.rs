@@ -917,3 +917,19 @@ fn publication_state_rejects_malformed_same_version_tokens() {
     let stale = format!("{prefix}0000000000000000");
     assert_eq!(snapshot_status(&listing, Some(&stale)).unwrap().publication_state, PublicationState::Stale);
 }
+
+#[test]
+fn malformed_row_ids_are_repaired_before_export_and_persist() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "bad\nkey".into() }).unwrap();
+    let original = list(&doc);
+    assert_eq!(original.measurements[0].id, "bad\nkey");
+    assert!(csv_checked(&original).is_err());
+    let (listing, changed) = prepare_export_with_changes(&mut doc).unwrap();
+    assert_eq!(changed, 1);
+    assert!(valid_row_id(&listing.measurements[0].id));
+    let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
+    assert_eq!(list(&reopened).measurements[0].id, listing.measurements[0].id);
+    assert_eq!(pending_id_repairs(&reopened).unwrap(), 0);
+    assert!(csv_checked(&list(&reopened)).is_ok());
+}
