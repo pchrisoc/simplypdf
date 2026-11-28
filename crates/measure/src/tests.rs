@@ -917,3 +917,33 @@ fn publication_state_rejects_malformed_same_version_tokens() {
     let stale = format!("{prefix}0000000000000000");
     assert_eq!(snapshot_status(&listing, Some(&stale)).unwrap().publication_state, PublicationState::Stale);
 }
+
+#[test]
+fn malformed_row_ids_are_repaired_before_export_and_persist() {
+    let mut doc = fixture("", "", &[]);
+    add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: "bad\nkey".into() }).unwrap();
+    let original = list(&doc);
+    assert_eq!(original.measurements[0].id, "bad\nkey");
+    assert!(csv_checked(&original).is_err());
+    let (listing, changed) = prepare_export_with_changes(&mut doc).unwrap();
+    assert_eq!(changed, 1);
+    assert!(valid_row_id(&listing.measurements[0].id));
+    let reopened = Document::open(Arc::new(write_full(&doc, &SaveOptions::default()).unwrap())).unwrap();
+    assert_eq!(list(&reopened).measurements[0].id, listing.measurements[0].id);
+    assert_eq!(pending_id_repairs(&reopened).unwrap(), 0);
+    assert!(csv_checked(&list(&reopened)).is_ok());
+}
+
+#[test]
+fn invisible_row_ids_are_repaired_without_changing_visible_unicode_ids() {
+    let mut doc = fixture("", "", &[]);
+    for id in ["row\u{200b}1", "\u{feff}", "row\u{202e}2", "測量-1"] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    assert!(csv_checked(&list(&doc)).is_err());
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 3);
+    let listing = list(&doc);
+    assert_eq!(listing.measurements[3].id, "測量-1");
+    assert!(csv_checked(&listing).is_ok());
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 0);
+}
