@@ -342,3 +342,6 @@ Repository: `pchrisoc/simplypdf`; integration branch: `main`.
 
 - PR #96: source commit `9a3757124f898f725a407d4b22b559b9cb652bd7` shares control-character validation between normalization and checked CSV export; test commit `59d0eeb4bc5b1c3763db52da687bc6d4f53aaeb8` covers migration and PDF reopen.
 - Tests not executed locally; verify PR-head CI before merging. Next inspect desktop save path and callers of `prepare_export_with_changes` for persistence and undo/redo integration; verify XLSX and automation behavior. ENG-08.01 remains unchecked.
+
+
+- ENG-08.01 follow-up (PR #96): reject invisible formatting marks in row IDs (7e0d6fe8), with migration/idempotence and visible Unicode regression coverage (353a5fb0). CI not yet verified. Next: desktop save integration and downstream XLSX/automation identity checks; resolve URL dependency audit without suppressing advisories. Keep README unchecked.
