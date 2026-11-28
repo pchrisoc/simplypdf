@@ -933,3 +933,17 @@ fn malformed_row_ids_are_repaired_before_export_and_persist() {
     assert_eq!(pending_id_repairs(&reopened).unwrap(), 0);
     assert!(csv_checked(&list(&reopened)).is_ok());
 }
+
+#[test]
+fn invisible_row_ids_are_repaired_without_changing_visible_unicode_ids() {
+    let mut doc = fixture("", "", &[]);
+    for id in ["row\u{200b}1", "\u{feff}", "row\u{202e}2", "測量-1"] {
+        add(&mut doc, &new(Kind::Distance, vec![[0.0, 0.0], [3.0, 4.0]]), &Meta { date: None, id: id.into() }).unwrap();
+    }
+    assert!(csv_checked(&list(&doc)).is_err());
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 3);
+    let listing = list(&doc);
+    assert_eq!(listing.measurements[3].id, "測量-1");
+    assert!(csv_checked(&listing).is_ok());
+    assert_eq!(normalize_ids(&mut doc).unwrap(), 0);
+}
