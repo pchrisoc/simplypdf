@@ -686,7 +686,8 @@ pub fn list(doc: &Document) -> Listing {
 }
 // Control characters cannot safely serve as durable spreadsheet row keys.
 fn valid_row_id(id: &str) -> bool {
-    !id.trim().is_empty() && !id.chars().any(char::is_control)
+    !id.trim().is_empty()
+        && !id.chars().any(|ch| ch.is_control() || matches!(ch, '\u{200b}'..='\u{200f}' | '\u{202a}'..='\u{202e}' | '\u{2060}'..='\u{2069}' | '\u{feff}'))
 }
 
 /// Assign persistent, unique PDF /NM names to measurements imported without them or
